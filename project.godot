@@ -1,0 +1,59 @@
+; Beauty Forest — native Godot 4.7 project
+; Engine configuration. The game is built entirely at runtime so there are no
+; fragile external model or texture dependencies.
+
+config_version=5
+
+[application]
+
+; The engine would otherwise quit mid-playback on a window close request,
+; leaking AudioStreamPlayback refs at exit. The game director hushes audio
+; and drains the AudioServer in quit_gracefully() instead (see main.gd).
+config/auto_accept_quit=false
+
+config/name="Beauty Forest"
+config/description="A bright, gentle survivor tale beneath an enchanted forest."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.7")
+boot_splash/bg_color=Color(0.16, 0.25, 0.16, 1)
+boot_splash/show_image=false
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+common/physics_ticks_per_second=60
+common/max_physics_steps_per_frame=8
+
+[rendering]
+
+; Forward+ is the intended desktop renderer here: glow, SSAO/SSIL, soft
+; shadows, procedural sky reflections, and the high-quality material path are
+; the point. Pinned explicitly: Web exports fall back to gl_compatibility
+; (which drops SSIL/volumetrics), so never assume SSIL/SSAO exist at runtime.
+renderer/rendering_method="forward_plus"
+renderer/rendering_method.mobile="mobile"
+renderer/rendering_method.web="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+anti_aliasing/quality/msaa_3d=2
+anti_aliasing/quality/screen_space_aa=1
+environment/defaults/default_clear_color=Color(0.72, 0.84, 0.55, 1)
+environment/defaults/default_environment=""
+
+[audio]
+
+buses/default_bus_layout=""
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true

@@ -1,0 +1,252 @@
+class_name RunWorld
+extends RunCeremonies
+
+## Floor construction and traversal: teardown/rebuild of the forest world, the
+## player and Mote, objective placement, stairs, interaction and the camera.
+## Combat and lullaby state it resets live in RunCombat.
+
+func _update_camera(delta: float) -> void:
+    if player == null or not is_instance_valid(player):
+        return
+    var target := player.global_position + CAMERA_OFFSET
+    var weight := 1.0 if bool(settings.get("reduced_motion", false)) else 1.0 - exp(-delta * 5.2)
+    camera.global_position = camera.global_position.lerp(target, weight)
+    # The offset and look target have the same relationship every frame, so
+    # orientation stays exactly fixed. No interpolation can introduce roll.
+    # Intentionally no mouse aim, no recoil, no trauma, and no shake.
+
+func _load_floor(number: int, menu_stage: bool = false) -> void:
+    ending_pending = false
+    ending_countdown = 0.0
+    _reset_lullaby()
+    if is_instance_valid(world):
+        world.get_parent().remove_child(world)
+        world.queue_free()
+    notes.clear()
+    wisps.clear()
+
+    floor_number = maxi(1, number)
+    dungeon = DungeonGenerator.generate(floor_number)
+    region = BeautyContent.region_for_floor(floor_number)
+    world = ForestWorld.new()
+    world.name = "ForestFloor%d" % floor_number
+    add_child(world)
+    world.build_floor(floor_number, dungeon, bool(settings.get("reduced_motion", false)))
+    _set_world_processing(mode in [Mode.MENU, Mode.PLAYING])
+
+    player = Player.new()
+    player.name = "Wanderer"
+    world.add_child(player)
+    player.setup(dungeon, charm_effects, bool(settings.get("reduced_motion", false)))
+    var spawn_room: Dictionary = dungeon["rooms"][0]
+    player.global_position = Vector3(spawn_room["cx"], 0.05, spawn_room["cy"])
+    player.footstep.connect(_on_player_footstep)
+    player.dashed.connect(_on_player_dashed)
+    if mote and is_instance_valid(mote):
+        var old_parent := mote.get_parent()
+        if old_parent:
+            old_parent.remove_child(mote)
+        world.add_child(mote)
+    else:
+        mote = _build_mote()
+        world.add_child(mote)
+    mote.global_position = player.global_position + START_POSITIONS
+
+    stair_visible = true
+    merchant_exists = false
+    dragon_exists = false
+    dragon_finale = false
+    floor_modifier = BeautyContent.random_modifier(BeautyContent.story_floor(floor_number)) if not menu_stage else {}
+
+    if not menu_stage:
+        _spawn_wisps()
+        var story := BeautyContent.story_floor(floor_number)
+        merchant_exists = story in [2, 4, 7, 10] and not BeautyContent.is_dragon_floor(floor_number)
+        dragon_exists = BeautyContent.is_dragon_floor(floor_number)
+        dragon_finale = story == 13
+        if dragon_exists:
+            var largest: Dictionary = dungeon["rooms"][0]
+            for room: Dictionary in dungeon["rooms"]:
+                if float(room["area"]) > float(largest["area"]):
+                    largest = room
+            world.build_dragon(largest, dragon_finale)
+            var chime_room := _farthest_non_dragon_room(largest)
+            world.build_dream_chimes(chime_room)
+            _relocate_stair_from(largest)
+            stair_visible = false
+        world.set_objectives_visible(stair_visible, merchant_exists, dragon_exists)
+        hit_this_floor = false
+        pulse_cooldown = 0.0
+        note_cooldown = 0.0
+        invulnerable_time = 1.0
+        slow_time = 0.0
+        _next_petal_shower = play_seconds + _rng.randf_range(32.0, 56.0)
+    else:
+        world.set_objectives_visible(false, false, false)
+
+    camera.global_position = player.global_position + CAMERA_OFFSET
+    camera.look_at(player.global_position + Vector3.UP * 0.78, Vector3.UP)
+    audio.start_ambient(String(region["key"]))
+    ui.set_map(dungeon, player.global_position)
+    _refresh_ui()
+    if not menu_stage:
+        player.set_control_enabled(true)
+        var story_number := BeautyContent.story_floor(floor_number)
+        var vignette: Array = BeautyContent.STORY.get(story_number, [])
+        if not vignette.is_empty():
+            ui.show_story(String(vignette[0]), String(vignette[1]))
+        var entry_floor: int = int({"sunlit-roots": 1, "pollen-halls": 5, "mushroom-lull": 9, "roost": 13}.get(String(region["key"]), -1))
+        if story_number == entry_floor:
+            ui.add_log("Mote: “%s”" % String(region["entry"]))
+        ui.add_log("Mote: “Today’s forecast: %s — %s.”" % [String(floor_modifier.get("name", "cozy air")), String(floor_modifier.get("description", "the woods are humming"))])
+        if merchant_exists:
+            ui.show_toast("Peddle’s cart is nearby. Press F when you’re ready to browse.")
+        if _has_feeling_floor():
+            ui.show_toast("A Big Feeling wanders this floor. Wait for its GOLD halo, then press E nearby and sing with it.")
+
+func _farthest_non_dragon_room(dragon_room: Dictionary) -> Dictionary:
+    var spawn_room: Dictionary = dungeon["rooms"][0]
+    var best: Dictionary = dragon_room
+    var best_distance := -1.0
+    for room: Dictionary in dungeon["rooms"]:
+        if room == dragon_room:
+            continue
+        var distance := Vector2(room["cx"] - spawn_room["cx"], room["cy"] - spawn_room["cy"]).length()
+        if distance > best_distance:
+            best_distance = distance
+            best = room
+    return best
+
+func _relocate_stair_from(room: Dictionary) -> void:
+    if not _point_in_room(world.stair_position, room):
+        return
+    for candidate: Dictionary in dungeon["rooms"]:
+        if candidate != room:
+            world.stair_position = Vector3(candidate["cx"], 0, candidate["cy"])
+            var stair := world.get_node_or_null("Stairwell")
+            if stair:
+                (stair as Node3D).position = world.stair_position
+            return
+
+func _point_in_room(point: Vector3, room: Dictionary) -> bool:
+    return point.x >= float(room["x"]) and point.x < float(room["x"]) + float(room["w"]) \
+        and point.z >= float(room["y"]) and point.z < float(room["y"]) + float(room["h"])
+
+func _nearest_chime() -> Node3D:
+    if not dragon_exists or world == null:
+        return null
+    var best: Node3D
+    var best_distance := 1.7
+    for chime in world.chimes:
+        if not is_instance_valid(chime):
+            continue
+        var distance := player.global_position.distance_to(chime.global_position)
+        if distance < best_distance:
+            best_distance = distance
+            best = chime
+    return best
+
+func _try_interact() -> void:
+    # The finale epilogue keeps Mode.PLAYING so the story can play out, so this
+    # needs the same gate Dash uses: without it E and the touch SING button
+    # answered with a stray "wander toward whatever is glowing" while the
+    # controls were off and the ending card owned the screen.
+    if not _gameplay_controls_enabled():
+        return
+    if _lullaby_active:
+        _judge_lullaby_beat()
+        return
+    if stair_visible and world and is_instance_valid(world.get_node_or_null("Stairwell")):
+        var stair := world.get_node("Stairwell") as Node3D
+        if stair.visible and player.global_position.distance_to(stair.global_position) < 2.3:
+            _descend()
+            return
+    var feeling := _near_feeling(4.5)
+    if feeling != null and feeling.is_boss_vulnerable():
+        _begin_feeling_lullaby(feeling)
+        return
+    var near_chime := _nearest_chime()
+    if near_chime != null:
+        ui.add_log("Mote: “Let the chime drift close on its own — no button needed.”")
+        return
+    ui.add_log("Mote: “Wander toward whatever is glowing. I’ll keep the map, and your sleeve. Lightly.”")
+
+func _descend() -> void:
+    hp = minf(hp_max, hp + 30.0)
+    if not hit_this_floor:
+        _award_sticker("pacifist")
+        ui.add_log("Mote: “Not a single bump! I’m writing a ballad about this.”")
+    var next_floor := floor_number + 1
+    if next_floor >= 6:
+        _award_sticker("kindling")
+    meta["best_floor"] = maxi(int(meta.get("best_floor", 0)), next_floor)
+    BeautyData.save_meta(meta)
+    ui.add_log("Floor %d cleared. You rest by the stairwell (+30 warmth), then wander down." % floor_number)
+    ui.add_log("Mote: “%s”" % String(BeautyContent.random_choice(BeautyContent.DESCEND_LINES)))
+    audio.play_chord([392.0, 493.88, 587.33], 0.72, 0.09)
+    _load_floor(next_floor, false)
+
+func _build_mote() -> Node3D:
+    var root := Node3D.new()
+    root.name = "Mote"
+    mote_core = MeshInstance3D.new()
+    var sphere := SphereMesh.new()
+    sphere.radius = 0.22
+    sphere.height = 0.44
+    sphere.radial_segments = 16
+    sphere.rings = 10
+    mote_core.mesh = sphere
+    var material := StandardMaterial3D.new()
+    material.albedo_color = Color("#fff0aa")
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    material.emission_enabled = true
+    material.emission = Color("#ffe486")
+    material.emission_energy_multiplier = 3.0
+    mote_core.material_override = material
+    root.add_child(mote_core)
+    for side in [-1.0, 1.0]:
+        var eye := MeshInstance3D.new()
+        var eye_mesh := SphereMesh.new()
+        eye_mesh.radius = 0.033
+        eye_mesh.height = 0.06
+        eye.mesh = eye_mesh
+        var eye_material := StandardMaterial3D.new()
+        eye_material.albedo_color = Color("#4a3729")
+        eye_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+        eye.material_override = eye_material
+        eye.position = Vector3(side * 0.07, 0.02, -0.205)
+        root.add_child(eye)
+    var halo := MeshInstance3D.new()
+    var torus := TorusMesh.new()
+    torus.inner_radius = 0.28
+    torus.outer_radius = 0.34
+    halo.mesh = torus
+    var halo_material := StandardMaterial3D.new()
+    halo_material.albedo_color = Color(1, 0.84, 0.35, 0.30)
+    halo_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    halo_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    halo_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+    halo.mesh.material = halo_material
+    root.add_child(halo)
+    mote_light = OmniLight3D.new()
+    mote_light.light_color = Color("#ffe595")
+    mote_light.light_energy = 0.45
+    mote_light.omni_range = 3.8
+    root.add_child(mote_light)
+    _mote_seed = randf() * TAU
+    return root
+
+func _update_mote(delta: float) -> void:
+    if mote == null or not is_instance_valid(mote) or player == null or not is_instance_valid(player):
+        return
+    _mote_seed += delta * 0.72
+    var orbit := Vector3.ZERO
+    if not bool(settings.get("reduced_motion", false)):
+        orbit = Vector3(sin(_mote_seed) * 0.18, sin(_mote_seed * 1.7) * 0.10, cos(_mote_seed * 0.8) * 0.18)
+    var target := player.global_position + Vector3(-0.72, 1.48, 0.42) + orbit
+    var weight := 1.0 - exp(-delta * (3.0 if mode == Mode.MENU else 5.0))
+    mote.global_position = mote.global_position.lerp(target, weight)
+    if mote_core:
+        mote_core.rotation.y += delta * 0.8
+    if not bool(settings.get("reduced_motion", false)):
+        mote.scale = Vector3.ONE * (1.0 + sin(_mote_seed * 2.0) * 0.035)

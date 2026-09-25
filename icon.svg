@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff2b4"/>
+      <stop offset="0.58" stop-color="#cfe486"/>
+      <stop offset="1" stop-color="#6eae55"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#fff9cf" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#ffe47d" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="3" y="3" width="122" height="122" rx="26" fill="#244b35" stroke="#ffe49a" stroke-width="5"/>
+  <path d="M9 28Q32 8 64 10q35-2 55 19v73q-24 17-55 17T9 101Z" fill="url(#sky)"/>
+  <path d="M22 103V64m84 40V59" stroke="#815536" stroke-width="9" stroke-linecap="round"/>
+  <g fill="#5cae4a">
+    <circle cx="23" cy="49" r="23"/><circle cx="48" cy="38" r="28"/><circle cx="78" cy="35" r="29"/><circle cx="104" cy="50" r="23"/>
+  </g>
+  <g fill="#8bcf5e" opacity=".9">
+    <circle cx="37" cy="31" r="15"/><circle cx="70" cy="25" r="17"/><circle cx="98" cy="39" r="14"/>
+  </g>
+  <path d="M9 101q26-13 55-13t55 13v7q-28 12-55 12T9 108Z" fill="#4d934c"/>
+  <circle cx="91" cy="34" r="14" fill="url(#glow)"/>
+  <circle cx="91" cy="34" r="6" fill="#fff7c8"/>
+  <circle cx="65" cy="65" r="17" fill="url(#glow)"/>
+  <g transform="translate(57 61)">
+    <circle cx="8" cy="0" r="8" fill="#f2c29d"/>
+    <path d="M-1-1q9-13 18 0" fill="#744b32"/>
+    <path d="M3 7h10l3 20H0Z" fill="#5ea96b"/>
+    <path d="M3 26 1 39m12-13 2 13" stroke="#455f60" stroke-width="5" stroke-linecap="round"/>
+    <path d="m14 8 10 30" stroke="#8b603e" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="24" cy="39" r="6" fill="#ffe37d"/>
+    <circle cx="24" cy="39" r="11" fill="url(#glow)"/>
+  </g>
+  <g fill="#fff0b1">
+    <circle cx="28" cy="91" r="3"/><circle cx="38" cy="97" r="2.5"/><circle cx="106" cy="87" r="3"/><circle cx="97" cy="96" r="2"/>
+  </g>
+</svg>

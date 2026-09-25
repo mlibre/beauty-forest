@@ -1,0 +1,394 @@
+class_name GameUIScreens
+extends GameUILayout
+
+## The animated, joyful screens: menu, pause, nap, ending, Peddle's cart, the
+## memory book and the gentler-forest options panel.
+
+func show_menu(meta: Dictionary) -> void:
+    _clear(_overlay_content)
+    _hud.visible = false
+    _show_overlay()
+    var title := _label("Beauty Forest", 46, Color("#ffe6a0"))
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    _overlay_content.add_child(title)
+    var subtitle := _label("a cozy walk — no hurry, no losing ♥", 20, Color("#dcebbd"))
+    subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    _overlay_content.add_child(subtitle)
+    _overlay_content.add_child(_spacer(4))
+    var intro := _label("Your lantern sings all by itself. You just wander, cuddle lost wisps home, and pick kind gifts. There is no attack button. Leaving anytime is always okay.", 17, Color("#fff0c8"))
+    intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    intro.custom_minimum_size = Vector2(820, 0)
+    _overlay_content.add_child(intro)
+    var how := _label("How it feels:  ① wander  ② lantern sings  ③ choose a cozy gift  ♥", 14, Color("#d8e9bd"))
+    how.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    how.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    how.custom_minimum_size = Vector2(820, 0)
+    _overlay_content.add_child(how)
+    _overlay_content.add_child(_spacer(8))
+    _overlay_content.add_child(_label("STEP 1 — PICK HOW GENTLE ♥", 14, Color("#ffe39a")))
+    # Flow (not HBox): on narrow windows the three style buttons wrap onto a
+    # second row instead of overflowing the card.
+    var styles := HFlowContainer.new()
+    styles.alignment = FlowContainer.ALIGNMENT_CENTER
+    styles.last_wrap_alignment = FlowContainer.LAST_WRAP_ALIGNMENT_CENTER
+    styles.add_theme_constant_override("hseparation", 10)
+    styles.add_theme_constant_override("vseparation", 10)
+    styles.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+    _overlay_content.add_child(styles)
+    var menu_style_descriptions := {
+        "gentle": "Extra cozy · bumps hurt less",
+        "standard": "Just right, as Mote planned",
+        "bold": "A bit brisker · more soul-light",
+    }
+    for key in ["gentle", "standard", "bold"]:
+        var style: Dictionary = BeautyContent.STYLE_DATA[key]
+        var picked: bool = key == _selected_style
+        var button := _button("%s%s\n%s" % [("♥ " if picked else ""), style["name"], String(menu_style_descriptions[key])], picked)
+        button.custom_minimum_size = Vector2(250, 74)
+        button.tooltip_text = "Step 1: choose %s. Step 2: press Wander below." % String(style["name"])
+        button.pressed.connect(func():
+            _selected_style = key
+            show_menu(meta)
+        )
+        styles.add_child(button)
+    _overlay_content.add_child(_spacer(12))
+    var step2 := _label("STEP 2 — BEGIN ♥", 14, Color("#ffe39a"))
+    step2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    _overlay_content.add_child(step2)
+    var start_button := _button("♥  Wander into the forest", true)
+    start_button.custom_minimum_size = Vector2(340, 58)
+    start_button.tooltip_text = "Start a gentle walk. You can leave anytime."
+    start_button.pressed.connect(func(): start_requested.emit(_selected_style))
+    var start_center := CenterContainer.new()
+    start_center.add_child(start_button)
+    _overlay_content.add_child(start_center)
+    var record := "Visits %d  ·  Deepest floor %d  ·  Wisps guided home %d" % [int(meta.get("runs", 0)), int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0))]
+    var record_label := _label(record, 14, Color("#cbdcb7"))
+    record_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    record_label.custom_minimum_size = Vector2(820, 0)
+    _overlay_content.add_child(record_label)
+    var controls := _label("Walk: WASD / stick  ·  Dash: Shift  ·  Hug & sing: E  ·  Shop: F  ·  Memories: J  ·  Cozy options: C  ·  Rest: Esc", 13, Color("#b9cfaa"))
+    controls.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    controls.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    controls.custom_minimum_size = Vector2(820, 0)
+    _overlay_content.add_child(controls)
+    _overlay_content.add_child(_spacer(4))
+    var leave := _button("Not now — keep my spot warm ♥", false)
+    leave.custom_minimum_size = Vector2(430, 48)
+    leave.tooltip_text = "No pressure. The forest waits for you."
+    leave.pressed.connect(func(): quit_requested.emit())
+    var leave_center := CenterContainer.new()
+    leave_center.add_child(leave)
+    _overlay_content.add_child(leave_center)
+    _fit_layout()
+	# Refit AFTER building: the panels are authored at comfortable desktop
+	# widths, and _refit_content can only clamp children that already exist.
+    _focus_control(start_button)
+
+func show_pause(meta: Dictionary) -> void:
+    _clear(_overlay_content)
+    _hud.visible = true
+    _show_overlay()
+    _overlay_content.add_child(_centered_label("Take a breath ♥", 38, Color("#ffe6a0")))
+    _overlay_content.add_child(_centered_label("Paused — the forest waits for you. Nothing hurries here.", 17, Color("#dce9c2")))
+    _overlay_content.add_child(_spacer(18))
+    _overlay_content.add_child(_centered_button("♥  Keep wandering", true, func(): resume_requested.emit()))
+    _overlay_content.add_child(_centered_button("Make it gentler", false, func(): settings_open_requested.emit()))
+    _overlay_content.add_child(_centered_button("Start a fresh walk", false, func(): restart_requested.emit(false)))
+    _overlay_content.add_child(_centered_button("Leave for now ♥", false, func(): quit_requested.emit()))
+    _overlay_content.add_child(_spacer(12))
+    _overlay_content.add_child(_centered_label("Deepest floor %d  ·  Wisps hugged home %d  ·  Fun facts %d" % [int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0)), int(meta.get("facts", 0))], 14, Color("#bdcea9")))
+    _fit_layout()
+    _focus_first_enabled(_overlay_content)
+
+func show_death(floor_number: int, meta: Dictionary) -> void:
+    _clear(_overlay_content)
+    _hud.visible = false
+    _beat_ring.visible = false
+    _show_overlay()
+    _overlay_content.add_child(_centered_label("You took a cozy nap ♥", 42, Color("#ffe6a0")))
+    _overlay_content.add_child(_centered_label("Mote tucked your lantern into a mossy pocket. No one is cross. The forest will be here when you wake.", 18, Color("#e9f0d4")))
+    _overlay_content.add_child(_spacer(12))
+    _overlay_content.add_child(_centered_label("You reached floor %d. Every wisp you hugged home is still warm." % floor_number, 16, Color("#fff0c8")))
+    _overlay_content.add_child(_spacer(18))
+    _overlay_content.add_child(_centered_button("♥  Wake up & wander again", true, func(): restart_requested.emit(false)))
+    _overlay_content.add_child(_centered_button("Rest a little longer", false, func(): quit_requested.emit()))
+    _overlay_content.add_child(_centered_label("Visits %d  ·  Deepest floor %d" % [int(meta.get("runs", 0)), int(meta.get("best_floor", 0))], 14, Color("#bdcea9")))
+    _fit_layout()
+    _focus_first_enabled(_overlay_content)
+
+func show_ending(dragons: int, meta: Dictionary) -> void:
+    _clear(_overlay_content)
+    _hud.visible = false
+    _beat_ring.visible = false
+    _show_overlay()
+    _overlay_content.add_child(_centered_label("The dragons are snuggled ♥", 42, Color("#ffe6a0")))
+    _overlay_content.add_child(_centered_label("Snoozle’s family sleeps in a warm heap of happy dreams. Somewhere far below, one enormous cousin yawns: ‘More lullabies when you’re ready.’", 18, Color("#e9f0d4")))
+    _overlay_content.add_child(_spacer(10))
+    _overlay_content.add_child(_centered_label("The forest grew one floor deeper, just for you. Come back for another gentle walk whenever you like.", 16, Color("#fff0c8")))
+    _overlay_content.add_child(_centered_label("Dragons tucked in: %d  ·  Wisps hugged home: %d  ·  Fun facts: %d" % [dragons, int(meta.get("wisps_soothed", 0)), int(meta.get("facts", 0))], 15, Color("#cbdcaf")))
+    _overlay_content.add_child(_spacer(16))
+    _overlay_content.add_child(_centered_button("♥  Wander deeper", true, func(): restart_requested.emit(true)))
+    _overlay_content.add_child(_centered_button("Until next time ♥", false, func(): quit_requested.emit()))
+    _fit_layout()
+    _focus_first_enabled(_overlay_content)
+
+func show_shop(state: Dictionary) -> void:
+    _dismiss_beat_ring()
+    _modal_open = true
+    _cancel_story()
+    _reset_touch_joystick()
+    _shop_scrim.visible = true
+    _shop_card.visible = true
+    _fit_layout()
+    _clear(_shop_content)
+    var heading := HBoxContainer.new()
+    _shop_content.add_child(heading)
+    var title := _label("Peddle’s cozy cart ♥", 28, Color("#ffe49b"))
+    title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    heading.add_child(title)
+    heading.add_child(_label("✦ %d to spend" % int(state.get("sparkles", 0)), 22, Color("#ffe987")))
+    _shop_content.add_child(_label("Everything helps all by itself. Warm tea heals you now. Pick up to 3 charms + 2 lantern songs.", 14, Color("#dce9c4")))
+    _shop_content.add_child(_separator())
+
+    var scroll := ScrollContainer.new()
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    _shop_content.add_child(scroll)
+    var list := VBoxContainer.new()
+    list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    list.add_theme_constant_override("separation", 7)
+    scroll.add_child(list)
+
+    list.add_child(_section_label("1 · WARM TEA — DRINK NOW ♥"))
+    # Spending sparkles on tea while already warm used to be a silent no-op
+    # purchase: the button was live, the price was charged, and nothing
+    # happened. Offer it only when it can actually do something, and say why.
+    var warmth_full := float(state.get("hp", 0.0)) >= float(state.get("hp_max", 1.0))
+    for charm: Dictionary in BeautyContent.CHARMS:
+        if String(charm["key"]) != "tea":
+            continue
+        var tea_button := _shop_item(charm, int(state.get("sparkles", 0)), false, not warmth_full, false)
+        if warmth_full:
+            tea_button.tooltip_text = "You are warm as a toast already — keep these sparkles for a charm ♥"
+        tea_button.pressed.connect(func(): buy_requested.emit("tea"))
+        list.add_child(tea_button)
+
+    list.add_child(_section_label("2 · COZY CHARMS — PICK UP TO 3 ♥"))
+    var owned: Dictionary = state.get("owned", {})
+    var equipped: Dictionary = state.get("charms", {})
+    for charm: Dictionary in BeautyContent.CHARMS:
+        var key := String(charm["key"])
+        if key == "tea":
+            continue
+        if bool(owned.get(key, false)):
+            var toggle := _shop_item(charm, int(state.get("sparkles", 0)), bool(equipped.get(key, false)), true, true)
+            toggle.pressed.connect(func(): charm_equip_requested.emit(key))
+            list.add_child(toggle)
+        else:
+            var buy := _shop_item(charm, int(state.get("sparkles", 0)), false, true, false)
+            buy.pressed.connect(func(): buy_requested.emit(key))
+            list.add_child(buy)
+
+    list.add_child(_section_label("3 · LANTERN SONGS — PICK UP TO 2 ♥"))
+    var stanzas: Dictionary = state.get("stanzas", {})
+    for stanza: Dictionary in BeautyContent.STANZAS:
+        var key := String(stanza["key"])
+        var toggle := _shop_item(stanza, 0, bool(stanzas.get(key, false)), true, true)
+        toggle.pressed.connect(func(): stanza_equip_requested.emit(key))
+        list.add_child(toggle)
+
+    list.add_child(_section_label("4 · MOTE’S HUM — PICK ONE ♥"))
+    var verse: Dictionary = state.get("mote_verse", {})
+    for option: Dictionary in BeautyContent.MOTE_VERSES:
+        var key := String(option["key"])
+        var selected := String(verse.get("key", "")) == key
+        var toggle := _shop_item(option, 0, selected, true, true)
+        toggle.pressed.connect(func(): mote_verse_requested.emit(key))
+        list.add_child(toggle)
+
+    _shop_content.add_child(_centered_button("♥  Done — back to the walk", true, func(): close_shop()))
+    _fit_layout()
+    _focus_first_enabled(_shop_content)
+
+func show_journal(meta: Dictionary, facts_learned: Array, stickers: Array) -> void:
+    _dismiss_beat_ring()
+    _modal_open = true
+    _cancel_story()
+    _reset_touch_joystick()
+    _shop_scrim.visible = true
+    _shop_card.visible = true
+    _fit_layout()
+    _clear(_shop_content)
+    _shop_content.add_child(_label("Mote’s memory book ♥", 30, Color("#ffe49b")))
+    _shop_content.add_child(_label("Fun facts and stickers you collected. Just for smiles — never a test.", 14, Color("#dce9c4")))
+    _shop_content.add_child(_separator())
+    var scroll := ScrollContainer.new()
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    _shop_content.add_child(scroll)
+    var list := VBoxContainer.new()
+    list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    list.add_theme_constant_override("separation", 9)
+    scroll.add_child(list)
+    list.add_child(_section_label("FUN FACTS YOU FOUND · %d ♥" % facts_learned.size()))
+    if facts_learned.is_empty():
+        list.add_child(_label("No facts yet. Level up gently or soothe a curious wisp; Mote will share one.", 16, Color("#eee8c8")))
+    else:
+        for index in range(facts_learned.size()):
+            list.add_child(_label("%02d  ·  %s" % [index + 1, facts_learned[index]], 16, Color("#fff0c8")))
+    list.add_child(_section_label("YOUR STICKERS ♥"))
+    if stickers.is_empty():
+        list.add_child(_label("First Nap is waiting somewhere ahead. It is not a prize cup; it is simply a little proof you wandered kindly.", 16, Color("#eee8c8")))
+    else:
+        for sticker in stickers:
+            list.add_child(_label("✦ " + String(BeautyContent.STICKERS.get(sticker, sticker)), 16, Color("#ffe8a2")))
+    list.add_child(_section_label("YOUR KINDNESS SO FAR ♥"))
+    list.add_child(_label("Walks: %d    Deepest floor: %d    Wisps hugged home: %d    Dragons tucked in: %d" % [int(meta.get("runs", 0)), int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0)), int(meta.get("dragons_sung", 0))], 16, Color("#dce9c4")))
+    _shop_content.add_child(_centered_button("♥  Close my book", true, func(): close_journal()))
+    _fit_layout()
+    _focus_first_enabled(_shop_content)
+
+func show_settings(settings: Dictionary) -> void:
+    _dismiss_beat_ring()
+    _settings = settings.duplicate(true)
+    _modal_open = true
+    _cancel_story()
+    _reset_touch_joystick()
+    _shop_scrim.visible = true
+    _shop_card.visible = true
+    _fit_layout()
+    _clear(_shop_content)
+    _shop_content.add_child(_label("Make it yours ♥", 30, Color("#ffe49b")))
+    _shop_content.add_child(_label("Cozy choices. Change anything, anytime. Leaving is always okay.", 14, Color("#dce9c4")))
+    _shop_content.add_child(_separator())
+    var scroll := ScrollContainer.new()
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    _shop_content.add_child(scroll)
+    var list := VBoxContainer.new()
+    list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    list.add_theme_constant_override("separation", 8)
+    scroll.add_child(list)
+
+    var motion := CheckButton.new()
+    motion.text = "Still forest — calm decorative motion (walk stays readable)"
+    motion.button_pressed = bool(_settings.get("reduced_motion", false))
+    motion.toggled.connect(func(value):
+        _settings["reduced_motion"] = value
+        _emit_settings()
+    )
+    list.add_child(motion)
+    list.add_child(_slider_row("Text size", "text_scale", 0.75, 2.0, 0.05, "%d%%", 100.0))
+    var contrast := CheckButton.new()
+    contrast.text = "High-contrast pockets and journal"
+    contrast.button_pressed = bool(_settings.get("high_contrast", false))
+    contrast.toggled.connect(func(value):
+        _settings["high_contrast"] = value
+        _emit_settings()
+    )
+    list.add_child(contrast)
+    list.add_child(_section_label("COZY COMFORT ♥"))
+    list.add_child(_slider_row("Bump softness", "damage_taken", 0.25, 3.0, 0.05, "×%.2f"))
+    list.add_child(_slider_row("Extra song time", "rhythm_window", 0.25, 3.0, 0.05, "×%.2f"))
+    list.add_child(_slider_row("Wisp speed", "wisp_speed", 0.25, 3.0, 0.05, "×%.2f"))
+    list.add_child(_section_label("COZY SOUNDS ♥"))
+    list.add_child(_slider_row("Volume", "volume", 0.0, 1.0, 0.05, "%d%%", 100.0))
+    var mute := CheckButton.new()
+    mute.text = "Hush all sound"
+    mute.button_pressed = bool(_settings.get("muted", false))
+    mute.toggled.connect(func(value):
+        _settings["muted"] = value
+        _emit_settings()
+    )
+    list.add_child(mute)
+    var reset := _button("Restore gentle defaults", false)
+    reset.pressed.connect(func():
+        _settings = BeautyData.default_settings()
+        _emit_settings()
+        show_settings(_settings)
+    )
+    list.add_child(reset)
+    _shop_content.add_child(_centered_button("♥  Back to the walk", true, func(): close_settings()))
+    _fit_layout()
+    _focus_first_enabled(_shop_content)
+
+func _slider_row(title: String, key: String, minimum: float, maximum: float, step: float, format: String, display_scale: float = 1.0) -> HBoxContainer:
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 12)
+    var label := _label(title, 15, Color("#e8efd0"))
+    label.custom_minimum_size = Vector2(180, 0)
+    row.add_child(label)
+    var slider := HSlider.new()
+    slider.min_value = minimum
+    slider.max_value = maximum
+    slider.step = step
+    slider.value = float(_settings.get(key, minimum))
+    slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    row.add_child(slider)
+    var value_label := _label(format % (float(_settings.get(key, minimum)) * display_scale), 14, Color("#ffe69a"))
+    value_label.custom_minimum_size = Vector2(70, 0)
+    value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+    row.add_child(value_label)
+    slider.value_changed.connect(func(value):
+        _settings[key] = value
+        if format == "%d%%":
+            value_label.text = format % int(value * display_scale)
+        else:
+            value_label.text = format % value
+        _emit_settings()
+    )
+    return row
+
+func close_shop() -> void:
+    _shop_scrim.visible = false
+    _shop_card.visible = false
+    _modal_open = false
+    shop_closed.emit()
+
+func close_journal() -> void:
+    _shop_scrim.visible = false
+    _shop_card.visible = false
+    _modal_open = false
+    journal_closed.emit()
+
+func close_settings() -> void:
+    _shop_scrim.visible = false
+    _shop_card.visible = false
+    _modal_open = false
+    settings_closed.emit()
+
+func close_panels() -> void:
+    _shop_scrim.visible = false
+    _shop_card.visible = false
+    _overlay_scrim.visible = false
+    _overlay_card.visible = false
+    _modal_open = false
+    _beat_ring.visible = false
+    _cancel_story()
+    _reset_touch_joystick()
+
+func _shop_item(item: Dictionary, sparkles: int, selected: bool, enabled: bool, is_owned: bool) -> Button:
+    var key := String(item.get("key", ""))
+    var price := int(item.get("price", 0))
+    var status := "♥ WEARING" if selected else ("in pocket — tap to wear" if is_owned else ("take for ✦ %d" % price if price > 0 else "try it on"))
+    var price_text := "✦ %d" % price if price > 0 else "free gift"
+    var button := Button.new()
+    button.text = "%s  ·  %s\n%s\n%s" % [String(item.get("name", key)), price_text, String(item.get("description", "")), status]
+    button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+    button.custom_minimum_size = Vector2(0, 78)
+    if is_owned and not selected:
+        button.tooltip_text = "%s — already yours. Tap to wear it." % String(item.get("description", ""))
+    elif selected:
+        button.tooltip_text = "%s — wearing it now. Tap to rest it." % String(item.get("description", ""))
+    elif price > 0 and sparkles < price:
+        button.tooltip_text = "You need %d sparkles — soothe %d more wisp%s. It will keep. ♥" % [price, price - sparkles, "" if price - sparkles == 1 else "s"]
+    else:
+        button.tooltip_text = String(item.get("description", ""))
+    button.disabled = not enabled or (not is_owned and price > 0 and sparkles < price)
+    button.add_theme_stylebox_override("normal", _button_style(Color(0.14, 0.28, 0.18, 0.92), Color("#8abf75") if selected else Color("#d8c27c"), 12))
+    button.add_theme_stylebox_override("hover", _button_style(Color(0.22, 0.39, 0.23, 0.98), Color("#ffe69b"), 12))
+    button.add_theme_stylebox_override("pressed", _button_style(Color(0.10, 0.21, 0.13, 1.0), Color("#fff0b0"), 12))
+    button.add_theme_stylebox_override("disabled", _button_style(Color(0.12, 0.18, 0.13, 0.55), Color("#75836d"), 12))
+    return button

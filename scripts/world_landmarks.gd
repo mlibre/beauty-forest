@@ -1,0 +1,221 @@
+class_name WorldLandmarks
+extends WorldScenery
+
+## Objective landmarks built into every floor: the stairwell, Peddle's cart, the
+## wishing pool and the forest sign. Placement rules (farthest room, pool never
+## on the stair) are resolved in _build_clearings.
+
+func _build_clearings() -> void:
+    var rooms: Array = dungeon["rooms"]
+    var spawn_room: Dictionary = rooms[0]
+    var farthest_room: Dictionary = rooms[0]
+    var farthest_distance := -1.0
+    for room: Dictionary in rooms:
+        var distance := Vector2(room["cx"] - spawn_room["cx"], room["cy"] - spawn_room["cy"]).length()
+        if distance > farthest_distance:
+            farthest_distance = distance
+            farthest_room = room
+    stair_position = Vector3(farthest_room["cx"], 0, farthest_room["cy"])
+    _build_stairwell(stair_position)
+
+    if rooms.size() >= 2:
+        var merchant_room: Dictionary = rooms[1]
+        merchant_position = Vector3(merchant_room["cx"], 0, merchant_room["cy"] + 2.0)
+        _build_merchant(merchant_position)
+
+    var pool_room: Dictionary = rooms[rooms.size() - 1]
+    if pool_room == farthest_room and rooms.size() >= 2:
+        for candidate: Dictionary in rooms:
+            if candidate != farthest_room:
+                pool_room = candidate
+                break
+    var pool_position := Vector3(pool_room["cx"] - 1.5, 0.02, pool_room["cy"] - 1.3)
+    if pool_room == farthest_room:
+        pool_position = Vector3(pool_room["cx"] + 2.0, 0.02, pool_room["cy"] + 2.0)
+    _build_wishing_pool(pool_position)
+    _build_sign(Vector3(float(spawn_room["x"]) + 1.0, 0, float(spawn_room["y"]) + float(spawn_room["h"]) - 1.0))
+
+func _build_stairwell(world_position: Vector3) -> void:
+    var stairwell := Node3D.new()
+    stairwell.name = "Stairwell"
+    stairwell.position = world_position
+    add_child(stairwell)
+    for step in range(5):
+        var step_mesh := MeshInstance3D.new()
+        var box := BoxMesh.new()
+        box.size = Vector3(2.3, 0.18, 0.52)
+        step_mesh.mesh = box
+        step_mesh.material_override = _pbr(Color("#d6bd7d").darkened(step * 0.025), 0.90)
+        step_mesh.position = Vector3(0, 0.09 + float(step) * 0.11, 0.70 - float(step) * 0.28)
+        step_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+        stairwell.add_child(step_mesh)
+    var arch := MeshInstance3D.new()
+    var arch_mesh := TorusMesh.new()
+    arch_mesh.inner_radius = 1.05
+    arch_mesh.outer_radius = 1.30
+    arch_mesh.rings = 42
+    arch_mesh.ring_segments = 10
+    arch.mesh = arch_mesh
+    arch.material_override = _emissive(Color("#bdf0bd"), 2.0)
+    arch.position = Vector3(0, 0.20, 0.50)
+    arch.rotation.x = PI * 0.5
+    stairwell.add_child(arch)
+    var glow := MeshInstance3D.new()
+    var disk := CylinderMesh.new()
+    disk.top_radius = 1.0
+    disk.bottom_radius = 1.0
+    disk.height = 0.03
+    glow.mesh = disk
+    glow.material_override = _emissive(Color("#9ee6a9"), 1.5)
+    glow.position = Vector3(0, 0.125, 1.18)
+    stairwell.add_child(glow)
+    var light := OmniLight3D.new()
+    light.light_color = Color("#b9f0bd")
+    light.light_energy = 1.15
+    light.omni_range = 5.5
+    light.position = Vector3(0, 0.8, 0.4)
+    stairwell.add_child(light)
+
+func _build_merchant(world_position: Vector3) -> void:
+    merchant_visual = Node3D.new()
+    merchant_visual.name = "Peddle"
+    merchant_visual.position = world_position
+    add_child(merchant_visual)
+    var body := Node3D.new()
+    body.name = "MerchantBody"
+    merchant_visual.add_child(body)
+    _merchant_body = body
+    var cart := MeshInstance3D.new()
+    var cart_mesh := BoxMesh.new()
+    cart_mesh.size = Vector3(1.65, 0.72, 1.05)
+    cart.mesh = cart_mesh
+    cart.material_override = _pbr(Color("#b86f50"), 0.82)
+    cart.position = Vector3(0, 0.66, 0)
+    body.add_child(cart)
+    for side in [-1.0, 1.0]:
+        var wheel := MeshInstance3D.new()
+        var wheel_mesh := TorusMesh.new()
+        wheel_mesh.inner_radius = 0.28
+        wheel_mesh.outer_radius = 0.43
+        wheel.mesh = wheel_mesh
+        wheel.material_override = _pbr(Color("#72503a"), 0.90)
+        wheel.position = Vector3(side * 0.88, 0.38, 0)
+        wheel.rotation.y = PI * 0.5
+        body.add_child(wheel)
+    var canopy := MeshInstance3D.new()
+    var canopy_mesh := CylinderMesh.new()
+    canopy_mesh.top_radius = 0.18
+    canopy_mesh.bottom_radius = 1.30
+    canopy_mesh.height = 0.72
+    canopy.mesh = canopy_mesh
+    canopy.material_override = _pbr(Color("#f3c66f"), 0.78)
+    canopy.position = Vector3(0, 1.85, 0)
+    body.add_child(canopy)
+    for x in [-0.68, 0.68]:
+        var post := MeshInstance3D.new()
+        var post_mesh := CylinderMesh.new()
+        post_mesh.top_radius = 0.035
+        post_mesh.bottom_radius = 0.045
+        post_mesh.height = 1.25
+        post.mesh = post_mesh
+        post.material_override = _pbr(Color("#765238"), 0.90)
+        post.position = Vector3(x, 1.46, 0.45)
+        body.add_child(post)
+    var peddle := MeshInstance3D.new()
+    peddle.mesh = SphereMesh.new()
+    peddle.mesh.radius = 0.34
+    peddle.mesh.height = 0.68
+    peddle.material_override = _emissive(Color("#fff0a4"), 2.0)
+    peddle.position = Vector3(0, 2.72, 0)
+    body.add_child(peddle)
+    for side in [-1.0, 1.0]:
+        var eye := MeshInstance3D.new()
+        eye.mesh = SphereMesh.new()
+        eye.mesh.radius = 0.055
+        eye.mesh.height = 0.10
+        eye.material_override = _pbr(Color("#493a2e"), 0.62)
+        eye.position = Vector3(side * 0.11, 2.78, 0.31)
+        body.add_child(eye)
+    var light := OmniLight3D.new()
+    light.light_color = Color("#ffe5a0")
+    light.light_energy = 0.80
+    light.omni_range = 5.0
+    light.position = Vector3(0, 2.4, 0)
+    merchant_visual.add_child(light)
+
+func _build_wishing_pool(world_position: Vector3) -> void:
+    var pool := Node3D.new()
+    pool.name = "WishingPool"
+    pool.position = world_position
+    add_child(pool)
+    var water := MeshInstance3D.new()
+    var water_mesh := CylinderMesh.new()
+    water_mesh.top_radius = 1.22
+    water_mesh.bottom_radius = 1.22
+    water_mesh.height = 0.035
+    water_mesh.radial_segments = 40
+    water.mesh = water_mesh
+    var water_material := ShaderMaterial.new()
+    water_material.shader = load("res://shaders/forest_water.gdshader")
+    water_material.set_shader_parameter("shallow_color", Color("#79d8c4"))
+    water_material.set_shader_parameter("deep_color", Color("#3e9e93"))
+    # The water shader animates from `time_seconds`; without a driver the pool
+    # was a still, banded disc instead of drifting light.
+    _water_material = water_material
+    water_mesh.material = water_material
+    water.position = Vector3(0, 0.04, 0)
+    pool.add_child(water)
+    var rim := MeshInstance3D.new()
+    var rim_mesh := TorusMesh.new()
+    rim_mesh.inner_radius = 1.15
+    rim_mesh.outer_radius = 1.38
+    rim_mesh.rings = 42
+    rim.mesh = rim_mesh
+    rim.material_override = _pbr(Color("#c7b47d"), 0.94)
+    rim.position = Vector3(0, 0.08, 0)
+    pool.add_child(rim)
+    for stone_index in range(6):
+        var angle := TAU * float(stone_index) / 6.0
+        var stone := MeshInstance3D.new()
+        var sphere := SphereMesh.new()
+        sphere.radius = 0.22
+        sphere.height = 0.36
+        stone.mesh = sphere
+        stone.material_override = _pbr(Color("#9a8c6e").lerp(Color(region["flower"]), 0.15), 0.96)
+        stone.scale = Vector3(1.0, 0.72, 1.0)
+        stone.position = Vector3(cos(angle) * 1.28, 0.18, sin(angle) * 1.28)
+        pool.add_child(stone)
+
+func _build_sign(world_position: Vector3) -> void:
+    var sign := Node3D.new()
+    sign.name = "ForestSign"
+    sign.position = world_position
+    sign.rotation.y = _rng.randf_range(-0.35, 0.35)
+    add_child(sign)
+    var post := MeshInstance3D.new()
+    var post_mesh := CylinderMesh.new()
+    post_mesh.top_radius = 0.07
+    post_mesh.bottom_radius = 0.09
+    post_mesh.height = 1.4
+    post.mesh = post_mesh
+    post.material_override = _pbr(Color("#7d5538"), 0.9)
+    post.position = Vector3(0, 0.7, 0)
+    sign.add_child(post)
+    var board := MeshInstance3D.new()
+    var board_mesh := BoxMesh.new()
+    board_mesh.size = Vector3(1.65, 0.72, 0.12)
+    board.mesh = board_mesh
+    board.material_override = _pbr(Color("#c99558"), 0.88)
+    board.position = Vector3(0, 1.35, 0)
+    sign.add_child(board)
+    var label := Label3D.new()
+    label.text = String(BeautyContent.random_choice(BeautyContent.SIGNS))
+    label.font_size = 22
+    label.pixel_size = 0.006
+    label.modulate = Color("#5c3d2c")
+    label.outline_size = 0
+    label.position = Vector3(0, 1.35, 0.071)
+    label.rotation.y = 0.0
+    label.width = 250
+    label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    sign.add_child(label)
