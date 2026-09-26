@@ -32,9 +32,9 @@ func update_hud(state: Dictionary) -> void:
     _sparkle_label.text = "✦ %d sparkles to spend" % int(state.get("sparkles", 0))
     var charm_names: Array = state.get("charm_names", [])
     if charm_names.is_empty():
-        _charm_label.text = "Charms 0/3: none yet — Peddle can help ♥"
+        _charm_label.text = "Charms 0/%d: none yet — Peddle can help ♥" % BeautyContent.MAX_CHARMS
     else:
-        _charm_label.text = "Charms %d/3: %s" % [charm_names.size(), ", ".join(charm_names)]
+        _charm_label.text = "Charms %d/%d: %s" % [charm_names.size(), BeautyContent.MAX_CHARMS, ", ".join(charm_names)]
     _objective_label.text = String(state.get("objective", "Follow the glowing stair ↓"))
     _hint_label.text = String(state.get("hint", "Just wander — your lantern sings alone ♥"))
     _mote_label.text = "“%s”" % String(state.get("mote_line", "The forest keeps your place warm."))

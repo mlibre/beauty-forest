@@ -192,7 +192,7 @@ func show_shop(state: Dictionary) -> void:
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     heading.add_child(title)
     heading.add_child(_label("✦ %d to spend" % int(state.get("sparkles", 0)), 22, Color("#ffe987")))
-    _shop_frame.add_child(_label("Everything helps all by itself. Warm tea heals you now. Pick up to 3 charms + 2 lantern songs.", 14, Color("#dce9c4")))
+    _shop_frame.add_child(_label("Everything helps all by itself. Warm tea heals you now. Pick up to %d charms + %d lantern songs." % [BeautyContent.MAX_CHARMS, BeautyContent.MAX_STANZAS], 14, Color("#dce9c4")))
     _shop_frame.add_child(_separator())
     var list := _panel_list(7)
 
@@ -210,7 +210,7 @@ func show_shop(state: Dictionary) -> void:
         tea_button.pressed.connect(func(): buy_requested.emit("tea"))
         list.add_child(tea_button)
 
-    list.add_child(_section_label("2 · COZY CHARMS — PICK UP TO 3 ♥"))
+    list.add_child(_section_label("2 · COZY CHARMS — PICK UP TO %d ♥" % BeautyContent.MAX_CHARMS))
     var owned: Dictionary = state.get("owned", {})
     var equipped: Dictionary = state.get("charms", {})
     for charm: Dictionary in BeautyContent.CHARMS:
@@ -226,7 +226,7 @@ func show_shop(state: Dictionary) -> void:
             buy.pressed.connect(func(): buy_requested.emit(key))
             list.add_child(buy)
 
-    list.add_child(_section_label("3 · LANTERN SONGS — PICK UP TO 2 ♥"))
+    list.add_child(_section_label("3 · LANTERN SONGS — PICK UP TO %d ♥" % BeautyContent.MAX_STANZAS))
     var stanzas: Dictionary = state.get("stanzas", {})
     for stanza: Dictionary in BeautyContent.STANZAS:
         var key := String(stanza["key"])
