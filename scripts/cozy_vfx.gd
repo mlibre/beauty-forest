@@ -72,6 +72,17 @@ static func heart_burst(parent: Node, world_position: Vector3) -> void:
     burst(parent, world_position, Color("#ff9fb4"), 18, 1.8, 0.8)
     ring(parent, world_position + Vector3.UP * 0.12, Color("#ffd1df"), 1.5, 0.55)
 
+static func soothe_celebration(parent: Node, world_position: Vector3, big: bool) -> void:
+    ## The layered thank-you for a guided wisp: warm petals plus a soft ring.
+    ## One call, still disposable, still never touches the camera.
+    ## world_position is the wisp's ground position; heights match the old
+    ## burst (0.8 x scale) and ring (0.15) placement.
+    var lift := 2.8 if big else 0.8
+    var color := Color("#ffe49a") if big else Color("#fff0a5")
+    burst(parent, world_position + Vector3.UP * lift, color, 38 if big else 24, 2.7, 1.15)
+    ring(parent, world_position + Vector3.UP * 0.15, color, 2.8 if big else 1.8, 0.72)
+    burst(parent, world_position + Vector3.UP * (lift + 0.4), Color("#ffd1e8"), 10 if big else 6, 1.1, 0.8)
+
 static func pulse_ring(parent: Node, world_position: Vector3, color: Color, final_radius: float = 2.4) -> void:
     ring(parent, world_position + Vector3.UP * 0.16, color, final_radius, 0.52)
 

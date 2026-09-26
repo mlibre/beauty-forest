@@ -92,6 +92,7 @@ const WISP_TYPES := {
 const NICKNAMES := [
     "Barnaby", "Petunia", "Gerald", "Moira", "Clive", "Sprocket", "Waffles", "Ingrid",
     "Douglas", "Pip", "Margaret", "Kevin", "Biscuit", "Tansy", "Wobble", "Posy", "Crumpet", "Fig",
+    "Plum", "Doodle", "Mabel", "Puddles", "Thimble", "Sorrel",
 ]
 
 const REGIONS := [
@@ -130,6 +131,8 @@ const FLOOR_MODIFIERS := [
     {"name": "Dewbright morning", "description": "thank-you hearts drift gently toward you", "heart_drift": true},
     {"name": "Kind updrafts", "description": "updrafts carry song-notes 20% farther", "note_range": 1.20},
     {"name": "Bouncy caps", "description": "mushroom caps bounce hearts toward you", "heart_drift": true},
+    {"name": "Firefly evening", "description": "fireflies hum along: song-notes fly a little farther", "note_range": 1.15},
+    {"name": "Honeyed air", "description": "everything feels possible: richer souls and warmer hearts", "soul": 1.20, "heart_rate": 0.15},
 ]
 
 const CHARMS := [
@@ -191,6 +194,14 @@ const FACTS := [
     "Cows have best friends and get stressed when separated.",
     "Butterflies taste with their feet.",
     "Hot water can freeze faster than cold water under the right conditions.",
+    "Fireflies talk to each other in flashes — each species has its own Morse code.",
+    "A single teaspoon of honey is the life's work of about twelve bees.",
+    "Otters hold hands while sleeping so they don't drift apart — twice as cozy as rumored.",
+    "Mushrooms breathe out a little mist every night, like tiny forest kettles.",
+    "A snail can sleep for three years when the weather is unkind. Relatable.",
+    "Dandelion seeds can ride the wind for miles on their tiny parachutes.",
+    "Bees can recognize human faces, and they gossip about the kind ones.",
+    "Trees share sugar with their seedlings through underground fungal post.",
 ]
 
 const MOTE_LINES := [
@@ -210,6 +221,12 @@ const MOTE_LINES := [
     "Somewhere a dragon is snoring in your honor. Probably.",
     "No rush, no fuss. The stairs will wait. They are stairs.",
     "I packed snacks. They are made of light. Zero crumbs.",
+    "That wisp just waved at you. With its whole body. Charming.",
+    "Your lantern is humming in a major key today. Fancy.",
+    "I asked a mushroom for directions. It said ‘down, but prettily’.",
+    "Somewhere, a pebble is cheering for you. Quietly. Like a pebble.",
+    "You walk like someone who waves at trees. The trees noticed.",
+    "Deep breath in… smell that? That is Tuesday. Cozy Tuesday.",
 ]
 
 const SOOTHE_LINES := [
@@ -219,6 +236,8 @@ const SOOTHE_LINES := [
     "That soothe was softer than a dandelion sneeze.",
     "The lantern sang, the wisp sighed happily. Teamwork.",
     "Guided home! The forest applauds, quietly, with leaves.",
+    "That wisp is telling everyone about you. In glows.",
+    "Softer than soup! And twice as warming.",
 ]
 
 const DESCEND_LINES := [
@@ -227,6 +246,8 @@ const DESCEND_LINES := [
     "Mind the first step. It is dramatic and loves attention.",
     "Deeper still! The cozy thickens most beautifully.",
     "I can smell adventure. Or soup. Either way, onward.",
+    "Another floor, another blanket of moss. The forest shows off for you.",
+    "Careful, the stairs are showing off their glow again.",
 ]
 
 const FEELINGS := {
@@ -264,6 +285,9 @@ const SIGNS := [
     "Sing softly. The walls hum along.",
     "Kevin the rock was here. Still reliable.",
     "No grumps past this point, by decree.",
+    "Honk softly if you love lanterns.",
+    "This way to the coziest moss. All ways, actually.",
+    "Wisps guided home today: too many to count, happily.",
 ]
 
 const STICKERS := {

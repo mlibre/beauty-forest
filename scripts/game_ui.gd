@@ -22,9 +22,13 @@ func update_hud(state: Dictionary) -> void:
     var xp_next := maxi(1, int(state.get("xp_next", 10)))
     _health_label.text = "♥ Warmth  %d / %d" % [hp, hp_max]
     _health_bar.max_value = hp_max
-    _health_bar.value = hp
+    if _health_shown < 0.0 or _reduced_motion:
+        _health_bar.value = hp
+    _health_shown = float(hp)
     _xp_bar.max_value = xp_next
-    _xp_bar.value = xp
+    if _xp_shown < 0.0 or _reduced_motion:
+        _xp_bar.value = xp
+    _xp_shown = float(xp)
     _floor_label.text = "Floor %d — %s" % [int(state.get("floor", 1)), String(state.get("region_name", "Sunlit Roots"))]
     _region_label.text = String(state.get("forecast", "A warm path through the roots"))
     _level_label.text = "Level %d  ·  %d / %d kindness to next gift" % [int(state.get("level", 1)), xp, xp_next]

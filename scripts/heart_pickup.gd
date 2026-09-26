@@ -16,6 +16,7 @@ var _visual: Node3D
 var _light: OmniLight3D
 var _collected := false
 var _expired := false
+var _age := 0.0
 
 func setup(world_position: Vector3, amount: float, pickup_mult: float, should_magnet: bool) -> void:
     position = world_position
@@ -104,8 +105,17 @@ func _process(delta: float) -> void:
         return
     _visual.rotation.y += delta * 1.8
     _visual.position.y = 0.62 + sin(Time.get_ticks_msec() * 0.003 + _seed) * 0.12
-    if lifetime < 3.0:
+    _age += delta
+    if _age < 0.4:
+        # Fresh hearts pop in like a cork: purely visual, pickup shape is live.
+        var eased := 1.0 - pow(1.0 - clampf(_age / 0.4, 0.0, 1.0), 3.0)
+        _visual.scale = Vector3.ONE * lerpf(0.3, 1.0, eased)
+    elif lifetime < 3.0:
         _visual.scale = Vector3.ONE * maxf(0.05, lifetime / 3.0)
+    else:
+        _visual.scale = Vector3.ONE
+    if _light:
+        _light.light_energy = 0.42 + sin(Time.get_ticks_msec() * 0.005 + _seed) * 0.08
     if magnet and is_instance_valid(_player):
         var to_player := _player.global_position + Vector3.UP * 0.55 - global_position
         var distance := to_player.length()

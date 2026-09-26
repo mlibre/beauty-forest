@@ -226,6 +226,10 @@ func _start_run(start_floor: int, keep_progress: bool = false) -> void:
     _mote_line_timer = 28.0
     _load_floor(maxi(1, start_floor), false)
     ui.add_log("Mote: “%s”" % _mote_line)
+    if not keep_progress and int(meta.get("runs", 0)) > 1:
+        # A returning visit, never a nudge: no counts, no pressure, just the
+        # forest remembering you fondly.
+        ui.show_toast("Welcome back ♥ The forest kept your spot warm.")
 
 func _touch_dash() -> void:
     if mode != Mode.PLAYING or player == null or not is_instance_valid(player):
@@ -261,11 +265,11 @@ func _resume_game() -> void:
 
 func _on_start_requested(style_key: String) -> void:
     selected_style = style_key
+    meta["style"] = style_key
     _start_run(1)
 
 func _on_restart_requested(continue_deeper: bool = false) -> void:
     var next_floor := floor_number + 1 if continue_deeper else 1
-    meta["style"] = style_key
     # "Wander deeper" keeps the walk (and its loadout) going; "a fresh walk"
     # starts over on purpose.
     _start_run(next_floor, continue_deeper)

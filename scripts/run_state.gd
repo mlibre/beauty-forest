@@ -93,6 +93,8 @@ var _feeling_round := 1
 var _feeling_hits := 0
 var _feeling_rest := 0
 var _quitting := false
+var _soothes_this_floor := 0
+var _mote_joy := 0.0
 
 func _gameplay_controls_enabled() -> bool:
     return mode == Mode.PLAYING and not ending_pending
@@ -259,6 +261,7 @@ func _gain_xp(amount: int) -> void:
         _learn_fact("A level-up lantern fact")
     if levels > 0:
         CozyVFX.burst(world, player.global_position + Vector3.UP * 1.1, Color("#ffe99a"), 44, 2.0, 1.25)
+        CozyVFX.ring(world, player.global_position + Vector3.UP * 0.2, Color("#ffe99a"), 3.2, 0.9)
         audio.play_level()
         ui.show_toast("✦ Level %d — %d new fact%s in the Atlas!" % [level, levels, "" if levels == 1 else "s"])
         _celebrate(1.0)

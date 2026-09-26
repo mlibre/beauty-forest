@@ -28,6 +28,7 @@ var _hurt_time := 0.0
 var _seed := 0.0
 var _orbit_approach := true
 var _visual: Node3D
+var _spawn_pop := 1.0
 var _body_material: ShaderMaterial
 var _halo_material: StandardMaterial3D
 var _halo: MeshInstance3D
@@ -61,6 +62,7 @@ func setup(p_type_key: String, p_floor_number: int, p_is_big: bool = false, p_fe
         display_name = "%s \"%s\"" % [type_key, nickname]
     curious = randf() < 0.07
     _boss_window = 1.0 if is_big else 0.0
+    _spawn_pop = 0.0
     _build()
 
 func _build() -> void:
@@ -276,6 +278,12 @@ func tick_behavior(delta: float, player_position: Vector3, aggro_range: float, s
         var bob_scale := 1.0
         if _hurt_time > 0.0:
             bob_scale += _hurt_time * 0.17
+        # New arrivals pop in like a bubble finding its shape: purely visual,
+        # movement and contact grace are untouched.
+        if _spawn_pop < 1.0:
+            _spawn_pop = minf(1.0, _spawn_pop + delta * 2.8)
+            var eased := 1.0 - pow(1.0 - _spawn_pop, 3.0)
+            bob_scale *= lerpf(0.25, 1.0, eased)
         _visual.scale = Vector3(bob_scale, bob_scale, bob_scale)
     if _halo and not is_big and not reduced_motion:
         _halo.rotation.y += delta * 0.9
@@ -283,6 +291,10 @@ func tick_behavior(delta: float, player_position: Vector3, aggro_range: float, s
         _body_material.set_shader_parameter("glow", (0.34 if shielded else 0.10) + _hurt_time * 0.20)
     if _aura_material:
         var aura_alpha := 0.09 + (0.06 if shielded else 0.0) + (0.03 if is_feeling else 0.0)
+        if curious and not reduced_motion:
+            # A curious wisp's glow twinkles faintly, like it is already
+            # excited about the fact it cannot wait to share.
+            aura_alpha += 0.025 + 0.025 * sin(Time.get_ticks_msec() * 0.006 + _seed)
         _aura_material.albedo_color.a = aura_alpha
     if _big_light:
         _big_light.light_energy = (2.2 if not is_feeling else 1.7) * (0.94 + sin(Time.get_ticks_msec() * 0.002 + _seed) * 0.06)

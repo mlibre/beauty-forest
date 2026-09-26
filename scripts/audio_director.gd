@@ -222,6 +222,18 @@ func play_pickup(index: int = 0) -> void:
     var tones: Array[float] = [523.25, 587.33, 659.25, 783.99, 880.0]
     play_tone(tones[posmod(index, tones.size())], 0.38, 0.085, 1)
 
+func play_soothe(index: int = 0, big: bool = false) -> void:
+    ## Each guided wisp sings the next step of a never-ending pentatonic
+    ## melody, so soothing a trail of wisps hums a little song by itself.
+    ## Very Big Wisps get a warm low harmony underneath, like the forest
+    ## humming along an octave down.
+    var melody: Array[float] = [523.25, 587.33, 659.25, 783.99, 880.0, 783.99, 659.25, 587.33]
+    var tone := melody[posmod(index, melody.size())]
+    play_tone(tone, 0.42, 0.075, 1)
+    play_tone(tone * 2.0, 0.30, 0.030, 1)
+    if big:
+        play_tone(tone * 0.5, 0.60, 0.050, 1)
+
 func play_hit() -> void:
     play_chord([220.0, 329.63], 0.20, 0.055, 0.28)
 

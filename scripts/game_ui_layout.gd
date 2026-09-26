@@ -244,6 +244,11 @@ func _fit_layout() -> void:
     # 360px buttons); clamp rows to what fits so small/portrait windows wrap
     # the text instead of pushing buttons off-screen.
     _refit_content(_overlay_content, _overlay_card)
+    # The panel frame owns the heading rows and the closing button directly —
+    # only the scrolling list lives deeper — so the frame itself must be refit
+    # too, or an unwrapped heading (the settings subtitle at 200% text) forces
+    # the whole card wider than the window. Recursion reaches the list inside.
+    _refit_content(_shop_frame, _shop_card)
     if is_instance_valid(_shop_scroll):
         _refit_content(_shop_scroll, _shop_card)
     _refit_content(_shop_content, _shop_card)
@@ -252,30 +257,6 @@ func _fit_layout() -> void:
     # it back off-screen.
     _fit_modal_card(_overlay_card)
     _fit_modal_card(_shop_card)
-
-    # Centre the card by ANCHOR and never write its position.
-    #
-    # The card's anchors all sit at the parent centre with
-    # GROW_DIRECTION_BOTH, so the engine re-derives the offsets from that anchor
-    # point on every size change and the card is centred whatever size it
-    # settles at. Two earlier attempts were both wrong in the same way: they
-    # computed an absolute `position` from a size that later changed. A
-    # ScrollContainer's vertical bar is a real child that only joins the tree
-    # once the list overflows, and then it widens the card by an amount that
-    # depends on the theme (measured 15-28px here) — so a position written
-    # before the bar existed left the card 4px off-centre, and no fixed
-    # allowance can predict it.
-    #
-    # Assigning a bare -size/2 instead (the original detached-node trick) parked
-    # the whole panel off-screen up-left, which is why every menu used to look
-    # broken at every resolution.
-    card.anchor_left = 0.5
-    card.anchor_top = 0.5
-    card.anchor_right = 0.5
-    card.anchor_bottom = 0.5
-    card.grow_horizontal = Control.GROW_DIRECTION_BOTH
-    card.grow_vertical = Control.GROW_DIRECTION_BOTH
-    card.reset_size()
 
 func _refit_content(container: Node, card: PanelContainer = null) -> void:
     if not is_instance_valid(container):
@@ -469,23 +450,32 @@ func _fit_modal_card(card: PanelContainer) -> void:
     )
     card.custom_minimum_size = card_size
     card.reset_size()
-    # Control.position is ABSOLUTE in parent coordinates once the control is in
-    # the tree, so the card is centred by subtracting half its size from the
-    # parent centre. (Assigning a bare -size/2 — the old detached-node trick —
-    # parked every panel off-screen up-left, which is why each menu used to look
-    # broken at every resolution.)
+    # Centre the card by ANCHOR and never write its position.
     #
-    # Centring on the card's CURRENT size is exact whenever it is measured. The
-    # one thing that used to invalidate it was a late size change: content that
-    # overflows vertically adds the ScrollContainer's vertical bar, which widens
-    # the card by ~8px a layout pass later and left a 1024x640 window's menu
-    # 4px off-centre. MODAL_SCROLLBAR_ALLOWANCE reserves that width up front, so
-    # the size no longer moves under the position.
-    card.position = parent_size * 0.5 - card.size * 0.5
-    # Safety net for a card that content forced wider than the window (200% text
-    # on a small window used to push it 152px off the left edge): keep it inside.
-    card.position.x = clampf(card.position.x, 0.0, maxf(0.0, parent_size.x - card.size.x))
-    card.position.y = clampf(card.position.y, 0.0, maxf(0.0, parent_size.y - card.size.y))
+    # The card's anchors all sit at the parent centre with
+    # GROW_DIRECTION_BOTH, so the engine re-derives the offsets from that
+    # anchor point on every size change and the card stays centred whatever
+    # size it settles at. Computing an absolute `position` from `card.size`
+    # here could only ever read a stale size: the ScrollContainer's vertical
+    # bar joins the tree a layout pass later and widens the card under a
+    # position that was already written, which left 1024x640 and 480x900
+    # windows several pixels off-centre.
+    card.anchor_left = 0.5
+    card.anchor_top = 0.5
+    card.anchor_right = 0.5
+    card.anchor_bottom = 0.5
+    card.offset_left = 0.0
+    card.offset_top = 0.0
+    card.offset_right = 0.0
+    card.offset_bottom = 0.0
+    card.grow_horizontal = Control.GROW_DIRECTION_BOTH
+    card.grow_vertical = Control.GROW_DIRECTION_BOTH
+    card.reset_size()
+    # Safety net for a card that content forced wider than the window (200%
+    # text on a small window used to push it 152px off the left edge): with
+    # anchor centring there is no position to clamp, but the requested size
+    # above already caps the card to the window, so only content minimums
+    # larger than the window itself can still overflow — symmetrically.
 
 func _show_overlay() -> void:
     _dismiss_beat_ring()

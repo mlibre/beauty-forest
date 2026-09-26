@@ -5,6 +5,14 @@ extends RunState
 ## player damage. The song ceremonies that share this state extend it in
 ## RunCeremonies; progression helpers live in RunState.
 
+## One soft hue per step of the lantern's round, mirroring the pentatonic arc
+## AudioDirector.play_soothe sings. A volley of notes reads as a little rainbow
+## arpeggio while staying pale enough for the sunlit grove.
+const NOTE_MELODY: Array[Color] = [
+    Color("#ffe7a4"), Color("#ffd1e8"), Color("#cdeaff"), Color("#e5d8ff"),
+    Color("#fff3b0"), Color("#d8f3c8"), Color("#ffdfc2"), Color("#f6e6b4"),
+]
+
 func _spawn_wisps() -> void:
     var count := mini(6 + floor_number * 2, 40)
     var occupied: Dictionary = {}
@@ -182,7 +190,8 @@ func _fire_song_note(target: Wisp) -> void:
     note.name = "HomingSongNote"
     world.add_child(note)
     var damage: float = round(attack * 0.8 * float(charm_effects.get("song_damage", 1.0)) * float(stanza_effects.get("song_damage", 1.0)))
-    note.setup(target, damage, float(stanza_effects.get("song_speed", 1.0)), float(stanza_effects.get("song_life", 0.0)) + float(verse_effects.get("song_life", 0.0)), Color("#ffe7a4"))
+    var note_color := NOTE_MELODY[int(meta.get("wisps_soothed", 0)) % NOTE_MELODY.size()]
+    note.setup(target, damage, float(stanza_effects.get("song_speed", 1.0)), float(stanza_effects.get("song_life", 0.0)) + float(verse_effects.get("song_life", 0.0)), note_color)
     note.position = player.global_position + Vector3.UP * 1.20
     var direction := target.global_position - note.global_position
     direction.y = 0.0
@@ -245,6 +254,9 @@ func _soothe_wisp(wisp: Wisp, distant: bool) -> void:
     wisp.soothed = true
     var was_big := wisp.is_big
     meta["wisps_soothed"] = int(meta.get("wisps_soothed", 0)) + 1
+    _soothes_this_floor += 1
+    _mote_joy = 1.0
+    audio.play_soothe(int(meta.get("wisps_soothed", 0)), was_big)
     if int(meta["wisps_soothed"]) >= 100:
         _award_sticker("century")
     if was_big:
@@ -252,9 +264,12 @@ func _soothe_wisp(wisp: Wisp, distant: bool) -> void:
     if wisp.is_feeling:
         _award_sticker("feeling_friend")
     sparkles += 3 if was_big else 1
-    var color := Color("#ffe49a") if was_big else Color(region["accent"])
-    CozyVFX.burst(world, wisp.global_position + Vector3.UP * (0.8 * wisp.visual_scale), color, 38 if was_big else 24, 2.7, 1.15)
-    CozyVFX.ring(world, wisp.global_position + Vector3.UP * 0.15, color, 2.8 if was_big else 1.8, 0.72)
+    CozyVFX.soothe_celebration(world, wisp.global_position, was_big)
+    if _soothes_this_floor > 0 and _soothes_this_floor % 6 == 0:
+        # A floor milestone, not a timer: no expiry, no pressure, just the
+        # forest noticing out loud every six guided wisps.
+        CozyVFX.burst(world, player.global_position + Vector3(0, 3.0, 0), Color(region["flower"]), 30, 1.1, 2.0)
+        ui.show_toast("Six guided home on this floor — the grove rustles happily. ♥")
     var farewell: Variant = wisp.feeling_farewell if not wisp.feeling_farewell.is_empty() else BeautyContent.random_choice(wisp.type_data.get("farewells", ["Thank you."]))
     ui.add_log("%s drifts home happily: “%s”" % [wisp.display_name, String(farewell)])
     if was_big:

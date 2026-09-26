@@ -11,6 +11,7 @@ var damage := 8.0
 var note_color := Color("#ffe6a0")
 var _velocity := Vector3.ZERO
 var _retarget_time := 0.0
+var _trail_tick := 0.0
 var _core: MeshInstance3D
 var _trail: MeshInstance3D
 
@@ -92,6 +93,16 @@ func _physics_process(delta: float) -> void:
         return
 
     global_position = next
+    # A sprinkle of crumbs behind each note so long flights read clearly
+    # across the grove. Tinted to match the note itself, so each step of the
+    # lantern's melody leaves its own color behind. Tiny, additive, and freed
+    # by CozyVFX itself.
+    _trail_tick -= delta
+    if _trail_tick <= 0.0:
+        _trail_tick = 0.12
+        var trail_parent := get_parent()
+        if trail_parent != null and trail_parent.is_inside_tree():
+            CozyVFX.trail_tick(trail_parent, global_position, note_color)
     if _core:
         _core.rotation.y += delta * 7.0
         _core.scale = Vector3.ONE * (1.0 + sin(Time.get_ticks_msec() * 0.018) * 0.08)

@@ -75,6 +75,10 @@ var _high_contrast := false
 var _text_scale := 1.0
 var _compact_hud := false
 var _time := 0.0
+## Eased HUD bar values. Labels snap instantly so numbers stay exact; the bars
+## glide toward them instead of jumping, which softens every bump and heal.
+var _health_shown := -1.0
+var _xp_shown := -1.0
 
 func _process(delta: float) -> void:
     if _root == null or _overlay_card == null:
@@ -85,12 +89,42 @@ func _process(delta: float) -> void:
         var breath := 1.0 + sin(_time * 1.8) * 0.012
         _overlay_card.scale = Vector2(breath, breath)
         _overlay_card.pivot_offset = _overlay_card.size * 0.5
+        # Menus stay alive: the scrim shimmers almost imperceptibly and the
+        # story card floats on its own breath. Scale/alpha only — no rect
+        # moves, so the responsive layout measurements keep holding.
+        if is_instance_valid(_overlay_scrim) and _overlay_scrim.visible:
+            _overlay_scrim.modulate = Color(1, 1, 1) * (0.97 + sin(_time * 1.1) * 0.03)
+        if is_instance_valid(_story_card) and _story_card.visible:
+            var story_breath := 1.0 + sin(_time * 2.1 + 1.3) * 0.008
+            _story_card.scale = Vector2(story_breath, story_breath)
+            _story_card.pivot_offset = _story_card.size * 0.5
+        if is_instance_valid(_shop_card) and _shop_card.visible:
+            var shop_breath := 1.0 + sin(_time * 1.6 + 0.6) * 0.006
+            _shop_card.scale = Vector2(shop_breath, shop_breath)
+            _shop_card.pivot_offset = _shop_card.size * 0.5
+    _ease_bar(_health_bar, _health_shown, delta)
+    _ease_bar(_xp_bar, _xp_shown, delta)
     if _minimap.is_visible_in_tree():
         _minimap.queue_redraw()
+
+func _ease_bar(bar: ProgressBar, target: float, delta: float) -> void:
+    if bar == null or not is_instance_valid(bar) or target < 0.0:
+        return
+    if _reduced_motion or is_equal_approx(bar.value, target):
+        bar.value = target
+        return
+    bar.value = lerpf(bar.value, target, 1.0 - exp(-delta * 10.0))
+    if absf(bar.value - target) < 0.05:
+        bar.value = target
 
 func set_hud_visible(value: bool) -> void:
     if _hud:
         _hud.visible = value
+
+func set_selected_style(key: String) -> void:
+    ## Seeds the menu's trail pick, so a returning visit finds its last trail
+    ## already picked. Unknown keys fall back to the standard trail.
+    _selected_style = key if BeautyContent.STYLE_DATA.has(key) else "standard"
 
 func _cancel_story() -> void:
     _story_generation += 1
@@ -121,11 +155,6 @@ func _centered_button(text: String, primary: bool, callback: Callable) -> Center
 func _focus_control(control: Control) -> void:
     if control == null or not is_instance_valid(control):
         return
-func set_selected_style(key: String) -> void:
-    ## Seeds the menu's trail pick, so a returning visit finds its last trail
-    ## already picked. Unknown keys fall back to the standard trail.
-    _selected_style = key if BeautyContent.STYLE_DATA.has(key) else "standard"
-
     if control is BaseButton and (control as BaseButton).disabled:
         return
     # Deferred: the panel was just built/shown this frame, so an immediate
@@ -282,6 +311,17 @@ func _clear(node: Node) -> void:
 func apply_settings(settings: Dictionary) -> void:
     _settings = settings.duplicate(true)
     _reduced_motion = bool(_settings.get("reduced_motion", false))
+    if _reduced_motion:
+        # Freeze the menu breathing at rest so enabling Still Forest never
+        # leaves a card parked mid-breath.
+        if is_instance_valid(_overlay_card):
+            _overlay_card.scale = Vector2.ONE
+        if is_instance_valid(_story_card):
+            _story_card.scale = Vector2.ONE
+        if is_instance_valid(_shop_card):
+            _shop_card.scale = Vector2.ONE
+        if is_instance_valid(_overlay_scrim):
+            _overlay_scrim.modulate = Color.WHITE
     _high_contrast = bool(_settings.get("high_contrast", false))
     _text_scale = clampf(float(_settings.get("text_scale", 1.0)), 0.75, 2.0)
     _root.theme.default_font_size = int(round(18.0 * _text_scale))

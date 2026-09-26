@@ -16,6 +16,10 @@ var _lantern_light: OmniLight3D
 var _lantern_core: MeshInstance3D
 var _scarf: MeshInstance3D
 var _model: Node3D
+var _staff_pivot: Node3D
+var _blink_timer := 2.8
+var _blink_time := 0.0
+var _eye_meshes: Array[MeshInstance3D] = []
 
 func _ready() -> void:
     _build_character()
@@ -106,6 +110,7 @@ func _build_character() -> void:
         eye_white.material_override = _toot(Color("#fffaf0"))
         eye_white.position = Vector3(side * 0.105, 0.02, -0.285)
         head.add_child(eye_white)
+        _eye_meshes.append(eye_white)
         var pupil := MeshInstance3D.new()
         pupil.mesh = SphereMesh.new()
         pupil.mesh.radius = 0.034
@@ -156,6 +161,7 @@ func _build_character() -> void:
     # lantern combat is implemented by the game, never by this prop.
     var staff_pivot := Node3D.new()
     staff_pivot.name = "StaffPivot"
+    _staff_pivot = staff_pivot
     right_arm.add_child(staff_pivot)
     staff_pivot.position = Vector3(0, -0.43, -0.05)
     var staff := MeshInstance3D.new()
@@ -369,6 +375,27 @@ func _process(delta: float) -> void:
         _swing_target = maxf(0.0, _swing_target - delta * 2.7)
     _walk_current = lerpf(_walk_current, _walk_target, 1.0 - exp(-delta * 10.0))
     _swing_current = lerpf(_swing_current, _swing_target, 1.0 - exp(-delta * 18.0))
+    # A slow, soft blink keeps the hero feeling alive between adventures.
+    # Only the eye meshes squash — never the legs, arms or model root, which
+    # the animation blend graph owns.
+    _blink_timer -= delta
+    if _blink_timer <= 0.0:
+        _blink_timer = randf_range(2.4, 5.2)
+        _blink_time = 0.16
+    var blink_squash := 1.0
+    if _blink_time > 0.0:
+        _blink_time = maxf(0.0, _blink_time - delta)
+        blink_squash = 0.12 if _blink_time > 0.04 else lerpf(0.12, 1.0, 1.0 - _blink_time / 0.04)
+    for eye: MeshInstance3D in _eye_meshes:
+        if is_instance_valid(eye):
+            eye.scale.y = blink_squash
+    # The lantern staff sways a breath with the walk; the arm pivots above
+    # stay owned by the AnimationTree so the walk/swing tests keep passing.
+    if _staff_pivot and is_instance_valid(_staff_pivot):
+        var sway := sin(_time * 2.0) * 0.03 + _walk_current * sin(_time * 7.0) * 0.05
+        if _reduced_motion:
+            sway *= 0.25
+        _staff_pivot.rotation.x = sway
     if animation_tree:
         animation_tree.set("parameters/Locomotion/blend_amount", _walk_current)
         animation_tree.set("parameters/MoveLayer/blend_amount", _swing_current)

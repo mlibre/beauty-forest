@@ -56,6 +56,8 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
     merchant_exists = false
     dragon_exists = false
     dragon_finale = false
+    _soothes_this_floor = 0
+    _mote_joy = 0.0
     floor_modifier = BeautyContent.random_modifier(BeautyContent.story_floor(floor_number)) if not menu_stage else {}
 
     if not menu_stage:
@@ -239,13 +241,17 @@ func _update_mote(delta: float) -> void:
     if mote == null or not is_instance_valid(mote) or player == null or not is_instance_valid(player):
         return
     _mote_seed += delta * 0.72
+    _mote_joy = maxf(0.0, _mote_joy - delta * 0.8)
     var orbit := Vector3.ZERO
     if not bool(settings.get("reduced_motion", false)):
-        orbit = Vector3(sin(_mote_seed) * 0.18, sin(_mote_seed * 1.7) * 0.10, cos(_mote_seed * 0.8) * 0.18)
+        var joy_hop := _mote_joy * 0.22
+        orbit = Vector3(sin(_mote_seed) * 0.18, sin(_mote_seed * 1.7) * 0.10 + joy_hop * sin(_mote_seed * 6.0), cos(_mote_seed * 0.8) * 0.18)
     var target := player.global_position + Vector3(-0.72, 1.48, 0.42) + orbit
     var weight := 1.0 - exp(-delta * (3.0 if mode == Mode.MENU else 5.0))
     mote.global_position = mote.global_position.lerp(target, weight)
     if mote_core:
         mote_core.rotation.y += delta * 0.8
+    if mote_light and is_instance_valid(mote_light):
+        mote_light.light_energy = 0.45 + _mote_joy * 0.55
     if not bool(settings.get("reduced_motion", false)):
-        mote.scale = Vector3.ONE * (1.0 + sin(_mote_seed * 2.0) * 0.035)
+        mote.scale = Vector3.ONE * (1.0 + sin(_mote_seed * 2.0) * 0.035 + _mote_joy * 0.12)
