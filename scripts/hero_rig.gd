@@ -12,7 +12,6 @@ var _swing_current := 0.0
 var _happy := false
 var _time := 0.0
 var _reduced_motion := false
-var _face_parts: Array[MeshInstance3D] = []
 var _lantern_light: OmniLight3D
 var _lantern_core: MeshInstance3D
 var _scarf: MeshInstance3D
@@ -82,7 +81,6 @@ func _build_character() -> void:
     face.material_override = skin
     face.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
     head.add_child(face)
-    _face_parts.append(face)
 
     var hair_cap := MeshInstance3D.new()
     hair_cap.mesh = SphereMesh.new()
