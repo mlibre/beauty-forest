@@ -212,7 +212,10 @@ func _build_decor() -> void:
             for petal_index in range(5):
                 var angle := TAU * float(petal_index) / 5.0
                 petals.append(Transform3D(Basis.from_euler(Vector3(0, angle, 0)).scaled(Vector3.ONE * _rng.randf_range(0.75, 1.08)), position + Vector3(cos(angle) * 0.095, stem_height, sin(angle) * 0.095)))
-            petal_colors.append(Color(region["flower"]).lerp(Color("#fff2a8"), _rng.randf() * 0.42))
+                # One color per petal keeps the color array parallel to the
+                # transforms; without it the multimesh silently drops all
+                # petal colors and the flowers bloom white.
+                petal_colors.append(Color(region["flower"]).lerp(Color("#fff2a8"), _rng.randf() * 0.42))
         elif index < desired_flowers + desired_mushrooms:
             var stem_height := _rng.randf_range(0.18, 0.42)
             mushrooms_stems.append(Transform3D(Basis.IDENTITY.scaled(Vector3(0.7, stem_height, 0.7)), position + Vector3(0, stem_height * 0.5, 0)))
