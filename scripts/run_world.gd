@@ -79,7 +79,6 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
         pulse_cooldown = 0.0
         note_cooldown = 0.0
         invulnerable_time = 1.0
-        slow_time = 0.0
         _next_petal_shower = play_seconds + _rng.randf_range(32.0, 56.0)
     else:
         world.set_objectives_visible(false, false, false)

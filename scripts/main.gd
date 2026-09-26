@@ -142,7 +142,6 @@ func _process(delta: float) -> void:
     if mode == Mode.PLAYING:
         play_seconds += delta
         invulnerable_time = maxf(0.0, invulnerable_time - delta)
-        slow_time = maxf(0.0, slow_time - delta)
         _mote_line_timer -= delta
         if _mote_line_timer <= 0.0:
             _mote_line = String(BeautyContent.random_choice(BeautyContent.MOTE_LINES))

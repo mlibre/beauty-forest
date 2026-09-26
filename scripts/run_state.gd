@@ -68,7 +68,6 @@ var play_seconds := 0.0
 var pulse_cooldown := 0.0
 var note_cooldown := 0.0
 var invulnerable_time := 0.0
-var slow_time := 0.0
 var wisps: Array[Wisp] = []
 var notes: Array[SongNote] = []
 var stair_visible := true
