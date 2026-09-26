@@ -13,6 +13,10 @@ extends SceneTree
 ##     measured in real parent coordinates and land inside the window.
 ##  3. The 200% text-size setting widened the HUD and modal cards past the live
 ##     viewport, and tall modal content expanded a tiny card off-screen.
+##  4. The on-screen touch controls own the bottom corners, but the layout
+##     parked the GROVE MAP in the bottom-right corner *under* the SING/DASH/
+##     CART/BOOK/COZY cluster and the log under the joystick, so on a
+##     touchscreen both readouts were painted over by opaque buttons.
 
 var _failures := 0
 var _ui: GameUI
@@ -29,6 +33,57 @@ func _check(condition: bool, message: String) -> void:
 func _frames(count: int) -> void:
 	for _frame in range(count):
 		await process_frame
+
+func _settle(size: Vector2i) -> bool:
+	## Drive the window and wait for the real parent rect to adopt it, which is
+	## how the game reaches the layout (viewport resize, then fit).
+	root.size = size
+	root.content_scale_size = size
+	for _attempt in range(40):
+		await _frames(2)
+		if _ui._root.size.is_equal_approx(Vector2(size)):
+			return true
+	return false
+
+func _check_touch_layout(size: Vector2i) -> void:
+	## Force the on-screen touch controls on — CI and most desktop players have
+	## no touchscreen, so the default path can never see this — and assert the
+	## bottom-corner HUD is placed *around* them instead of underneath.
+	if not await _settle(size):
+		print("note: headless viewport did not adopt %dx%d; skipping the touch layout" % [size.x, size.y])
+		return
+	var was_visible := _ui._touch_root.visible
+	_ui._touch_root.visible = true
+	_ui._fit_layout()
+	await _frames(3)
+	var tag := "with touch controls at %dx%d" % [size.x, size.y]
+	var parent := Rect2(Vector2.ZERO, _ui._root.size)
+	var cluster := _ui._touch_cluster_rect()
+	var joystick := _ui._joystick_rect()
+	_check(not _touch_controls_off_screen(_ui), "a touch control hangs off the screen %s" % tag)
+	var map_rect := Rect2(_ui._minimap.position, _ui._minimap.size)
+	var log_rect := Rect2(_ui._log_label.position, _ui._log_label.size)
+	var right_rect := Rect2(_ui._right_card.position, _ui._right_card.size)
+	# A control that yielded (nothing on screen fits clear of the buttons) is
+	# allowed to sit anywhere in the window; only what is actually painted has
+	# to stay readable.
+	_check(not _ui._minimap.visible or not map_rect.intersects(cluster), "the touch buttons cover the GROVE MAP %s: map=%s cluster=%s" % [tag, str(map_rect), str(cluster)])
+	_check(not _ui._minimap.visible or not map_rect.intersects(right_rect), "the Mote card covers the GROVE MAP %s" % tag)
+	_check(not _ui._log_label.visible or not log_rect.intersects(joystick), "the touch joystick covers the log %s: log=%s joystick=%s" % [tag, str(log_rect), str(joystick)])
+	_check(not _ui._log_label.visible or not log_rect.intersects(cluster), "the touch buttons cover the log %s: log=%s cluster=%s" % [tag, str(log_rect), str(cluster)])
+	_check(parent.encloses(map_rect), "the GROVE MAP left the window %s: %s" % [tag, str(map_rect)])
+	_check(parent.encloses(log_rect), "the log left the window %s: %s" % [tag, str(log_rect)])
+	_ui._touch_root.visible = was_visible
+	_ui._fit_layout()
+
+func _touch_controls_off_screen(ui: GameUI) -> bool:
+	var parent := ui._root.size
+	for control: Control in ui._touch_buttons:
+		var rect := Rect2(control.position, control.size)
+		if rect.position.x < 0.0 or rect.position.y < 0.0 or rect.end.x > parent.x or rect.end.y > parent.y:
+			return true
+	var stick := Rect2(ui._touch_joystick.position, ui._touch_joystick.size)
+	return stick.position.x < 0.0 or stick.position.y < 0.0 or stick.end.x > parent.x or stick.end.y > parent.y
 
 func _find_shop_button(text: String) -> Button:
 	for node in _ui._shop_content.find_children("*", "Button", true, false):
@@ -117,6 +172,12 @@ func _run() -> void:
 		var pause_rect := Rect2(_ui._overlay_card.position, _ui._overlay_card.size)
 		_check(_root_rect.encloses(pause_rect), "the pause card %s is outside the window: %s" % [tag, pause_rect])
 		_check(_ui._overlay_content.size.x <= _ui._overlay_card.size.x, "pause copy is wider than its card %s" % tag)
+
+	# The touch controls sit in the same bottom corners as the map and the log,
+	# so they get their own pass at every size: without a touchscreen the
+	# assertions above cannot see that collision at all.
+	for touch_size: Vector2i in [Vector2i(1280, 720), Vector2i(1024, 640), Vector2i(640, 360), Vector2i(480, 900), Vector2i(480, 240)]:
+		await _check_touch_layout(touch_size)
 
 	if _failures > 0:
 		quit(1)

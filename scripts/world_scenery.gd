@@ -133,6 +133,7 @@ func _build_ground_and_collisions() -> void:
     var ground_base := Color(region["ground"]).darkened(0.13)
     ground_material.set_shader_parameter("base_color", ground_base)
     ground_material.set_shader_parameter("light_patch", ground_base.lerp(Color("#d6cf82"), 0.27))
+    ground_material.set_shader_parameter("deep_patch", ground_base.lerp(Color("#3f6b33"), 0.34))
     ground_visual.material_override = ground_material
     ground_visual.position = Vector3(float(width) * 0.5, 0.0, float(depth) * 0.5)
     ground_visual.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -258,30 +259,47 @@ func _build_decor() -> void:
     _add_multimesh("WarmPebbles", rock_mesh, _pbr(Color("#bcae89"), 0.98), rocks, [])
 
 func _build_sunbeams() -> void:
-    var count := 6 + (2 if floor_number >= 5 else 0)
+    # Soft god rays through the canopy, not translucent slabs.
+    #
+    # The first version dropped 6-8 unshaded additive cylinders (2.3m base
+    # radius, 14m tall, CULL_DISABLED so both walls drew) straight into the
+    # play area. The fixed isometric camera looks down through them, so the
+    # whole floor washed out into flat yellow haze, the grove behind them
+    # disappeared, and every region read as the same overexposed smear.
+    #
+    # These are slimmer, softer-edged, dimmer, and lifted so the bright part
+    # sits above the canopy instead of across the hero.
+    if dungeon["rooms"].is_empty():
+        return
+    var count := 4 + (1 if floor_number >= 5 else 0)
     for beam_index in range(count):
+        var room: Dictionary = dungeon["rooms"][beam_index % dungeon["rooms"].size()]
+        var base_radius := _rng.randf_range(0.62, 1.05)
+        var height := _rng.randf_range(9.5, 12.5)
         var beam := MeshInstance3D.new()
+        beam.name = "Sunbeam%d" % beam_index
         var mesh := CylinderMesh.new()
-        mesh.top_radius = 0.7
-        mesh.bottom_radius = 2.3
-        mesh.height = 14.0
-        mesh.radial_segments = 16
+        mesh.top_radius = base_radius * 0.30
+        mesh.bottom_radius = base_radius
+        mesh.height = height
+        mesh.radial_segments = 14
         mesh.cap_top = false
         mesh.cap_bottom = false
         beam.mesh = mesh
-        var material := StandardMaterial3D.new()
-        material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-        material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-        material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-        material.albedo_color = Color(region["accent"], 0.045)
-        material.emission_enabled = true
-        material.emission = Color(region["accent"])
-        material.emission_energy_multiplier = 0.45
-        material.cull_mode = BaseMaterial3D.CULL_DISABLED
-        beam.mesh.material = material
-        var room: Dictionary = dungeon["rooms"][beam_index % dungeon["rooms"].size()]
-        beam.position = Vector3(room["cx"] + _rng.randf_range(-5, 5), 6.8, room["cy"] + _rng.randf_range(-5, 5))
-        beam.rotation_degrees = Vector3(_rng.randf_range(-12, 12), _rng.randf_range(0, 360), _rng.randf_range(-12, 12))
+        var material := ShaderMaterial.new()
+        material.shader = load("res://shaders/sunbeam.gdshader")
+        material.set_shader_parameter("beam_color", Color(region["accent"]))
+        material.set_shader_parameter("intensity", _rng.randf_range(0.13, 0.20))
+        material.set_shader_parameter("base_radius", base_radius)
+        material.set_shader_parameter("tip_radius", base_radius * 0.30)
+        material.set_shader_parameter("beam_height", height)
+        material.set_shader_parameter("drift", _rng.randf_range(0.0, TAU))
+        beam.material_override = material
+        # Anchored to the room but pushed out to the grove side so the shaft
+        # frames the clearing instead of veiling the hero standing in it.
+        var lean := Vector2(_rng.randf_range(-1.0, 1.0), _rng.randf_range(-1.0, 1.0)).normalized() * _rng.randf_range(4.0, 7.0)
+        beam.position = Vector3(float(room["cx"]) + lean.x, height * 0.5, float(room["cy"]) + lean.y)
+        beam.rotation_degrees = Vector3(_rng.randf_range(-7, 7), _rng.randf_range(0, 360), _rng.randf_range(-7, 7))
         add_child(beam)
 
 func _build_ambient_life() -> void:

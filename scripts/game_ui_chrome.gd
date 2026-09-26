@@ -94,11 +94,18 @@ func _build_interface() -> void:
     _hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _hud.add_child(_hint_label)
 
-    _log_label = _label("", 13, Color("#e7efd0"))
+    # Mote's running chatter hangs directly on the scene as bare text, so pale
+    # cream lines sat on pale moss and were close to unreadable exactly when
+    # something interesting happened. A dark outline lifts the transcript off
+    # any background without moving or re-parenting the label, which the
+    # touch-aware layout and its regression suite both measure.
+    _log_label = _label("", 13, Color("#f4f0d2"))
     _log_label.position = Vector2(20, -152)
     _log_label.custom_minimum_size = Vector2(470, 126)
     _log_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
     _log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    _log_label.add_theme_color_override("font_outline_color", Color(0.06, 0.11, 0.07, 0.92))
+    _log_label.add_theme_constant_override("outline_size", 5)
     _hud.add_child(_log_label)
 
     _toast_label = _label("", 16, Color("#fff2c4"))
@@ -133,11 +140,15 @@ func _build_interface() -> void:
     _overlay_card.add_child(overlay_margin)
     var overlay_scroll := ScrollContainer.new()
     overlay_scroll.name = "OverlayScroll"
-    overlay_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    # Rows wrap to the card width (see _refit_content); a sideways scrollbar
+    # could only ever be the 12px wrap overflow, and it clipped the menu copy
+    # mid-word with a grey bar across the bottom of the panel.
+    overlay_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     overlay_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
     overlay_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     overlay_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     overlay_scroll.custom_minimum_size = Vector2.ZERO
+    _style_scrollbars(overlay_scroll)
     overlay_margin.add_child(overlay_scroll)
     _overlay_content = VBoxContainer.new()
     _overlay_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -167,6 +178,7 @@ func _build_interface() -> void:
     _shop_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _shop_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     _shop_scroll.custom_minimum_size = Vector2.ZERO
+    _style_scrollbars(_shop_scroll)
     shop_margin.add_child(_shop_scroll)
     _shop_content = VBoxContainer.new()
     _shop_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL

@@ -9,6 +9,7 @@ func _fit_layout() -> void:
     # modal cards so small/portrait windows show controls, not clipped panels.
     if _root == null or _overlay_card == null:
         return
+    _fitted_size = _root.size
     var viewport_size := _parent_size()
     var narrow := viewport_size.x < 900.0
     var small_height := viewport_size.y < 600.0
@@ -121,9 +122,9 @@ func _fit_layout() -> void:
         var map_side := clampf(minf(viewport_size.x, viewport_size.y) * 0.19, 96.0, 172.0 if not small_height else 132.0)
         _minimap.custom_minimum_size = Vector2(map_side, map_side + 12.0)
         _minimap.reset_size()
-        # CozyMinimap enforces its own 172x184 minimum, so place it from the
-        # size it ACTUALLY got (using the requested side overflowed the window
-        # by the difference).
+        # CozyMinimap sets no floor of its own, so the 172x184 it was built with
+        # is only an initial size — measure the size it actually got rather than
+        # the one that was requested.
         var map_rect := _effective_rect(_minimap)
         # The bottom-right corner is the touch cluster's, and parking the GROVE
         # MAP in it meant SING/DASH/CART/BOOK/COZY painted straight over the
@@ -191,9 +192,6 @@ func _fit_layout() -> void:
         _toast_label.reset_size()
         _toast_label.position = Vector2(maxf(8.0, (viewport_size.x - _toast_label.size.x) * 0.5), 76.0 if small_height else 96.0)
     if is_instance_valid(_story_card):
-        var story_width := clampf(viewport_size.x * 0.72, 280.0, 560.0)
-        _story_card.custom_minimum_size = Vector2(story_width, 0)
-        _story_card.reset_size()
         # The story card is opaque and draws after the HUD, so it has to start
         # below the toast band measured above it. Fixed offsets (96 on short
         # windows, 150 on tall ones) ignored how far the toast text actually
@@ -201,10 +199,26 @@ func _fit_layout() -> void:
         var story_top := 150.0
         if is_instance_valid(_toast_label):
             story_top = _toast_label.position.y + _toast_label.size.y + 4.0
+        # It also has to live in the GAP between the two HUD cards. Centring it
+        # on the viewport alone let a 560px card run 36px under "MOTE SAYS" and
+        # 12px under the status card, and its lower edge landed on the hero's
+        # head right where the camera keeps them.
+        var gap_left := 8.0
+        var gap_right := viewport_size.x - 8.0
+        if not _compact_hud:
+            if is_instance_valid(_left_card):
+                gap_left = _effective_rect(_left_card).end.x + 10.0
+            if is_instance_valid(_right_card):
+                gap_right = _effective_rect(_right_card).position.x - 10.0
+        var story_width := clampf(viewport_size.x * 0.72, 280.0, 560.0)
+        var gap_width := maxf(200.0, gap_right - gap_left)
+        story_width = minf(story_width, gap_width)
+        _story_card.custom_minimum_size = Vector2(story_width, 0)
+        _story_card.reset_size()
         # A very short window cannot stack both bands; keeping the card on screen
         # wins over keeping it clear of the toast.
         story_top = minf(story_top, maxf(8.0, viewport_size.y - _story_card.size.y - 8.0))
-        _story_card.position = Vector2(maxf(8.0, (viewport_size.x - _story_card.size.x) * 0.5), story_top)
+        _story_card.position = Vector2(gap_left + (gap_width - _story_card.size.x) * 0.5, story_top)
     _fit_modal_card(_overlay_card)
     _fit_modal_card(_shop_card)
     # Modal copy is authored at comfortable desktop widths (up to 820px text,
@@ -223,19 +237,26 @@ func _fit_layout() -> void:
 func _refit_content(container: Node, card: PanelContainer = null) -> void:
     if not is_instance_valid(container):
         return
-    # Measure the real inner width of the fitted card (34+34 margins) and allow
-    # for the vertical scrollbar, so rows can never be wider than the panel
-    # that scrolls them.
+    # Measure the real inner width of the fitted card and allow for the vertical
+    # scrollbar, so rows can never be wider than the panel that scrolls them.
     var available := 820.0
     if is_instance_valid(card):
-        # Use the card's requested width, not its content-expanded size. Once a
-        # long label has inflated a PanelContainer, measuring that expanded size
-        # makes the available width grow with the overflow and the fit can never
-        # recover.
-        var fitted_width := card.custom_minimum_size.x
-        if fitted_width <= 1.0:
-            fitted_width = card.size.x
-        available = fitted_width - 68.0 - 16.0
+        # Prefer the scroll viewport's own live width. Deriving it from the
+        # card instead (card - margins - a guessed scrollbar) came out 12px
+        # too generous at 1280x720, which is exactly the overflow that put a
+        # horizontal scrollbar under the menu.
+        var scroll := _scroll_ancestor(container)
+        if scroll != null and scroll.size.x > 1.0:
+            available = scroll.size.x - 10.0
+        else:
+            # Use the card's requested width, not its content-expanded size.
+            # Once a long label has inflated a PanelContainer, measuring that
+            # expanded size makes the available width grow with the overflow
+            # and the fit can never recover.
+            var fitted_width := card.custom_minimum_size.x
+            if fitted_width <= 1.0:
+                fitted_width = card.size.x
+            available = fitted_width - 68.0 - 26.0
     else:
         available = _parent_size().x - 96.0
     available = maxf(160.0, minf(820.0, available))
@@ -251,6 +272,14 @@ func _refit_content(container: Node, card: PanelContainer = null) -> void:
                 control.reset_size()
         if child.get_child_count() > 0:
             _refit_content(child, card)
+
+func _scroll_ancestor(node: Node) -> ScrollContainer:
+    var current := node
+    while current != null:
+        if current is ScrollContainer:
+            return current as ScrollContainer
+        current = current.get_parent()
+    return null
 
 func _set_compact_card_labels(card: Control, width_floor: float, max_lines: int) -> void:
     if not is_instance_valid(card):
@@ -291,8 +320,12 @@ func _effective_rect(control: Control) -> Rect2:
 
 func _card_rect(panel: Control) -> Rect2:
     ## The measured rect of a HUD card, or an empty rect when it is not on
-    ## screen (so an invisible card never blocks a placement).
-    if not is_instance_valid(panel) or not panel.is_visible_in_tree():
+    ## screen (so a hidden card never blocks a placement). Reads the card's own
+    ## `visible` rather than `is_visible_in_tree()`: the menu and ending screens
+    # hide the whole HUD, and a fit that runs underneath them must reserve the
+    # same space a fit that runs during play does, or the map jumps the moment
+    # the HUD comes back.
+    if not is_instance_valid(panel) or not panel.visible:
         return Rect2()
     return _effective_rect(panel)
 
@@ -302,12 +335,18 @@ func _touch_cluster_rect() -> Rect2:
     ## authored anchor offsets because several buttons are wider than their
     ## 98px minimum (BOOK ♥ measures 109px), and because Control.position is
     ## absolute once a node is in the tree.
-    if not is_instance_valid(_touch_root) or not _touch_root.is_visible_in_tree():
+    #
+    ## This deliberately reads `_touch_root.visible` and not
+    ## `is_visible_in_tree()`: the menu and the ending screens hide the whole
+    ## HUD, and a fit that runs underneath them (every resize, every panel
+    ## open) must still know the buttons own the corner, or it would put the
+    ## GROVE MAP straight back under them.
+    if not is_instance_valid(_touch_root) or not _touch_root.visible:
         return Rect2()
     var cluster := Rect2()
     var found := false
     for button in _touch_buttons:
-        if not is_instance_valid(button) or not button.is_visible_in_tree():
+        if not is_instance_valid(button):
             continue
         var rect := _effective_rect(button)
         cluster = cluster.merge(rect) if found else rect
@@ -315,9 +354,12 @@ func _touch_cluster_rect() -> Rect2:
     return cluster if found else Rect2()
 
 func _joystick_rect() -> Rect2:
-    ## The touch joystick in the bottom-left corner, or an empty rect when there
-    ## is no touchscreen.
-    if not is_instance_valid(_touch_joystick) or not _touch_joystick.is_visible_in_tree():
+    ## The touch joystick in the bottom-left corner, or an empty rect when this
+    ## device has no on-screen controls (see _touch_cluster_rect for why this
+    ## is not an is_visible_in_tree() check).
+    if not is_instance_valid(_touch_root) or not _touch_root.visible:
+        return Rect2()
+    if not is_instance_valid(_touch_joystick):
         return Rect2()
     return _effective_rect(_touch_joystick)
 

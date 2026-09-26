@@ -40,8 +40,11 @@ func update_hud(state: Dictionary) -> void:
     _mote_label.text = "“%s”" % String(state.get("mote_line", "The forest keeps your place warm."))
 
 func set_map(dungeon: Dictionary, player_position: Vector3) -> void:
+    # Deliberately does not force `_minimap.visible`: every floor load calls
+    # this, and forcing the flag true here re-showed a map that the responsive
+    # layout had just yielded (hidden) because the on-screen touch buttons own
+    # the corner it would land in. GameUILayout owns the map's visibility.
     _minimap.set_map(dungeon, player_position)
-    _minimap.visible = true
 
 func update_map_player(player_position: Vector3, markers: Array[Dictionary]) -> void:
     _minimap.player_position = player_position
