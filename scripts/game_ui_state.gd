@@ -121,6 +121,11 @@ func _centered_button(text: String, primary: bool, callback: Callable) -> Center
 func _focus_control(control: Control) -> void:
     if control == null or not is_instance_valid(control):
         return
+func set_selected_style(key: String) -> void:
+    ## Seeds the menu's trail pick, so a returning visit finds its last trail
+    ## already picked. Unknown keys fall back to the standard trail.
+    _selected_style = key if BeautyContent.STYLE_DATA.has(key) else "standard"
+
     if control is BaseButton and (control as BaseButton).disabled:
         return
     # Deferred: the panel was just built/shown this frame, so an immediate

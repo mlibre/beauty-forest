@@ -10,6 +10,9 @@ func _ready() -> void:
     _rng.randomize()
     settings = BeautyData.load_settings()
     meta = BeautyData.load_meta()
+    selected_style = String(meta.get("style", "standard"))
+    if not BeautyContent.STYLE_DATA.has(selected_style):
+        selected_style = "standard"
     _ensure_input_actions()
 
     camera = Camera3D.new()
@@ -34,6 +37,7 @@ func _ready() -> void:
     _load_floor(1, true)
     mode = Mode.MENU
     player.set_control_enabled(false)
+    ui.set_selected_style(selected_style)
     ui.show_menu(meta)
 
 func _connect_ui() -> void:
@@ -261,6 +265,7 @@ func _on_start_requested(style_key: String) -> void:
 
 func _on_restart_requested(continue_deeper: bool = false) -> void:
     var next_floor := floor_number + 1 if continue_deeper else 1
+    meta["style"] = style_key
     # "Wander deeper" keeps the walk (and its loadout) going; "a fresh walk"
     # starts over on purpose.
     _start_run(next_floor, continue_deeper)

@@ -40,6 +40,7 @@ static func default_meta() -> Dictionary:
         "wisps_soothed": 0,
         "facts": 0,
         "dragons_sung": 0,
+        "style": "standard",
         "stickers": [],
         "facts_learned": [],
     }
@@ -84,6 +85,8 @@ static func _clean_meta(source: Dictionary) -> Dictionary:
     var clean := default_meta()
     for key in ["runs", "best_floor", "wisps_soothed", "facts", "dragons_sung"]:
         clean[key] = _stored_count(source.get(key, 0))
+    var stored_style := String(source.get("style", "standard"))
+    clean["style"] = stored_style if BeautyContent.STYLE_DATA.has(stored_style) else "standard"
     if source.get("stickers", []) is Array:
         var seen := {}
         var stickers: Array[String] = []
