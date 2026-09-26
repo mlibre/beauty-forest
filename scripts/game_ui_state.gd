@@ -54,6 +54,7 @@ var _overlay_card: PanelContainer
 var _overlay_content: VBoxContainer
 var _shop_scrim: ColorRect
 var _shop_card: PanelContainer
+var _shop_frame: VBoxContainer
 var _shop_scroll: ScrollContainer
 var _shop_content: VBoxContainer
 var _story_card: PanelContainer
@@ -74,23 +75,12 @@ var _reduced_motion := false
 var _high_contrast := false
 var _text_scale := 1.0
 var _compact_hud := false
-var _fitted_size := Vector2.ZERO
 var _time := 0.0
 
 func _process(delta: float) -> void:
     if _root == null or _overlay_card == null:
         return
     _time += delta
-    # The root Control's rect settles a frame or two after the tree is built
-    # (the window manager applies the real client size late), and the viewport
-    # never fires `size_changed` for that settle. The first `_fit_layout` pass
-    # therefore measured a short root — 556px tall instead of 720 — and every
-    # bottom-anchored HUD element (log, minimap, hint, toast) stayed 164px too
-    # high until the window happened to be resized. Re-fit whenever the root's
-    # own rect differs from the size the last pass used, which both repairs the
-    # initial settle and keeps working after a real resize.
-    if _root.size != _fitted_size:
-        _fit_layout()
     if not _reduced_motion:
         _beat_ring.pivot_offset = _beat_ring.size * 0.5
         var breath := 1.0 + sin(_time * 1.8) * 0.012

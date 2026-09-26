@@ -1,6 +1,14 @@
 class_name GameUILayout
 extends GameUIChrome
 
+## Shared modal-panel metrics. The overlay card uses 34px side margins and the
+## shop card 26px; 68 is the wider of the two, so a row clamped for one panel
+## still fits the other.
+const MODAL_MARGIN_X := 68.0
+## Slightly wider than the engine's slim VScrollBar, so reserving it can only
+## ever leave slack and never make a row overflow.
+const MODAL_SCROLLBAR_ALLOWANCE := 14.0
+
 ## Responsive placement for every HUD and modal control, plus the helpers that
 ## measure the real parent rect instead of trusting pre-tree anchor offsets.
 
@@ -9,7 +17,6 @@ func _fit_layout() -> void:
     # modal cards so small/portrait windows show controls, not clipped panels.
     if _root == null or _overlay_card == null:
         return
-    _fitted_size = _root.size
     var viewport_size := _parent_size()
     var narrow := viewport_size.x < 900.0
     var small_height := viewport_size.y < 600.0
@@ -203,6 +210,7 @@ func _fit_layout() -> void:
         # on the viewport alone let a 560px card run 36px under "MOTE SAYS" and
         # 12px under the status card, and its lower edge landed on the hero's
         # head right where the camera keeps them.
+        var story_width := clampf(viewport_size.x * 0.72, 280.0, 560.0)
         var gap_left := 8.0
         var gap_right := viewport_size.x - 8.0
         if not _compact_hud:
@@ -210,15 +218,26 @@ func _fit_layout() -> void:
                 gap_left = _effective_rect(_left_card).end.x + 10.0
             if is_instance_valid(_right_card):
                 gap_right = _effective_rect(_right_card).position.x - 10.0
-        var story_width := clampf(viewport_size.x * 0.72, 280.0, 560.0)
-        var gap_width := maxf(200.0, gap_right - gap_left)
-        story_width = minf(story_width, gap_width)
+        var gap := gap_right - gap_left
+        if gap < 240.0:
+            # On a narrow window the two HUD cards meet or overlap, so there is
+            # no gap to sit in. Centring on a minimum-width gap that does not
+            # exist pushed the card 120px off the right edge at 480px wide.
+            # Fall back to a plain centred band and let it overlap the cards.
+            gap_left = 8.0
+            gap_right = viewport_size.x - 8.0
+            gap = gap_right - gap_left
+        story_width = minf(story_width, gap)
         _story_card.custom_minimum_size = Vector2(story_width, 0)
         _story_card.reset_size()
         # A very short window cannot stack both bands; keeping the card on screen
         # wins over keeping it clear of the toast.
         story_top = minf(story_top, maxf(8.0, viewport_size.y - _story_card.size.y - 8.0))
-        _story_card.position = Vector2(gap_left + (gap_width - _story_card.size.x) * 0.5, story_top)
+        # The card's own text sets a minimum width no custom_minimum_size can
+        # beat, so clamp the final x too and keep it in the window regardless.
+        var story_x := gap_left + (gap - _story_card.size.x) * 0.5
+        story_x = clampf(story_x, 8.0, maxf(8.0, viewport_size.x - _story_card.size.x - 8.0))
+        _story_card.position = Vector2(story_x, story_top)
     _fit_modal_card(_overlay_card)
     _fit_modal_card(_shop_card)
     # Modal copy is authored at comfortable desktop widths (up to 820px text,
@@ -241,22 +260,32 @@ func _refit_content(container: Node, card: PanelContainer = null) -> void:
     # scrollbar, so rows can never be wider than the panel that scrolls them.
     var available := 820.0
     if is_instance_valid(card):
-        # Prefer the scroll viewport's own live width. Deriving it from the
-        # card instead (card - margins - a guessed scrollbar) came out 12px
-        # too generous at 1280x720, which is exactly the overflow that put a
-        # horizontal scrollbar under the menu.
+        # Two independent width sources, and the tighter one wins.
+        #
+        # The card's REQUESTED width is the only source that is correct in the
+        # same frame the card was just re-fitted, because the ScrollContainer
+        # inside it has not re-laid-out yet and still reports the previous
+        # frame's width. Using that stale value alone let a 480px window clamp
+        # its rows to 794px and inflate the menu card to 922px, straight off the
+        # left edge of the screen.
+        #
+        # The scroll viewport's own live width is the accurate source, and it
+        # is the one that includes the vertical scrollbar. Deriving the width
+        # from the card alone (card - margins - a guessed scrollbar) came out
+        # 12px too generous at 1280x720, which is exactly the overflow that put
+        # a horizontal scrollbar under the menu.
+        #
+        # Note the card's content-expanded size must never be used here: once a
+        # long label has inflated a PanelContainer, measuring that expanded size
+        # makes the available width grow with the overflow and the fit can never
+        # recover.
+        var fitted_width := card.custom_minimum_size.x
+        if fitted_width <= 1.0:
+            fitted_width = card.size.x
+        available = fitted_width - MODAL_MARGIN_X - 8.0
         var scroll := _scroll_ancestor(container)
         if scroll != null and scroll.size.x > 1.0:
-            available = scroll.size.x - 10.0
-        else:
-            # Use the card's requested width, not its content-expanded size.
-            # Once a long label has inflated a PanelContainer, measuring that
-            # expanded size makes the available width grow with the overflow
-            # and the fit can never recover.
-            var fitted_width := card.custom_minimum_size.x
-            if fitted_width <= 1.0:
-                fitted_width = card.size.x
-            available = fitted_width - 68.0 - 26.0
+            available = minf(available, scroll.size.x - 10.0)
     else:
         available = _parent_size().x - 96.0
     available = maxf(160.0, minf(820.0, available))
@@ -399,14 +428,259 @@ func _fit_modal_card(card: PanelContainer) -> void:
     if not is_instance_valid(card):
         return
     var parent_size := _parent_size()
-    var card_size := Vector2(minf(900.0, parent_size.x * 0.94), minf(640.0, parent_size.y * 0.92))
+    # Reserve the vertical scrollbar by NARROWING the requested card, so the
+    # card's size is the same whether or not the list happens to overflow.
+    #
+    # A ScrollContainer's vertical bar is a real child that only joins the tree
+    # once the content overflows, and then it is added to the card's total
+    # width. Measuring a 480x900 window, the menu card requested 451.2px, the
+    # list overflowed, the ~15px bar appeared, and the card became 466px — a
+    # late +15px size change that left it 4px off-centre (the suite's 2px
+    # centring check). Requesting `cap - allowance` keeps the settled card
+    # inside `cap` in both cases, so the position computed below stays exact.
+    # The card is a little narrower than the cap so that when the list does
+    # overflow and the vertical bar adds its own width, the settled card still
+    # fits inside the window instead of merely being centred on an overflow.
+    var cap := minf(900.0, parent_size.x * 0.94)
+    var card_size := Vector2(
+        maxf(220.0, cap - MODAL_SCROLLBAR_ALLOWANCE),
+        minf(640.0, parent_size.y * 0.92)
+    )
     card.custom_minimum_size = card_size
     card.reset_size()
-    # Control.position is absolute in parent coordinates: centre the card by
-    # subtracting HALF its size from the parent centre. Assigning -size/2 (the
-    # old detached-node trick) parked the whole panel off-screen up-left,
-    # which is why every menu looked broken at every resolution.
+    # Centre the card by ANCHOR and never write its position.
+    #
+    # The card's anchors all sit at the parent centre with
+    # GROW_DIRECTION_BOTH, so the engine re-derives the offsets from that anchor
+    # point on every size change and the card is centred whatever size it
+    # settles at. Two earlier attempts were both wrong in the same way: they
+    # computed an absolute `position` from a size that later changed. A
+    # ScrollContainer's vertical bar is a real child that only joins the tree
+    # once the list overflows, and then it widens the card by an amount that
+    # depends on the theme (measured 15-28px here) — so a position written
+    # before the bar existed left the card 4px off-centre, and no fixed
+    # allowance can predict it.
+    #
+    # Assigning a bare -size/2 instead (the original detached-node trick) parked
+    # the whole panel off-screen up-left, which is why every menu used to look
+    # broken at every resolution.
+    card.anchor_left = 0.5
+    card.anchor_top = 0.5
+    card.anchor_right = 0.5
+    card.anchor_bottom = 0.5
+    card.grow_horizontal = Control.GROW_DIRECTION_BOTH
+    card.grow_vertical = Control.GROW_DIRECTION_BOTH
+    card.reset_size()
+
+func _refit_content(container: Node, card: PanelContainer = null) -> void:
+    if not is_instance_valid(container):
+        return
+    # Measure the real inner width of the fitted card and allow for the vertical
+    # scrollbar, so rows can never be wider than the panel that scrolls them.
+    var available := 820.0
+    if is_instance_valid(card):
+        # Two independent width sources, and the tighter one wins.
+        #
+        # The card's REQUESTED width is the only source that is correct in the
+        # same frame the card was just re-fitted, because the ScrollContainer
+        # inside it has not re-laid-out yet and still reports the previous
+        # frame's width. Using that stale value alone let a 480px window clamp
+        # its rows to 794px and inflate the menu card to 922px, straight off the
+        # left edge of the screen.
+        #
+        # The scroll viewport's own live width is the accurate source, and it
+        # is the one that includes the vertical scrollbar. Deriving the width
+        # from the card alone (card - margins - a guessed scrollbar) came out
+        # 12px too generous at 1280x720, which is exactly the overflow that put
+        # a horizontal scrollbar under the menu.
+        #
+        # Note the card's content-expanded size must never be used here: once a
+        # long label has inflated a PanelContainer, measuring that expanded size
+        # makes the available width grow with the overflow and the fit can never
+        # recover.
+        var fitted_width := card.custom_minimum_size.x
+        if fitted_width <= 1.0:
+            fitted_width = card.size.x
+        available = fitted_width - MODAL_MARGIN_X - 8.0
+        var scroll := _scroll_ancestor(container)
+        if scroll != null and scroll.size.x > 1.0:
+            available = minf(available, scroll.size.x - 10.0)
+    else:
+        available = _parent_size().x - 96.0
+    available = maxf(160.0, minf(820.0, available))
+    for child in container.get_children():
+        var control := child as Control
+        if control != null and is_instance_valid(control):
+            var minimum := control.get_combined_minimum_size()
+            if minimum.x > available:
+                var custom := control.custom_minimum_size
+                control.custom_minimum_size = Vector2(available, custom.y)
+                if control is Label or control is Button:
+                    control.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+                control.reset_size()
+        if child.get_child_count() > 0:
+            _refit_content(child, card)
+
+func _scroll_ancestor(node: Node) -> ScrollContainer:
+    var current := node
+    while current != null:
+        if current is ScrollContainer:
+            return current as ScrollContainer
+        current = current.get_parent()
+    return null
+
+func _set_compact_card_labels(card: Control, width_floor: float, max_lines: int) -> void:
+    if not is_instance_valid(card):
+        return
+    for candidate in card.find_children("*", "Label", true, false):
+        var label := candidate as Label
+        if label == null or not is_instance_valid(label):
+            continue
+        label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        var font_height := float(label.get_theme_font_size("font_size"))
+        label.custom_minimum_size = Vector2(maxf(40.0, width_floor), maxf(label.custom_minimum_size.y, font_height * float(max_lines) + 4.0))
+        label.max_lines_visible = max_lines
+        label.clip_text = true
+        label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+
+func _restore_card_labels(card: Control) -> void:
+    if not is_instance_valid(card):
+        return
+    for candidate in card.find_children("*", "Label", true, false):
+        var label := candidate as Label
+        if label == null or not is_instance_valid(label):
+            continue
+        label.autowrap_mode = TextServer.AUTOWRAP_OFF
+        label.custom_minimum_size = Vector2.ZERO
+        label.max_lines_visible = -1
+        label.clip_text = false
+        label.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+
+func _effective_rect(control: Control) -> Rect2:
+    ## A control's `size` can lag behind a minimum-size change within the same
+    ## frame, so place neighbours from the size the control is guaranteed to
+    ## occupy. This is what keeps the HUD cards from overlapping on a narrow
+    ## window (and the minimap from hanging off the edge).
+    if not is_instance_valid(control):
+        return Rect2()
+    var guaranteed := control.get_combined_minimum_size()
+    return Rect2(control.position, Vector2(maxf(control.size.x, guaranteed.x), maxf(control.size.y, guaranteed.y)))
+
+func _card_rect(panel: Control) -> Rect2:
+    ## The measured rect of a HUD card, or an empty rect when it is not on
+    ## screen (so a hidden card never blocks a placement). Reads the card's own
+    ## `visible` rather than `is_visible_in_tree()`: the menu and ending screens
+    # hide the whole HUD, and a fit that runs underneath them must reserve the
+    # same space a fit that runs during play does, or the map jumps the moment
+    # the HUD comes back.
+    if not is_instance_valid(panel) or not panel.visible:
+        return Rect2()
+    return _effective_rect(panel)
+
+func _touch_cluster_rect() -> Rect2:
+    ## The block of on-screen touch buttons in the bottom-right corner, in real
+    ## parent coordinates. Measured from the live controls rather than the
+    ## authored anchor offsets because several buttons are wider than their
+    ## 98px minimum (BOOK ♥ measures 109px), and because Control.position is
+    ## absolute once a node is in the tree.
+    #
+    ## This deliberately reads `_touch_root.visible` and not
+    ## `is_visible_in_tree()`: the menu and the ending screens hide the whole
+    ## HUD, and a fit that runs underneath them (every resize, every panel
+    ## open) must still know the buttons own the corner, or it would put the
+    ## GROVE MAP straight back under them.
+    if not is_instance_valid(_touch_root) or not _touch_root.visible:
+        return Rect2()
+    var cluster := Rect2()
+    var found := false
+    for button in _touch_buttons:
+        if not is_instance_valid(button):
+            continue
+        var rect := _effective_rect(button)
+        cluster = cluster.merge(rect) if found else rect
+        found = true
+    return cluster if found else Rect2()
+
+func _joystick_rect() -> Rect2:
+    ## The touch joystick in the bottom-left corner, or an empty rect when this
+    ## device has no on-screen controls (see _touch_cluster_rect for why this
+    ## is not an is_visible_in_tree() check).
+    if not is_instance_valid(_touch_root) or not _touch_root.visible:
+        return Rect2()
+    if not is_instance_valid(_touch_joystick):
+        return Rect2()
+    return _effective_rect(_touch_joystick)
+
+func _place_clear(wanted: Vector2, candidates: Array[Vector2], blockers: Array[Rect2]) -> Vector2:
+    ## The first of `candidates` that keeps a `wanted`-sized rect fully on
+    ## screen and clear of every blocker, or Vector2.INF when nothing fits so
+    ## the caller can drop the control rather than stack it over something the
+    ## player needs to read. Each candidate is clamped into the window first,
+    ## so an out-of-bounds preferred corner can never win.
+    var parent := _parent_size()
+    if wanted.x > parent.x or wanted.y > parent.y:
+        return Vector2.INF
+    var limits := parent - wanted
+    for candidate in candidates:
+        var spot := Vector2(clampf(candidate.x, 0.0, limits.x), clampf(candidate.y, 0.0, limits.y))
+        var blocked := false
+        for blocker in blockers:
+            if blocker.size.x < 1.0 or blocker.size.y < 1.0:
+                continue
+            if Rect2(spot, wanted).intersects(blocker):
+                blocked = true
+                break
+        if not blocked:
+            return spot
+    return Vector2.INF
+
+func _parent_size() -> Vector2:
+    ## The live rect every HUD control is parented to. Prefer the real parent
+    ## rect over the viewport so absolute positions always land in-window.
+    if is_instance_valid(_root) and _root.size.x > 1.0 and _root.size.y > 1.0:
+        return _root.size
+    if is_inside_tree() and get_viewport() != null:
+        return get_viewport().get_visible_rect().size
+    return Vector2(1280, 720)
+
+func _fit_modal_card(card: PanelContainer) -> void:
+    if not is_instance_valid(card):
+        return
+    var parent_size := _parent_size()
+    # Reserve the vertical scrollbar by NARROWING the requested card, so the
+    # card's size is the same whether or not the list happens to overflow.
+    #
+    # A ScrollContainer's vertical bar is a real child that only joins the tree
+    # once the content overflows, and then it is added to the card's total
+    # width. Measuring a 480x900 window, the menu card requested 451.2px, the
+    # list overflowed, the ~15px bar appeared, and the card became 466px — a
+    # late +15px size change that left it 4px off-centre (the suite's 2px
+    # centring check). Requesting `cap - allowance` keeps the settled card
+    # inside `cap` in both cases, so the position computed below stays exact.
+    var cap := minf(900.0, parent_size.x * 0.94)
+    var card_size := Vector2(
+        maxf(220.0, cap - MODAL_SCROLLBAR_ALLOWANCE),
+        minf(640.0, parent_size.y * 0.92)
+    )
+    card.custom_minimum_size = card_size
+    card.reset_size()
+    # Control.position is ABSOLUTE in parent coordinates once the control is in
+    # the tree, so the card is centred by subtracting half its size from the
+    # parent centre. (Assigning a bare -size/2 — the old detached-node trick —
+    # parked every panel off-screen up-left, which is why each menu used to look
+    # broken at every resolution.)
+    #
+    # Centring on the card's CURRENT size is exact whenever it is measured. The
+    # one thing that used to invalidate it was a late size change: content that
+    # overflows vertically adds the ScrollContainer's vertical bar, which widens
+    # the card by ~8px a layout pass later and left a 1024x640 window's menu
+    # 4px off-centre. MODAL_SCROLLBAR_ALLOWANCE reserves that width up front, so
+    # the size no longer moves under the position.
     card.position = parent_size * 0.5 - card.size * 0.5
+    # Safety net for a card that content forced wider than the window (200% text
+    # on a small window used to push it 152px off the left edge): keep it inside.
+    card.position.x = clampf(card.position.x, 0.0, maxf(0.0, parent_size.x - card.size.x))
+    card.position.y = clampf(card.position.y, 0.0, maxf(0.0, parent_size.y - card.size.y))
 
 func _show_overlay() -> void:
     _dismiss_beat_ring()

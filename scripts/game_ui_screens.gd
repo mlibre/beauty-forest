@@ -25,57 +25,66 @@ func show_menu(meta: Dictionary) -> void:
     how.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     how.custom_minimum_size = Vector2(820, 0)
     _overlay_content.add_child(how)
-    _overlay_content.add_child(_spacer(8))
     _overlay_content.add_child(_label("STEP 1 — PICK HOW GENTLE ♥", 14, Color("#ffe39a")))
     # Flow (not HBox): on narrow windows the three style buttons wrap onto a
     # second row instead of overflowing the card.
+    #
+    # It must EXPAND to the card width, not shrink to its minimum. Sized to its
+    # minimum (SIZE_SHRINK_CENTER) the container is exactly as wide as the
+    # widest button, so three of them can never share a row: it wrapped one per
+    # row, and the menu needed 798px of height in a 564px panel, hiding the
+    # "Wander into the forest" button below the fold on a default window.
     var styles := HFlowContainer.new()
     styles.alignment = FlowContainer.ALIGNMENT_CENTER
     styles.last_wrap_alignment = FlowContainer.LAST_WRAP_ALIGNMENT_CENTER
     styles.add_theme_constant_override("hseparation", 10)
     styles.add_theme_constant_override("vseparation", 10)
-    styles.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
     _overlay_content.add_child(styles)
+    # Short second lines only. The longer copy ("Extra cozy · bumps hurt
+    # less") pushed each button past 280px wide, so the flow container wrapped
+    # the three style choices onto three separate rows and the menu needed 798px
+    # of height inside a 564px panel — which put the "Wander into the forest"
+    # button, the single most important thing on the screen, below the fold on a
+    # default 1280x720 window. The full description is one hover away.
     var menu_style_descriptions := {
-        "gentle": "Extra cozy · bumps hurt less",
-        "standard": "Just right, as Mote planned",
-        "bold": "A bit brisker · more soul-light",
+        "gentle": "bumps hurt less",
+        "standard": "just right",
+        "bold": "more soul-light",
     }
     for key in ["gentle", "standard", "bold"]:
         var style: Dictionary = BeautyContent.STYLE_DATA[key]
         var picked: bool = key == _selected_style
         var button := _button("%s%s\n%s" % [("♥ " if picked else ""), style["name"], String(menu_style_descriptions[key])], picked)
-        button.custom_minimum_size = Vector2(250, 74)
-        button.tooltip_text = "Step 1: choose %s. Step 2: press Wander below." % String(style["name"])
+        button.custom_minimum_size = Vector2(212, 66)
+        button.tooltip_text = "%s — %s. Then press Wander below." % [String(style["name"]), String(style["description"])]
         button.pressed.connect(func():
             _selected_style = key
             show_menu(meta)
         )
         styles.add_child(button)
-    _overlay_content.add_child(_spacer(12))
     var step2 := _label("STEP 2 — BEGIN ♥", 14, Color("#ffe39a"))
     step2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _overlay_content.add_child(step2)
     var start_button := _button("♥  Wander into the forest", true)
-    start_button.custom_minimum_size = Vector2(340, 58)
+    # 300, not 340: a Button's minimum is max(custom_minimum_size, its text),
+    # and the floor can never be shrunk by the reflow pass. At 340 the start
+    # button alone demanded 368px of a 361px column on a 480px-wide window, so
+    # the menu card grew past the window and could no longer be centred.
+    start_button.custom_minimum_size = Vector2(300, 54)
     start_button.tooltip_text = "Start a gentle walk. You can leave anytime."
     start_button.pressed.connect(func(): start_requested.emit(_selected_style))
     var start_center := CenterContainer.new()
     start_center.add_child(start_button)
     _overlay_content.add_child(start_center)
-    var record := "Visits %d  ·  Deepest floor %d  ·  Wisps guided home %d" % [int(meta.get("runs", 0)), int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0))]
-    var record_label := _label(record, 14, Color("#cbdcb7"))
+    var record := "Visits %d  ·  Deepest floor %d  ·  Wisps guided home %d\nWalk: WASD / stick · Dash: Shift · Hug & sing: E · Shop: F · Memories: J · Cozy options: C · Rest: Esc" % [int(meta.get("runs", 0)), int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0))]
+    var record_label := _label(record, 13, Color("#cbdcb7"))
     record_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    record_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     record_label.custom_minimum_size = Vector2(820, 0)
+    record_label.add_theme_constant_override("line_spacing", 5)
     _overlay_content.add_child(record_label)
-    var controls := _label("Walk: WASD / stick  ·  Dash: Shift  ·  Hug & sing: E  ·  Shop: F  ·  Memories: J  ·  Cozy options: C  ·  Rest: Esc", 13, Color("#b9cfaa"))
-    controls.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    controls.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    controls.custom_minimum_size = Vector2(820, 0)
-    _overlay_content.add_child(controls)
-    _overlay_content.add_child(_spacer(4))
     var leave := _button("Not now — keep my spot warm ♥", false)
-    leave.custom_minimum_size = Vector2(430, 48)
+    leave.custom_minimum_size = Vector2(300, 44)
     leave.tooltip_text = "No pressure. The forest waits for you."
     leave.pressed.connect(func(): quit_requested.emit())
     var leave_center := CenterContainer.new()
@@ -134,6 +143,41 @@ func show_ending(dragons: int, meta: Dictionary) -> void:
     _fit_layout()
     _focus_first_enabled(_overlay_content)
 
+func _clear_panel() -> void:
+    ## Empty the shared modal panel (cart, memory book, gentler-forest options).
+    ##
+    ## The frame is cleared rather than the list so a rebuild can never leave a
+    ## stale header, scroll or button behind. Callers then add their heading
+    ## rows, ask for the list, fill it, and add their closing button, so the
+    ## visual order is simply the order things were added.
+    _clear(_shop_frame)
+    _shop_content = null
+
+func _panel_list(separation: int = 8) -> VBoxContainer:
+    ## Append the scrolling row list to the panel and hand it back.
+    ##
+    ## Header rows and the closing button go into _shop_frame, which fills the
+    ## card; only the rows themselves go into the returned list inside this
+    ## scroll. The scroll has to sit directly under the frame, because a
+    ## ScrollContainer reports a ZERO minimum height on its scrolling axis, so
+    ## it can only be given room by SIZE_EXPAND_FILL inside a parent that has
+    ## spare height to give. _shop_scroll is rebound because the previous one
+    ## was freed along with the frame.
+    var scroll := ScrollContainer.new()
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    _style_scrollbars(scroll)
+    _shop_frame.add_child(scroll)
+    _shop_scroll = scroll
+    var list := VBoxContainer.new()
+    list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    list.add_theme_constant_override("separation", separation)
+    scroll.add_child(list)
+    _shop_content = list
+    return list
+
 func show_shop(state: Dictionary) -> void:
     _dismiss_beat_ring()
     _modal_open = true
@@ -142,24 +186,16 @@ func show_shop(state: Dictionary) -> void:
     _shop_scrim.visible = true
     _shop_card.visible = true
     _fit_layout()
-    _clear(_shop_content)
+    _clear_panel()
     var heading := HBoxContainer.new()
-    _shop_content.add_child(heading)
+    _shop_frame.add_child(heading)
     var title := _label("Peddle’s cozy cart ♥", 28, Color("#ffe49b"))
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     heading.add_child(title)
     heading.add_child(_label("✦ %d to spend" % int(state.get("sparkles", 0)), 22, Color("#ffe987")))
-    _shop_content.add_child(_label("Everything helps all by itself. Warm tea heals you now. Pick up to 3 charms + 2 lantern songs.", 14, Color("#dce9c4")))
-    _shop_content.add_child(_separator())
-
-    var scroll := ScrollContainer.new()
-    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    _shop_content.add_child(scroll)
-    var list := VBoxContainer.new()
-    list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    list.add_theme_constant_override("separation", 7)
-    scroll.add_child(list)
+    _shop_frame.add_child(_label("Everything helps all by itself. Warm tea heals you now. Pick up to 3 charms + 2 lantern songs.", 14, Color("#dce9c4")))
+    _shop_frame.add_child(_separator())
+    var list := _panel_list(7)
 
     list.add_child(_section_label("1 · WARM TEA — DRINK NOW ♥"))
     # Spending sparkles on tea while already warm used to be a silent no-op
@@ -208,9 +244,9 @@ func show_shop(state: Dictionary) -> void:
         toggle.pressed.connect(func(): mote_verse_requested.emit(key))
         list.add_child(toggle)
 
-    _shop_content.add_child(_centered_button("♥  Done — back to the walk", true, func(): close_shop()))
+    _shop_frame.add_child(_centered_button("♥  Done — back to the walk", true, func(): close_shop()))
     _fit_layout()
-    _focus_first_enabled(_shop_content)
+    _focus_first_enabled(_shop_frame)
 
 func show_journal(meta: Dictionary, facts_learned: Array, stickers: Array) -> void:
     _dismiss_beat_ring()
@@ -220,18 +256,11 @@ func show_journal(meta: Dictionary, facts_learned: Array, stickers: Array) -> vo
     _shop_scrim.visible = true
     _shop_card.visible = true
     _fit_layout()
-    _clear(_shop_content)
-    _shop_content.add_child(_label("Mote’s memory book ♥", 30, Color("#ffe49b")))
-    _shop_content.add_child(_label("Fun facts and stickers you collected. Just for smiles — never a test.", 14, Color("#dce9c4")))
-    _shop_content.add_child(_separator())
-    var scroll := ScrollContainer.new()
-    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    _shop_content.add_child(scroll)
-    var list := VBoxContainer.new()
-    list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    list.add_theme_constant_override("separation", 9)
-    scroll.add_child(list)
+    _clear_panel()
+    _shop_frame.add_child(_label("Mote’s memory book ♥", 30, Color("#ffe49b")))
+    _shop_frame.add_child(_label("Fun facts and stickers you collected. Just for smiles — never a test.", 14, Color("#dce9c4")))
+    _shop_frame.add_child(_separator())
+    var list := _panel_list(9)
     list.add_child(_section_label("FUN FACTS YOU FOUND · %d ♥" % facts_learned.size()))
     if facts_learned.is_empty():
         list.add_child(_label("No facts yet. Level up gently or soothe a curious wisp; Mote will share one.", 16, Color("#eee8c8")))
@@ -246,9 +275,9 @@ func show_journal(meta: Dictionary, facts_learned: Array, stickers: Array) -> vo
             list.add_child(_label("✦ " + String(BeautyContent.STICKERS.get(sticker, sticker)), 16, Color("#ffe8a2")))
     list.add_child(_section_label("YOUR KINDNESS SO FAR ♥"))
     list.add_child(_label("Walks: %d    Deepest floor: %d    Wisps hugged home: %d    Dragons tucked in: %d" % [int(meta.get("runs", 0)), int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0)), int(meta.get("dragons_sung", 0))], 16, Color("#dce9c4")))
-    _shop_content.add_child(_centered_button("♥  Close my book", true, func(): close_journal()))
+    _shop_frame.add_child(_centered_button("♥  Close my book", true, func(): close_journal()))
     _fit_layout()
-    _focus_first_enabled(_shop_content)
+    _focus_first_enabled(_shop_frame)
 
 func show_settings(settings: Dictionary) -> void:
     _dismiss_beat_ring()
@@ -259,18 +288,11 @@ func show_settings(settings: Dictionary) -> void:
     _shop_scrim.visible = true
     _shop_card.visible = true
     _fit_layout()
-    _clear(_shop_content)
-    _shop_content.add_child(_label("Make it yours ♥", 30, Color("#ffe49b")))
-    _shop_content.add_child(_label("Cozy choices. Change anything, anytime. Leaving is always okay.", 14, Color("#dce9c4")))
-    _shop_content.add_child(_separator())
-    var scroll := ScrollContainer.new()
-    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    _shop_content.add_child(scroll)
-    var list := VBoxContainer.new()
-    list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    list.add_theme_constant_override("separation", 8)
-    scroll.add_child(list)
+    _clear_panel()
+    _shop_frame.add_child(_label("Make it yours ♥", 30, Color("#ffe49b")))
+    _shop_frame.add_child(_label("Cozy choices. Change anything, anytime. Leaving is always okay.", 14, Color("#dce9c4")))
+    _shop_frame.add_child(_separator())
+    var list := _panel_list(8)
 
     var motion := CheckButton.new()
     motion.text = "Still forest — calm decorative motion (walk stays readable)"
@@ -310,9 +332,9 @@ func show_settings(settings: Dictionary) -> void:
         show_settings(_settings)
     )
     list.add_child(reset)
-    _shop_content.add_child(_centered_button("♥  Back to the walk", true, func(): close_settings()))
+    _shop_frame.add_child(_centered_button("♥  Back to the walk", true, func(): close_settings()))
     _fit_layout()
-    _focus_first_enabled(_shop_content)
+    _focus_first_enabled(_shop_frame)
 
 func _slider_row(title: String, key: String, minimum: float, maximum: float, step: float, format: String, display_scale: float = 1.0) -> HBoxContainer:
     var row := HBoxContainer.new()

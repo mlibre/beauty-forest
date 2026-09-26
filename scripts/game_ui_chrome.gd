@@ -152,7 +152,9 @@ func _build_interface() -> void:
     overlay_margin.add_child(overlay_scroll)
     _overlay_content = VBoxContainer.new()
     _overlay_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    _overlay_content.add_theme_constant_override("separation", 12)
+    # 10 rather than 12: the menu is the tallest screen in the game and every
+    # pixel of separation it gives up is a pixel the start button gets back.
+    _overlay_content.add_theme_constant_override("separation", 10)
     overlay_scroll.add_child(_overlay_content)
 
     _shop_scrim = ColorRect.new()
@@ -171,6 +173,19 @@ func _build_interface() -> void:
     _root.add_child(_shop_card)
     var shop_margin := _margin(26, 22, 26, 22)
     _shop_card.add_child(shop_margin)
+    # The scrolling list hangs DIRECTLY off a VBox under the card, and that VBox
+    # fills the card. A ScrollContainer reports a ZERO minimum height on its
+    # scrolling axis (that is what lets it scroll), so it can only be given
+    # room by SIZE_EXPAND_FILL inside a parent that has spare height to give.
+    # The list used to be nested one level deeper, inside a VBox that was
+    # itself sized to its own minimum, so the scroll always resolved to zero
+    # and the memory book rendered empty.
+    _shop_frame = VBoxContainer.new()
+    _shop_frame.name = "ShopFrame"
+    _shop_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _shop_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    _shop_frame.add_theme_constant_override("separation", 10)
+    shop_margin.add_child(_shop_frame)
     _shop_scroll = ScrollContainer.new()
     _shop_scroll.name = "ShopScroll"
     _shop_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -179,7 +194,7 @@ func _build_interface() -> void:
     _shop_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     _shop_scroll.custom_minimum_size = Vector2.ZERO
     _style_scrollbars(_shop_scroll)
-    shop_margin.add_child(_shop_scroll)
+    _shop_frame.add_child(_shop_scroll)
     _shop_content = VBoxContainer.new()
     _shop_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _shop_content.add_theme_constant_override("separation", 10)

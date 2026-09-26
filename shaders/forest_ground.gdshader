@@ -24,20 +24,21 @@ void fragment() {
 	broad += sin((p.x + p.y) * 0.09) * 0.55;
 	broad = clamp(broad / 2.27 * 0.5 + 0.5, 0.0, 1.0);
 
-	// Mid-scale pools where the canopy lets the low sun through. Two rotated
-	// wave sets beat against each other so the pattern never tiles visibly.
-	float dapple = sin(p.x * 0.63 + p.y * 0.21) * sin(p.y * 0.57 - p.x * 0.19);
-	float pool = smoothstep(-0.15, 0.85, dapple);
+	// Mid-scale pools where the canopy lets the low sun through. Three
+	// incommensurate wave sets, because two of them beat into visible rows
+	// across the clearing: at a ~10 world-unit period the floor read as mown
+	// stripes rather than as light falling through leaves.
+	float dapple = sin(p.x * 0.41 + p.y * 0.17) * sin(p.y * 0.33 - p.x * 0.23) * sin((p.x - p.y) * 0.11);
+	float pool = smoothstep(-0.04, 0.60, dapple);
 
-	// Fine grass/clover speckle, only visible near the camera.
+	// Fine grass/clover speckle. Kept low-frequency on purpose: a ~1.4 unit
+	// blade term aliased into a crawling shimmer at the far end of the room.
 	float fleck = pow(max(0.0, sin(p.x * 1.31) * sin(p.y * 1.17)), 18.0);
-	float blade = pow(max(0.0, sin(p.x * 3.7 + p.y * 2.9)), 24.0);
 
 	vec3 moss = mix(deep_patch.rgb, base_color.rgb, broad);
-	moss = mix(moss, light_patch.rgb, pool * 0.34);
+	moss = mix(moss, light_patch.rgb, pool * 0.22);
 	moss *= COLOR.rgb;
 	moss += vec3(0.10, 0.09, 0.025) * fleck;
-	moss += vec3(0.06, 0.08, 0.02) * blade * 0.5;
 
 	ALBEDO = moss;
 	ROUGHNESS = 0.96;
