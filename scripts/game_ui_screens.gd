@@ -180,7 +180,6 @@ func _panel_list(separation: int = 8) -> VBoxContainer:
 
 func show_shop(state: Dictionary) -> void:
     _dismiss_beat_ring()
-    _modal_open = true
     _cancel_story()
     _reset_touch_joystick()
     _shop_scrim.visible = true
@@ -250,7 +249,6 @@ func show_shop(state: Dictionary) -> void:
 
 func show_journal(meta: Dictionary, facts_learned: Array, stickers: Array) -> void:
     _dismiss_beat_ring()
-    _modal_open = true
     _cancel_story()
     _reset_touch_joystick()
     _shop_scrim.visible = true
@@ -282,7 +280,6 @@ func show_journal(meta: Dictionary, facts_learned: Array, stickers: Array) -> vo
 func show_settings(settings: Dictionary) -> void:
     _dismiss_beat_ring()
     _settings = settings.duplicate(true)
-    _modal_open = true
     _cancel_story()
     _reset_touch_joystick()
     _shop_scrim.visible = true
@@ -366,19 +363,16 @@ func _slider_row(title: String, key: String, minimum: float, maximum: float, ste
 func close_shop() -> void:
     _shop_scrim.visible = false
     _shop_card.visible = false
-    _modal_open = false
     shop_closed.emit()
 
 func close_journal() -> void:
     _shop_scrim.visible = false
     _shop_card.visible = false
-    _modal_open = false
     journal_closed.emit()
 
 func close_settings() -> void:
     _shop_scrim.visible = false
     _shop_card.visible = false
-    _modal_open = false
     settings_closed.emit()
 
 func close_panels() -> void:
@@ -386,7 +380,6 @@ func close_panels() -> void:
     _shop_card.visible = false
     _overlay_scrim.visible = false
     _overlay_card.visible = false
-    _modal_open = false
     _beat_ring.visible = false
     _cancel_story()
     _reset_touch_joystick()

@@ -493,7 +493,6 @@ func _show_overlay() -> void:
     _reset_touch_joystick()
     _overlay_scrim.visible = true
     _overlay_card.visible = true
-    _modal_open = true
     _overlay_card.modulate.a = 1.0
     _fit_layout()
 

@@ -65,7 +65,6 @@ var _beat_inner: Panel
 var _warm_flash: ColorRect
 var _settings: Dictionary = {}
 var _selected_style := "standard"
-var _modal_open := false
 var _toast_queue: Array[Dictionary] = []
 var _toast_active := false
 var _toast_tween: Tween
