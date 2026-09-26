@@ -85,6 +85,7 @@ Avoid non-Mix blend modes unless the effect needs Add/Subtract/Multiply/Premulti
 - Imported meshes need correct normals/tangents/UVs/material names. Fix source/import issues before writing a shader around bad data.
 - Keep triangle/shader/material complexity appropriate for target. A visually simple scene can be GPU-bound through overdraw, transparency, lights, shadows, or post-processing.
 - Reuse materials and meshes. Use `MultiMeshInstance3D` for large repeated opaque objects; use LOD/visibility ranges and spatial chunks.
+- When a `MultiMesh` carries per-instance colors, keep the color array parallel to the transform array and enable `use_colors` only when the counts match. A mismatch silently drops *all* instance colors — instances render the material default instead of erroring.
 - Use `MeshInstance3D.gi_mode`/lightmap/scale settings deliberately for baked GI. Do not use visual-only material emission as a substitute for gameplay illumination.
 - `CanvasItem`/UI draw order does not control 3D transparency sorting. Keep transparent surfaces separated and test camera angles.
 - `RenderingServer` frame callbacks and render resources are advanced APIs. Verify thread safety and renderer support before using them in a game.

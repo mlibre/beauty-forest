@@ -118,6 +118,7 @@ Use `Mutex`, `Semaphore`, and `WorkerThreadPool` correctly. Protect shared state
 - GPU profile/validation/abort: `--gpu-profile`, `--gpu-validation`, `--gpu-abort` where supported.
 - Movie capture: `--write-movie` with a fixed FPS/quit count; this is a capture tool, not a correctness test.
 - Frame limit/diagnostic: `--max-fps`, `--frame-delay`, `--fixed-fps`, `--print-fps` (avoid confusing simulation delay with an FPS limiter).
+- When an `extends`/`class_name` chain fails, read the **first** `SCRIPT ERROR`, not the last. Every dependent reports `Could not resolve class` / `Failed to compile depended scripts`; only the first error names the actually broken file.
 
 Use the installed editor's `--help` for available flags. Unknown flags may silently do nothing.
 

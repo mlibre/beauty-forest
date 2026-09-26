@@ -128,6 +128,7 @@ Use several layers:
 - Project warning settings; scope `@warning_ignore` narrowly with a reason.
 - `assert()` for invariants in debug/editor runs, not user-facing error handling or security. Its condition is omitted from release exports, so never put required side effects inside it.
 - `godot --headless --path <project> --check-only --script res://path.gd` to parse.
+- Shader parameter names are project-declared strings, not engine API: cross-check every `set_shader_parameter()` name against the `uniform` declarations by reading the `.gdshader` file. A wrong name fails at runtime, and no parser or `ClassDB` lookup catches it.
 - Runtime tests that load real scenes/resources and exercise signals, process timing, saves, and failure paths.
 
 A clean parser does not prove node paths, scene wiring, layers/masks, resources, localization, platform features, or runtime behavior.
