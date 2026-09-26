@@ -31,6 +31,16 @@ func _gui_input(event: InputEvent) -> void:
             _set_from_position(drag.position)
             accept_event()
 
+func _input(event: InputEvent) -> void:
+    # A release outside the stick never reaches _gui_input, which would leave
+    # the captured index set and the hero walking forever. The tree-wide tap
+    # catches that release by index; an inside release is already cleared by
+    # _gui_input, whose index check then simply stops matching.
+    if event is InputEventScreenTouch:
+        var touch := event as InputEventScreenTouch
+        if not touch.pressed and touch.index == _touch_index:
+            reset()
+
 func _set_from_position(local_position: Vector2) -> void:
     var center := size * 0.5
     var radius := minf(size.x, size.y) * 0.34
