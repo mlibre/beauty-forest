@@ -328,9 +328,14 @@ func _on_journal_closed() -> void:
         player.set_control_enabled(_gameplay_controls_enabled())
 
 func _open_settings() -> void:
+    # The COZY button stays lit while Peddle's cart or the memory book is open,
+    # so pressing it has to work. Close the modal underneath, remember it, and
+    # hand the player back to it on close rather than swallowing the press.
+    var return_to := mode
     if mode in [Mode.SHOP, Mode.JOURNAL]:
-        return
-    previous_mode = mode
+        ui.close_panels()
+        return_to = Mode.PLAYING
+    previous_mode = return_to
     mode = Mode.SETTINGS
     _set_world_processing(false)
     player.set_control_enabled(false)

@@ -8,7 +8,7 @@ Godot 4.7.2 · branch master · never push.
 
 ## Progress
 
-Completed iterations: 1-6 (see below)
+Completed iterations: 9 (see below)
 
 ## Iterations
 
@@ -20,22 +20,28 @@ Completed iterations: 1-6 (see below)
 | 4 | Ambience never re-armed after non-finale dragon | 2c4ed12 | done |
 | 5 | Stairwell + Peddle shared a clearing | 2c4ed12 | done |
 | 6 | Dream chime landed on stairwell glow disc | 2c4ed12 | done |
+| 7 | play_chord flat envelope -> click on every hit/step | c333127 | done |
+| 8 | sunbeam shader emitted exactly 0.0 (open cone) | 5a25404 | done |
+| 9 | Invisible 1.70m walls ringing 11/13 clearings | 2d0b4c9 | done |
+
+Refuted (audit's claim did not survive measurement):
+- B1. Log label over status card / off-screen -- NO. Label is text-clipped at
+  165px, never hits the hint bar, never leaves the window. Audit's numbers came
+  from measuring custom_minimum_size instead of the real rect.
+- B2. Story card overflows by up to 307px -- NO at every size with real text.
+  Only clips below 260px tall, which is below any sane window.
 
 ## Backlog (ranked, from the three delegated audits — all need independent verification)
 
 Tier 8 (UI):
-- B1. Mote's log label painted over the status card + hint bar, 71px off-screen bottom
-- B2. Story card overflows window bottom by up to 307px (show_story never refits)
 - B3. apply_settings never refits layout; _compact_hud is stale after text_scale change
 - B4. COZY button / C key silently no-op in SHOP and JOURNAL modes
 
 Tier 6 (feel/audio):
-- B5. play_chord envelope never decays -> ~40% end discontinuity (click) on every hit/step
-- B6. CozyVFX.burst allocates mesh+2 materials per call; ~75 bursts/sec
+- B5. DONE (c333127)  - B6. CozyVFX.burst allocates mesh+2 materials per call; ~75 bursts/sec
 
 Tier 7 (rendering):
-- B7. sunbeam.gdshader: capless cylinder means v_radial==1.0 always -> EMISSION==0
-- B8. Invisible 1.7m wall cells ringing clearings (collider where no tree drawn)
+- B7. DONE (5a25404)  - B8. DONE (2d0b4c9)
 
 Tier 2/3 (progression/logic):
 - B9. `_open_settings()` twice corrupts previous_mode (NOT player-reachable — scrim blocks input)

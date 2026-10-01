@@ -467,6 +467,8 @@ func _run() -> void:
         return
     if not await _check_ambience_returns_after_a_non_finale_dragon(game):
         return
+    if not await _check_settings_open_from_every_modal(game):
+        return
 
     print("BEAUTY_FOREST_MAIN_FLOW_OK")
     TestProfile.end()
@@ -560,6 +562,68 @@ func _check_ambience_returns_after_a_non_finale_dragon(game: Node) -> bool:
     game._start_run(1)
     await _frames(4)
     return true
+
+func _check_settings_open_from_every_modal(game: Node) -> bool:
+    ## The COZY button stays lit and enabled while Peddle's cart or the memory
+    ## book is open, so pressing it has to do something. _open_settings used to
+    ## early-return in SHOP and JOURNAL, so the press vanished with no log line
+    ## and no panel — and settings was unreachable from either modal.
+    for origin in ["journal", "shop"]:
+        game._start_run(2)
+        await _frames(4)
+        if origin == "journal":
+            game._open_journal()
+        else:
+            # The cart only opens at Peddle's actual position.
+            game.player.global_position = game.world.merchant_position + Vector3(1.0, 0.0, 0.0)
+            await _frames(2)
+            game._open_shop()
+        await _frames(3)
+        if not _check(game.mode in [game.Mode.SHOP, game.Mode.JOURNAL],
+                "the %s did not open (mode %d)" % [origin, game.mode]):
+            return false
+        game._open_settings()
+        await _frames(3)
+        if not _check(game.mode == game.Mode.SETTINGS,
+                "COZY did nothing while the %s was open (mode stayed %d)" % [origin, game.mode]):
+            return false
+        # The cart, the memory book and the settings panel deliberately share
+        # one card, which gets refilled -- so what must change is the CONTENT,
+        # not the card. "Make it yours" is the settings heading.
+        var headings := 0
+        for label in _texts_in(game.ui._shop_frame):
+            if label.contains("Make it yours") or label.contains("memory book"):
+                headings += 1
+        if not _check(headings == 1 and _has_text(game.ui._shop_frame, "Make it yours"),
+                "the %s content was left on screen instead of the settings panel" % origin):
+            return false
+        game.ui.settings_closed.emit()
+        await _frames(3)
+        if not _check(game.mode == game.Mode.PLAYING,
+                "closing settings did not return to play from the %s (mode %d)" % [origin, game.mode]):
+            return false
+        if not _check(game.player.control_enabled,
+                "the hero was left unable to move after closing settings from the %s" % origin):
+            return false
+    game._start_run(1)
+    await _frames(4)
+    return true
+
+func _has_text(node: Node, needle: String) -> bool:
+    for text in _texts_in(node):
+        if text.contains(needle):
+            return true
+    return false
+
+func _texts_in(node: Node) -> Array[String]:
+    var out: Array[String] = []
+    for child in node.get_children():
+        if child is Label:
+            out.append((child as Label).text)
+        elif child is Button:
+            out.append((child as Button).text)
+        out.append_array(_texts_in(child))
+    return out
 
 func _frames(count: int) -> void:
     for _frame in range(count):
