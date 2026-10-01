@@ -341,6 +341,7 @@ func _run() -> void:
 		_check(unaffordable.disabled, "an unowned charm was offered with 0 sparkles")
 
 	await _check_high_contrast_reaches_the_text()
+	await _check_bump_softness_drags_toward_softness()
 
 	if _failures > 0:
 		quit(1)
@@ -424,3 +425,79 @@ func _relative_luminance(c: Color) -> float:
 	var channel := func(v: float) -> float:
 		return v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4)
 	return 0.2126 * channel.call(c.r) + 0.7152 * channel.call(c.g) + 0.0722 * channel.call(c.b)
+
+
+## "Bump softness" is the only slider in the panel whose rightward drag made the
+## game harder: the stored value is a damage multiplier, so seeking gentler
+## bumps meant dragging right and landing on ×3.00 -- four times the damage being
+## avoided. Right must now always mean softer.
+func _check_bump_softness_drags_toward_softness() -> void:
+	_ui.apply_settings(BeautyData.default_settings())
+	await _frames(3)
+	_ui.show_settings(_ui._settings)
+	await _frames(4)
+	var row: HBoxContainer = _find_row("Bump softness")
+	_check(row != null, "the Bump softness row is missing")
+	if row == null:
+		return
+	var slider: HSlider = null
+	for child in row.get_children():
+		if child is HSlider:
+			slider = child
+			break
+	_check(slider != null, "the Bump softness row has no slider")
+	if slider == null:
+		return
+
+	# Dragging right must store the softest setting, not the hardest.
+	slider.value = 1.0
+	await _frames(3)
+	var softest: float = float(_ui._settings.get("damage_taken", -1.0))
+	print("BUMP_SOFTNESS right=%.2f" % softest)
+	_check(is_equal_approx(softest, 0.25),
+		"dragging Bump softness right stored %.2f, not the softest 0.25" % softest)
+
+	slider.value = 0.0
+	await _frames(3)
+	var hardest: float = float(_ui._settings.get("damage_taken", -1.0))
+	print("BUMP_SOFTNESS left=%.2f" % hardest)
+	_check(is_equal_approx(hardest, 3.0),
+		"dragging Bump softness left stored %.2f, not the hardest 3.00" % hardest)
+	_check(hardest > softest,
+		"Bump softness moved backwards: right %.2f, left %.2f" % [softest, hardest])
+
+	# The handle must show where the current setting sits, and reopening the
+	# panel must not shift it.
+	_ui.apply_settings({"damage_taken": 0.70})
+	await _frames(2)
+	_ui.show_settings(_ui._settings)
+	await _frames(4)
+	var reopened: HBoxContainer = _find_row("Bump softness")
+	var reopened_slider: HSlider = null
+	for child in reopened.get_children():
+		if child is HSlider:
+			reopened_slider = child
+			break
+	_check(reopened_slider != null and reopened_slider.value > 0.8,
+		"the default ×0.70 should sit near the right (soft) end, handle at %s" % [
+			str(reopened_slider.value if reopened_slider != null else "none")])
+
+	# Opening the panel must not itself change the setting.
+	var before_open: float = float(_ui._settings.get("damage_taken", -1.0))
+	_ui.apply_settings(BeautyData.default_settings())
+	await _frames(2)
+	_ui.close_settings()
+	await _frames(2)
+	_ui.apply_settings(BeautyData.default_settings())
+	await _frames(2)
+
+func _find_row(title: String) -> HBoxContainer:
+	for row in _ui._shop_content.find_children("*", "HBoxContainer", true, false):
+		var candidate := row as HBoxContainer
+		if candidate == null:
+			continue
+		for lbl in candidate.find_children("*", "Label", true, false):
+			var label := lbl as Label
+			if label != null and label.text == title:
+				return candidate
+	return null

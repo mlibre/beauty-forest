@@ -35,7 +35,9 @@ Completed iterations: 15 (see below)
 | 19 | _separate_wisps at maximum density | — | refuted, see below |
 | 20 | reduced_motion coverage | 6d5b8f1 | FIXED: boss light ignored Still Forest |
 | 21 | world_scenery dead declaration | — | no code change; see below |
-| 22 | high_contrast coverage | — | FIXED: contrast never reached the text |
+| 22 | high_contrast coverage | fd86185 | FIXED: contrast never reached the text |
+| 23 | damage_taken / wisp_speed / rhythm_window | — | refuted; settings sweep closed |
+| 24 | Bump softness slider direction | — | FIXED: dragging right made it harder |
 
 Refuted (audit's claim did not survive measurement):
 - B1. Log label over status card / off-screen -- NO. Label is text-clipped at
@@ -178,6 +180,51 @@ Tier 2/3 (progression/logic):
     gave the real answer.
   - Godot 4.7.2 StyleBoxFlat has no get_border_width_all(); use
     border_width_top. Worth remembering, it cost a parse-error round trip.
+
+- The remaining three settings (probes 74-77). All correct, and it took three
+  probes to find that out because each one first produced a convincing lie.
+  - Probe 74 said wisp_speed "saturates above 1.0" -- identical velocity at 1.0
+    and 3.0. False: it passed kindling_speed=1.0 by hand, and main.gd computes
+    it as wisp_speed/0.85. It also compared wisps[0] across separate
+    _start_run calls, which reseeds the wisp mix, so it was comparing a
+    Shambler against a Crawler.
+  - Probe 75 said damage_taken was "0.0000 warmth" at every setting. False: the
+    1.0s post-load invulnerability swallowed every hit. It also restarted the
+    run per setting, reseeding the mix again.
+  - Probe 76, on ONE fixed run with the guards opened, shows damage_taken is
+    correctly linear: at x0.357 a 10-point hit deals 4; at x4.286 it deals 43.
+    No clamping, no floor, no ceiling anywhere in 0.25-3.0.
+  - The one interesting edge: amount is an int, so a 1-point hit rounds to 0 at
+    the bottom of the slider. probe77 shows the smallest contact_damage the
+    game can deal is 4 (floor 1) rising to 9 (floor 13), and the 1.5x feeling
+    path only makes it bigger. So no real hit is ever swallowed. Not a defect.
+  - wisp_speed, damage_taken and rhythm_window all verified. The settings sweep
+    is closed: reduced_motion (fixed 6d5b8f1), high_contrast (fixed fd86185),
+    text_scale (fixed in run_state.gd), muted, volume, and these three. Two of
+    six had a silent hole, both found by measuring behaviour rather than
+    grepping for the setting name.
+
+- Bump softness (probes 78-80). The one remaining readability defect, and it
+  was a control-direction bug rather than a math bug.
+  - FIXED: "Bump softness" stores damage_taken, a damage MULTIPLIER, so the
+    slider ran softest-on-the-left. A player reaching for gentler bumps dragged
+    right and landed on x3.00 -- four times the damage they were trying to
+    avoid. Every other slider in the panel increases with a rightward drag;
+    this was the only one that decreased.
+  - The obvious fix does not work: HSlider in Godot 4.7.2 silently clamps
+    min_value=3.0, max_value=0.25 to min=max=3.0, every read returns 3.0, and
+    value_changed never fires again. probe79 measured exactly that before any
+    code was written. So _inverted_slider_row keeps a normal 0..1 track and maps
+    the position to the stored value itself.
+  - Verified both directions with real damage numbers: drag right -> stored
+    0.25, a 10-point hit deals 4 warmth; drag left -> stored 3.00, 43 warmth.
+    The handle also sits where the stored value belongs, so the default x0.70
+    rests near the soft end.
+  - Reverting to the plain slider makes regression_ui exit 1 with right=1.00
+    and left=0.25 -- exactly backwards, which is the clearest possible proof.
+  - One thing the probes caught in my own test: a print with a %s verb and two
+    arguments printed its format string literally. It would have hidden the
+    numbers on the one line that reports this invariant.
 
 Audit backlog is now exhausted: every item is done, refuted, or unreachable.
 Future iterations hunt fresh ground rather than re-reading the audits. (NOT player-reachable — scrim blocks input)

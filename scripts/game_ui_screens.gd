@@ -313,7 +313,13 @@ func show_settings(settings: Dictionary) -> void:
     )
     list.add_child(contrast)
     list.add_child(_section_label("COZY COMFORT ♥"))
-    list.add_child(_slider_row("Bump softness", "damage_taken", 0.25, 3.0, 0.05, "×%.2f"))
+    # "Bump softness" reads as a quantity of softness, so dragging right should
+    # add softness. The stored value is a damage multiplier, so it did the exact
+    # opposite: a player reaching for gentler bumps dragged right and set
+    # themselves to ×3.00, four times the damage they were trying to avoid. The
+    # slider now runs 3.0 (left, hardest) to 0.25 (right, softest) and displays
+    # the reciprocal, so right always means more of what the label names.
+    list.add_child(_inverted_slider_row("Bump softness", "damage_taken", 0.25, 3.0, "×%.2f"))
     list.add_child(_slider_row("Extra song time", "rhythm_window", 0.25, 3.0, 0.05, "×%.2f"))
     list.add_child(_slider_row("Wisp speed", "wisp_speed", 0.25, 3.0, 0.05, "×%.2f"))
     list.add_child(_section_label("COZY SOUNDS ♥"))
@@ -362,6 +368,48 @@ func _slider_row(title: String, key: String, minimum: float, maximum: float, ste
             value_label.text = format % value
         _emit_settings()
     )
+    return row
+
+func _inverted_slider_row(title: String, key: String, minimum: float, maximum: float, format: String, display_scale: float = 1.0) -> HBoxContainer:
+    ## A row whose label names a QUALITY of comfort rather than a raw amount.
+    ## The handle travels the usual way, left to right, but the value it stores
+    ## is the reciprocal of what the player reads: dragging right gives more of
+    ## what the label says. HSlider refuses an inverted range outright -- it
+    ## clamps min_value to max_value and then never emits value_changed again --
+    ## so the mapping has to happen here.
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 12)
+    var label := _label(title, 15, Color("#e8efd0"))
+    label.custom_minimum_size = Vector2(180, 0)
+    row.add_child(label)
+    var slider := HSlider.new()
+    slider.min_value = 0.0
+    slider.max_value = 1.0
+    slider.step = 0.0
+    slider.value = 0.0
+    slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    row.add_child(slider)
+    var value_label := _label(format % (float(_settings.get(key, maximum)) * display_scale), 14, Color("#ffe69a"))
+    value_label.custom_minimum_size = Vector2(70, 0)
+    value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+    row.add_child(value_label)
+
+    var span: float = maximum - minimum
+    var to_stored := func(t: float) -> float:
+        return minimum + (1.0 - clampf(t, 0.0, 1.0)) * span
+    slider.value_changed.connect(func(t: float):
+        var stored: float = to_stored.call(t)
+        _settings[key] = stored
+        if format == "%d%%":
+            value_label.text = format % int(stored * display_scale)
+        else:
+            value_label.text = format % stored
+        _emit_settings()
+    )
+    # Place the handle where the stored value belongs, without firing the
+    # callback for a move the player did not make.
+    var current: float = float(_settings.get(key, maximum))
+    slider.value = clampf(1.0 - (current - minimum) / span, 0.0, 1.0) if span > 0.0 else 0.0
     return row
 
 func close_shop() -> void:
