@@ -8,7 +8,7 @@ Godot 4.7.2 · branch master · never push.
 
 ## Progress
 
-Completed iterations: 9 (see below)
+Completed iterations: 11 (see below)
 
 ## Iterations
 
@@ -23,6 +23,8 @@ Completed iterations: 9 (see below)
 | 7 | play_chord flat envelope -> click on every hit/step | c333127 | done |
 | 8 | sunbeam shader emitted exactly 0.0 (open cone) | 5a25404 | done |
 | 9 | Invisible 1.70m walls ringing 11/13 clearings | 2d0b4c9 | done |
+| 10 | Boss/feeling spawn omit `occupied` -> wisp interpenetration | — | dropped, see below |
+| 11 | COZY button did nothing while shop/journal open | a7b9df3 | done |
 
 Refuted (audit's claim did not survive measurement):
 - B1. Log label over status card / off-screen -- NO. Label is text-clipped at
@@ -35,7 +37,11 @@ Refuted (audit's claim did not survive measurement):
 
 Tier 8 (UI):
 - B3. apply_settings never refits layout; _compact_hud is stale after text_scale change
-- B4. COZY button / C key silently no-op in SHOP and JOURNAL modes
+- B4. DONE (a7b9df3)
+- B10. DROPPED. Un-aware spawn picks land on an occupied cell 0.2% of the
+  time (9/4000). _separate_wisps() pushes overlapping pairs apart every frame,
+  so the worst case is a one-frame cosmetic pop. Below the fix bar.
+- B11. COZY button / C key silently no-op in SHOP and JOURNAL modes
 
 Tier 6 (feel/audio):
 - B5. DONE (c333127)  - B6. CozyVFX.burst allocates mesh+2 materials per call; ~75 bursts/sec

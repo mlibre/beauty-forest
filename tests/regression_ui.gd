@@ -217,6 +217,48 @@ func _run() -> void:
 	_ui.apply_settings(BeautyData.default_settings())
 	_ui._fit_layout()
 
+	# The check above had to call _fit_layout() by hand, which hid the real bug:
+	# the game never does that for you. Raising the text size has to reflow the
+	# HUD on its own, because the panel emits settings_changed and the director
+	# applies it — a player never resizes anything. Reproduce the player path
+	# only: set the size, emit, and look.
+	root.size = Vector2i(1280, 520)
+	root.content_scale_size = Vector2i(1280, 520)
+	for _frame in range(6):
+		await _frames(2)
+	_ui.apply_settings(BeautyData.default_settings())
+	_ui._fit_layout()
+	await _frames(4)
+	var before_left := Rect2(_ui._left_card.position, _ui._left_card.size)
+	_ui._settings["text_scale"] = 2.0
+	_ui.settings_changed.emit(_ui._settings.duplicate(true))
+	await _frames(4)
+	_check(_ui._compact_hud,
+		"raising the text size on a short window left the wide HUD in place (left card stayed %s)" % str(before_left))
+	var after_left := Rect2(_ui._left_card.position, _ui._left_card.size)
+	_check(after_left.size.x < before_left.size.x,
+		"the status card did not shrink when the HUD collapsed (%s -> %s)" % [str(before_left), str(after_left)])
+	_check(not _ui._minimap.visible, "the minimap stayed drawn on a collapsed HUD")
+	var after_right := Rect2(_ui._right_card.position, _ui._right_card.size)
+	_check(not after_left.intersects(after_right), "the collapsed status card still overlaps the Mote card")
+	var window_rect := Rect2(Vector2.ZERO, _ui._root.size)
+	_check(window_rect.encloses(after_left), "the collapsed status card fell outside the window: %s" % str(after_left))
+	_check(window_rect.encloses(after_right), "the Mote card fell outside the window: %s" % str(after_right))
+
+	# And a window with room to spare must NOT collapse, or the fix is just
+	# "always use the small HUD".
+	root.size = Vector2i(1280, 900)
+	root.content_scale_size = Vector2i(1280, 900)
+	for _frame in range(6):
+		await _frames(2)
+	_ui.settings_changed.emit(_ui._settings.duplicate(true))
+	await _frames(4)
+	_check(not _ui._compact_hud, "a tall window collapsed the HUD anyway")
+	_check(_ui._minimap.visible, "the minimap was dropped from a window with room for it")
+
+	_ui.apply_settings(BeautyData.default_settings())
+	_ui._fit_layout()
+
 	if _failures > 0:
 		quit(1)
 		return

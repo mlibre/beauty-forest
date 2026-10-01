@@ -222,6 +222,12 @@ func _recalculate_loadout(reset_hp: bool) -> void:
 func _apply_settings(value: Dictionary, persist: bool) -> void:
     settings = value.duplicate(true)
     ui.apply_settings(settings)
+    # The HUD collapses based on text_scale, but apply_settings lives in the base
+    # UI class and cannot call the layout pass defined further down the mixin
+    # chain. Without this, raising the text size on a short window leaves the
+    # wide layout in place — the left card grows to 590x454 and overlaps the
+    # hint bar — until something else happens to resize the window.
+    ui._fit_layout()
     if audio:
         audio.set_volume(float(settings.get("volume", 0.8)))
         audio.set_muted(bool(settings.get("muted", false)))
