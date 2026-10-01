@@ -297,7 +297,11 @@ func tick_behavior(delta: float, player_position: Vector3, aggro_range: float, s
             aura_alpha += 0.025 + 0.025 * sin(Time.get_ticks_msec() * 0.006 + _seed)
         _aura_material.albedo_color.a = aura_alpha
     if _big_light:
-        _big_light.light_energy = (2.2 if not is_feeling else 1.7) * (0.94 + sin(Time.get_ticks_msec() * 0.002 + _seed) * 0.06)
+        # Still Forest must still the boss light too: a breathing light is the
+        # most conspicuous motion on the floor, and it is the only animated
+        # channel here that a player who asked for stillness would still see.
+        var breathe := 0.0 if reduced_motion else sin(Time.get_ticks_msec() * 0.002 + _seed) * 0.06
+        _big_light.light_energy = (2.2 if not is_feeling else 1.7) * (0.94 + breathe)
 
 func is_boss_vulnerable() -> bool:
     return is_big and _boss_window > 0.0

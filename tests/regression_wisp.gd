@@ -46,5 +46,56 @@ func _run() -> void:
         quit(1)
         return
 
+    # Still Forest has to still every animated channel a wisp owns. The boss
+    # light breathes via sin() and was the one channel that never consulted the
+    # setting, so a player who asked for stillness still got a pulsing light.
+    if not await _check_boss_light_respects_still_forest():
+        print("BEAUTY_FOREST_WISP_REGRESSION_FAILED")
+        quit(1)
+        return
+
     print("BEAUTY_FOREST_WISP_REGRESSION_OK")
     quit(0)
+
+func _check_boss_light_respects_still_forest() -> bool:
+    for enabled in [false, true]:
+        var wisp := Wisp.new()
+        root.add_child(wisp)
+        wisp.setup("Shambler", 3, true)
+        wisp.set_reduced_motion(enabled)
+        var light: Light3D = null
+        for child: Node in wisp.find_children("*", "Light3D", true, false):
+            light = child
+            break
+        if light == null:
+            wisp.free()
+            await process_frame
+            print("FAIL: the big wisp has no light to still")
+            return false
+
+        # The breath is driven by Time.get_ticks_msec(), so the sample has to
+        # span real wall-clock time or every read lands inside one period.
+        var lowest := INF
+        var highest := -INF
+        var target := wisp.global_position + Vector3(5.0, 0.0, 0.0)
+        var started := Time.get_ticks_msec()
+        while Time.get_ticks_msec() - started < 1200:
+            wisp.tick_behavior(1.0 / 60.0, target, 40.0, 1.0, 1.0)
+            lowest = minf(lowest, light.light_energy)
+            highest = maxf(highest, light.light_energy)
+        var swing: float = highest - lowest
+        print("BOSS_LIGHT_SWING reduced_motion=%s swing=%.5f" % [enabled, swing])
+
+        if enabled and swing > 0.001:
+            wisp.free()
+            await process_frame
+            print("FAIL: the boss light still breathes with Still Forest on (%.5f)" % swing)
+            return false
+        if not enabled and swing < 0.01:
+            wisp.free()
+            await process_frame
+            print("FAIL: the boss light never breathes, so this test cannot see it (%.5f)" % swing)
+            return false
+        wisp.free()
+        await process_frame
+    return true

@@ -32,6 +32,7 @@ Completed iterations: 15 (see below)
 | 16 | Feeling ceremony at high rhythm_window; heart pickups | — | refuted, see below |
 | 17 | Quit path / save atomicity / sticker cap | — | refuted, see below |
 | 18 | Region ranges / ambient beds | — | refuted, see below |
+| 19 | _separate_wisps at maximum density | — | refuted, see below |
 
 Refuted (audit's claim did not survive measurement):
 - B1. Log label over status card / off-screen -- NO. Label is text-clipped at
@@ -111,6 +112,25 @@ Tier 2/3 (progression/logic):
   (Probe 61 read byte PAIRS as single samples and reported a bogus 0.008 peak;
   62 decoded little-endian s16 by hand and got the real number. That is the
   same class of mistake as reading custom_minimum_size instead of a real rect.)
+
+- _separate_wisps (probes 63-67). This took four probes to settle, and three of
+  them first reported a defect that did not exist.
+  - At spawn: 0 overlapping pairs on floor 1 (8 wisps) and floor 13 (32 wisps).
+    The `occupied` dict in the seeder already prevents overlap.
+  - Forced 32 wisps onto ONE point: resolved into a 19.5m x 0.00m LINE. Real,
+    but unreachable: identical coordinates give every pair a zero offset, so
+    the `distance < 0.001` fallback hands them all the same direction. The
+    generator cannot produce that state.
+  - Scattered in a 1m ball -> 4.7m x 5.2m disc. Two clumps 4m apart -> 7.3m x
+    3.4m. The solver converges to a proper 2D spread; the line was my setup.
+  - Under REAL tick_behavior + move_and_slide with the hero parked: 0
+    overlapping pairs in every one of 1500 frames, never more than 1 wisp
+    inside the 2.25m bump radius, HP untouched at 120/120. Physics resolves
+    convergence; _separate_wisps is a safety net that never fires.
+  - Cost at n=32: 0.002 ms/frame. Not a performance issue either.
+  Lesson worth keeping: an O(n^2) relaxation solver looks pathological until you
+  check whether the engine's own physics already prevents the pathological
+  input. Two of the four probes were convincing-looking lies.
 
 Audit backlog is now exhausted: every item is done, refuted, or unreachable.
 Future iterations hunt fresh ground rather than re-reading the audits. (NOT player-reachable — scrim blocks input)
