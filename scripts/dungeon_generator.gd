@@ -50,14 +50,18 @@ static func generate(floor_number: int) -> Dictionary:
     for grove_index in range(grove_count):
         var gx := rng.randi_range(2, width - 3)
         var gy := rng.randi_range(2, height - 3)
-        if _point_in_any_room(clearings, gx, gy):
+        if _point_in_any_room(clearings, gx, gy, 1):
             continue
         var radius := rng.randi_range(1, 3)
         for yy in range(gy - radius, gy + radius + 1):
             for xx in range(gx - radius, gx + radius + 1):
                 if xx <= 1 or yy <= 1 or xx >= width - 2 or yy >= height - 2:
                     continue
-                if _point_in_any_room(clearings, xx, yy):
+                # The grove visual deliberately leaves a one-cell margin around
+                # each clearing open, so a wall here would be collidable with
+                # nothing drawn on it — an invisible barrier ringing every room.
+                # Only grow groves outside that margin.
+                if _point_in_any_room(clearings, xx, yy, 1):
                     continue
                 var distance := Vector2(float(xx - gx), float(yy - gy)).length()
                 if distance <= float(radius) and rng.randf() < (1.0 - distance / float(radius + 1)) * 0.88:
@@ -112,10 +116,10 @@ static func generate(floor_number: int) -> Dictionary:
         "floor": safe_floor,
     }
 
-static func _point_in_any_room(rooms: Array[Dictionary], x: int, y: int) -> bool:
+static func _point_in_any_room(rooms: Array[Dictionary], x: int, y: int, margin: int = 0) -> bool:
     for room: Dictionary in rooms:
-        if x >= int(room["x"]) and x < int(room["x"]) + int(room["w"]) \
-                and y >= int(room["y"]) and y < int(room["y"]) + int(room["h"]):
+        if x >= int(room["x"]) - margin and x < int(room["x"]) + int(room["w"]) + margin \
+                and y >= int(room["y"]) - margin and y < int(room["y"]) + int(room["h"]) + margin:
             return true
     return false
 

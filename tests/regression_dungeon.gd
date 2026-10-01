@@ -10,6 +10,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_test_line_of_sight_endpoints()
 	_test_generated_topology()
+	_test_no_invisible_walls_around_clearings()
 	if failures.is_empty():
 		print("BEAUTY_FOREST_DUNGEON_OK")
 		quit(0)
@@ -37,6 +38,27 @@ func _test_generated_topology() -> void:
 		for sample: int in range(8):
 			var dungeon: Dictionary = D.generate(floor_number)
 			_validate_dungeon(dungeon, floor_number, sample)
+
+func _test_no_invisible_walls_around_clearings() -> void:
+	# The grove visual deliberately skips drawing a tree on any wall cell within
+	# one cell of a clearing, but collision came straight from is_floor(). Any
+	# wall inside that margin was therefore an invisible barrier ringing every
+	# room: measured 28 such cells across 11 of 13 campaign floors, each one
+	# stopping the player dead against empty moss.
+	for sample: int in range(40):
+		var dungeon: Dictionary = D.generate(1 + sample)
+		var rooms: Array = dungeon.get("rooms", [])
+		for room: Dictionary in rooms:
+			var room_x := int(room["x"])
+			var room_y := int(room["y"])
+			for z in range(room_y - 1, room_y + int(room["h"]) + 1):
+				for x in range(room_x - 1, room_x + int(room["w"]) + 1):
+					if D.is_floor(dungeon, x, z):
+						continue
+					failures.append(
+						"floor %d sample %d generated an undrawable wall at %d,%d inside a clearing's margin"
+						% [1 + sample, sample, x, z])
+					return
 
 func _validate_dungeon(dungeon: Dictionary, floor_number: int, sample: int) -> void:
 	var width := int(dungeon.get("width", -1))
