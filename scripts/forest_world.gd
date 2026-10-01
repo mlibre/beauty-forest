@@ -355,6 +355,12 @@ func build_dream_chimes(room: Dictionary) -> Array[Node3D]:
         _free_child(chime)
     chimes.clear()
     var occupied := {}
+    # Seed the spread with the cells the landmark props already own, so a chime
+    # cannot settle on top of the stairwell's glow disc or Peddle's canopy.
+    for landmark: Vector3 in [stair_position, merchant_position, dragon_position]:
+        if landmark == Vector3.ZERO:
+            continue
+        occupied[Vector2i(int(landmark.x), int(landmark.z))] = true
     for chime_index in range(5):
         var cell := _spread_cell(room, occupied, 2.8, chime_index)
         occupied[cell] = true

@@ -74,7 +74,11 @@ func _physics_process(delta: float) -> void:
             if provider.is_valid():
                 target = provider.call(global_position, speed * maxf(0.0, life))
     if is_instance_valid(target) and target.alive:
-        var desired := (target.global_position + Vector3.UP * 0.72) - global_position
+        # The aim point and the connect test must agree, or the note converges on
+        # empty air and expires. A Big Feeling renders at 3.5x scale, so it has a
+        # much taller body to reach: aim at the same height we test against.
+        var target_center := target.global_position + Vector3.UP * (0.70 * target.visual_scale)
+        var desired := target_center - global_position
         if desired.length_squared() > 0.001:
             desired = desired.normalized() * speed
             _velocity = _velocity.lerp(desired, clampf(delta * 5.2, 0.0, 1.0))

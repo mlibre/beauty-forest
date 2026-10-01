@@ -18,8 +18,12 @@ func _build_clearings() -> void:
     stair_position = Vector3(farthest_room["cx"], 0, farthest_room["cy"])
     _build_stairwell(stair_position)
 
+    # The generator deliberately parks the farthest clearing in the middle slot,
+    # so "the farthest room" and rooms[1] are the same room. Peddle's cart has to
+    # go somewhere the stairwell is not, or the two props interpenetrate and the
+    # F and E prompts overlap under one another.
     if rooms.size() >= 2:
-        var merchant_room: Dictionary = rooms[1]
+        var merchant_room: Dictionary = _distinct_room(rooms, [spawn_room, farthest_room])
         merchant_position = Vector3(merchant_room["cx"], 0, merchant_room["cy"] + 2.0)
         _build_merchant(merchant_position)
 
@@ -34,6 +38,15 @@ func _build_clearings() -> void:
         pool_position = Vector3(pool_room["cx"] + 2.0, 0.02, pool_room["cy"] + 2.0)
     _build_wishing_pool(pool_position)
     _build_sign(Vector3(float(spawn_room["x"]) + 1.0, 0, float(spawn_room["y"]) + float(spawn_room["h"]) - 1.0))
+
+func _distinct_room(rooms: Array, taken: Array) -> Dictionary:
+    # The first clearing none of `taken` already uses, so every objective prop
+    # gets its own room. Only a floor with fewer clearings than props falls back,
+    # which the generator never produces.
+    for room: Dictionary in rooms:
+        if not (taken as Array).has(room):
+            return room
+    return rooms[0]
 
 func _build_stairwell(world_position: Vector3) -> void:
     var stairwell := Node3D.new()

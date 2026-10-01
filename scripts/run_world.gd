@@ -67,9 +67,19 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
         dragon_exists = BeautyContent.is_dragon_floor(floor_number)
         dragon_finale = story == 13
         if dragon_exists:
-            var largest: Dictionary = dungeon["rooms"][0]
+            # The hero arrives at the centre of rooms[0], and Snoozle is 5m of
+            # sleeping barrel with no collider to push the hero out. Sleeping in
+            # the spawn clearing means the player opens the floor standing inside
+            # the dragon, so Snoozle takes the biggest *other* clearing and the
+            # walk over to meet it is the point of the floor.
+            var dragon_room: Dictionary = dungeon["rooms"][0]
+            var largest: Dictionary = dragon_room
+            var largest_area := -1.0
             for room: Dictionary in dungeon["rooms"]:
-                if float(room["area"]) > float(largest["area"]):
+                if room == dragon_room:
+                    continue
+                if float(room["area"]) > largest_area:
+                    largest_area = float(room["area"])
                     largest = room
             world.build_dragon(largest, dragon_finale)
             var chime_room := _farthest_non_dragon_room(largest)

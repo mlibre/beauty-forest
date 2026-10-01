@@ -15,10 +15,12 @@ func _run() -> void:
     world.set_process(false)
     world.build_floor(1, dungeon, true)
 
+    _check_objective_props_do_not_stack_on_generated_floors()
     _check_reduced_motion_initial_state(world)
     _check_pool_water_animates(world)
     _check_ambient_life_centering(world, dungeon)
     _check_objective_layout(world)
+    _check_objective_props_do_not_stack(world, dungeon)
     _check_camera_facing_visuals(world)
 
     var room: Dictionary = dungeon["rooms"][0]
@@ -27,6 +29,7 @@ func _run() -> void:
     var collected: Node3D = world.chimes.pop_front()
     world.remove_child(collected)
     collected.free()
+    _check_chimes_avoid_the_landmark_props(world)
     var animation_owners = world.get("_animated_chimes")
     if animation_owners is Array:
         for owner in animation_owners:
@@ -171,6 +174,88 @@ func _descendants(node: Node) -> Array[Node]:
         result.append(child)
         result.append_array(_descendants(child))
     return result
+
+func _check_objective_props_do_not_stack_on_generated_floors() -> void:
+    ## The synthetic fixture above hand-picks its rooms, so it never exercises the
+    ## generator's slot-swap that put the farthest clearing in rooms[1]. Build
+    ## real floors, which is the layout the player actually walks into.
+    var probe := ForestWorld.new()
+    root.add_child(probe)
+    probe.set_process(false)
+    for floor_number in [5, 13]:
+        for attempt in range(8):
+            var real_floor: int = floor_number + attempt * 97
+            var generated := DungeonGenerator.generate(real_floor)
+            probe.build_floor(real_floor, generated, true)
+            var stair := probe.stair_position
+            var merchant := probe.get_node_or_null("Peddle") as Node3D
+            _check(merchant != null, "floor %d built no Peddle cart" % real_floor)
+            if merchant != null:
+                var separation := Vector2(stair.x - merchant.position.x, stair.z - merchant.position.z).length()
+                _check(separation > 4.0,
+                    "floor %d stacked the stairwell and Peddle's cart %.2f m apart" % [real_floor, separation])
+            # Chimes only exist on a dragon floor, and they are built against a
+            # cleared room rather than by build_floor itself. Snoozle takes the
+            # biggest non-spawn clearing, exactly as run_world does.
+            var rooms: Array = generated["rooms"]
+            var dragon_room: Dictionary = rooms[0]
+            var largest_area := -1.0
+            for room: Dictionary in rooms:
+                if room == rooms[0]:
+                    continue
+                if float(room["area"]) > largest_area:
+                    largest_area = float(room["area"])
+                    dragon_room = room
+            probe.build_dragon(dragon_room, real_floor == 13)
+            var chime_room: Dictionary = rooms[0]
+            var farthest := -1.0
+            for room: Dictionary in rooms:
+                if room == dragon_room:
+                    continue
+                var reach := Vector2(room["cx"] - rooms[0]["cx"], room["cy"] - rooms[0]["cy"]).length()
+                if reach > farthest:
+                    farthest = reach
+                    chime_room = room
+            probe.build_dream_chimes(chime_room)
+            _check(not probe.chimes.is_empty(), "floor %d built no dream chimes" % real_floor)
+            for chime: Node3D in probe.chimes:
+                var chime_to_stair := Vector2(chime.global_position.x - stair.x, chime.global_position.z - stair.z).length()
+                _check(chime_to_stair > 2.0,
+                    "floor %d put a dream chime %.2f m from the stairwell" % [real_floor, chime_to_stair])
+    root.remove_child(probe)
+    probe.free()
+
+func _check_objective_props_do_not_stack(world: ForestWorld, dungeon: Dictionary) -> void:
+    ## The generator deliberately parks the farthest clearing in the middle slot,
+    ## so "the farthest room" (the stairwell) and rooms[1] (Peddle's cart) are the
+    ## same room. Shipping both at that room's centre left the stair glow disc,
+    ## the arch ring and the cart canopy interpenetrating, with the E and F
+    ## prompts stacked on top of each other.
+    var merchant := world.get_node_or_null("Peddle") as Node3D
+    _check(merchant != null, "Peddle's cart should exist")
+    if merchant == null:
+        return
+    var stair := world.stair_position
+    var separation := Vector2(stair.x - merchant.position.x, stair.z - merchant.position.z).length()
+    _check(separation > 4.0,
+        "the stairwell and Peddle's cart are %.2f m apart in the same clearing; they need their own rooms" % separation)
+    var pool := world.get_node_or_null("WishingPool") as Node3D
+    if pool != null:
+        var pool_separation := Vector2(pool.position.x - merchant.position.x, pool.position.z - merchant.position.z).length()
+        _check(pool_separation > 2.0, "Peddle's cart should not sit on the wishing pool")
+
+func _check_chimes_avoid_the_landmark_props(world: ForestWorld) -> void:
+    ## Chimes are spread inside one clearing, so a chime could settle on the
+    ## stairwell's 1.0 m glow disc or on Peddle's cart.
+    for chime: Node3D in world.chimes:
+        var stair_distance := Vector2(chime.global_position.x - world.stair_position.x,
+            chime.global_position.z - world.stair_position.z).length()
+        _check(stair_distance > 2.0,
+            "a dream chime settled %.2f m from the stairwell, on top of its glow disc" % stair_distance)
+        var merchant_distance := Vector2(chime.global_position.x - world.merchant_position.x,
+            chime.global_position.z - world.merchant_position.z).length()
+        _check(merchant_distance > 2.0,
+            "a dream chime settled %.2f m from Peddle's cart" % merchant_distance)
 
 func _synthetic_dungeon() -> Dictionary:
     var size := 48

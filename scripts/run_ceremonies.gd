@@ -155,6 +155,10 @@ func _win_dragon() -> void:
     else:
         world.reveal_stairwell()
         stair_visible = true
+        # Snoozle's lullaby silences the grove so the song reads clearly, but
+        # the hero keeps playing on this floor. Bring the ambience back, or the
+        # coziest moment in the game leaves the rest of the run muted.
+        audio.start_ambient(String(region.get("key", "sunlit-roots")))
         ui.show_story("DEEPER STILL", "Snoozle snoozes on, warm and enormous. But Mote tugs your sleeve: there are cousins below, and the forest grows deeper than any map.", 4.2)
         ui.add_log("Mote: “Snoozle sleeps soundly. The stair is glowing now.”")
 
