@@ -340,6 +340,8 @@ func _run() -> void:
 	if unaffordable != null:
 		_check(unaffordable.disabled, "an unowned charm was offered with 0 sparkles")
 
+	await _check_high_contrast_reaches_the_text()
+
 	if _failures > 0:
 		quit(1)
 		return
@@ -349,3 +351,76 @@ func _run() -> void:
 	game.free()
 	await _frames(4)
 	quit(0)
+
+
+## High Contrast only ever darkened the scrims and the minimap. The cards carry
+## their own near-opaque fill, so every label sat at the same 13.6:1 in both
+## modes -- a setting named for contrast that changed none of the text a player
+## actually reads. Each card has to get measurably darker.
+func _check_high_contrast_reaches_the_text() -> void:
+	for card_name in ["_shop_card", "_story_card", "_overlay_card"]:
+		var card: Control = _ui.get(card_name)
+		if card == null:
+			_check(false, "high contrast: %s is missing" % card_name)
+			continue
+		var plain := _card_fill(card)
+		_ui.apply_settings({"high_contrast": false})
+		await _frames(2)
+		var before := _card_fill(card)
+		_ui.apply_settings({"high_contrast": true})
+		await _frames(2)
+		var after := _card_fill(card)
+		var text: Color = _card_text_color(card)
+		var ratio_before := _contrast_ratio(text, before)
+		var ratio_after := _contrast_ratio(text, after)
+		print("HIGH_CONTRAST %s  %.2f:1 -> %.2f:1  fill %s -> %s" % [
+			card_name, ratio_before, ratio_after, str(before), str(after)])
+		_check(after.a > 0.0 and after.get_luminance() < before.get_luminance(),
+			"high contrast did not darken %s (luminance %f -> %f)" % [
+				card_name, before.get_luminance(), after.get_luminance()])
+		_check(ratio_after > ratio_before,
+			"high contrast did not raise the text ratio on %s (%.2f -> %.2f)" % [
+				card_name, ratio_before, ratio_after])
+		_ui.apply_settings({"high_contrast": false})
+		await _frames(2)
+		_check(_card_fill(card).is_equal_approx(plain),
+			"turning high contrast off did not restore %s" % card_name)
+
+	# The shared card is refilled every time a screen opens; the darker fill has
+	# to survive that, or the fix only works until the player looks at the cart.
+	_ui.apply_settings({"high_contrast": true})
+	await _frames(2)
+	var carried := _card_fill(_ui._shop_card)
+	_ui.show_shop({
+		"sparkles": 10, "charms": {}, "owned": {}, "stanzas": {},
+		"mote_verse": {}, "hp": 100.0, "hp_max": 100.0,
+	})
+	await _frames(3)
+	_check(_card_fill(_ui._shop_card).is_equal_approx(carried),
+		"refilling the card lost the high-contrast fill: %s -> %s" % [
+			str(carried), str(_card_fill(_ui._shop_card))])
+	_ui.apply_settings(BeautyData.default_settings())
+	await _frames(2)
+
+func _card_fill(card: Control) -> Color:
+	var style := card.get_theme_stylebox("panel") as StyleBoxFlat
+	if style == null:
+		return Color(0.0, 0.0, 0.0, 0.0)
+	return style.bg_color
+
+func _card_text_color(card: Control) -> Color:
+	for child in card.find_children("*", "Label", true, false):
+		var label := child as Label
+		if label != null and not label.text.is_empty():
+			return label.get_theme_color("font_color") * label.modulate
+	return Color.WHITE
+
+func _contrast_ratio(a: Color, b: Color) -> float:
+	var la := _relative_luminance(a)
+	var lb := _relative_luminance(b)
+	return (maxf(la, lb) + 0.05) / (minf(la, lb) + 0.05)
+
+func _relative_luminance(c: Color) -> float:
+	var channel := func(v: float) -> float:
+		return v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4)
+	return 0.2126 * channel.call(c.r) + 0.7152 * channel.call(c.g) + 0.0722 * channel.call(c.b)

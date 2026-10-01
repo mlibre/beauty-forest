@@ -33,6 +33,9 @@ Completed iterations: 15 (see below)
 | 17 | Quit path / save atomicity / sticker cap | — | refuted, see below |
 | 18 | Region ranges / ambient beds | — | refuted, see below |
 | 19 | _separate_wisps at maximum density | — | refuted, see below |
+| 20 | reduced_motion coverage | 6d5b8f1 | FIXED: boss light ignored Still Forest |
+| 21 | world_scenery dead declaration | — | no code change; see below |
+| 22 | high_contrast coverage | — | FIXED: contrast never reached the text |
 
 Refuted (audit's claim did not survive measurement):
 - B1. Log label over status card / off-screen -- NO. Label is text-clipped at
@@ -131,6 +134,50 @@ Tier 2/3 (progression/logic):
   Lesson worth keeping: an O(n^2) relaxation solver looks pathological until you
   check whether the engine's own physics already prevents the pathological
   input. Two of the four probes were convincing-looking lies.
+
+- reduced_motion, every animated channel (probes 68-70). One real defect and two
+  probe bugs, and the probe bugs came first.
+  - Propagation is correct: flipping the setting through _apply_settings reaches
+    world, hero, ui and all 32 wisps.
+  - FIXED (6d5b8f1): wisp.gd:300 breathed the boss light on a sine with no
+    reduced_motion guard. 0.19-0.26 peak-to-peak light_energy with the setting
+    ON. It was the only animated channel in the file without a guard -- the bob,
+    the halo spin and the curious aura twinkle all had one.
+  - Probe bug 1: I read ui._reduced_motion after mutating game.settings in
+    place, never calling _apply_settings. It reported the UI as not receiving
+    the setting. It was receiving it fine.
+  - Probe bug 2: I sampled wisp.position.y, but the bob is written to
+    _visual.position.y -- a child node. Both settings measured 0.0000.
+  - Harness bug, worth remembering: the first regression sampled 150 tight-loop
+    ticks. The breath is driven by Time.get_ticks_msec(), so that spans ~0ms of
+    real time and measured a 0.00016 swing -- it would have "passed" a dead
+    light. It now spans 1200ms of wall clock. Same for quit(1) inside a helper:
+    it does not stop execution, so the suite printed its OK marker after
+    declaring failure. Helpers return a bool now.
+  - world_scenery.gd:25 declares _reduced_motion and nothing reads or writes
+    it. Dead, not a missed feature: the scenery is static geometry with no
+    _process and no sin() anywhere in the file.
+
+- high_contrast (probes 71-73). Same shape as reduced_motion, and it had the
+  same kind of hole, only quieter.
+  - FIXED: the setting drove _overlay_scrim, _shop_scrim and the minimap, and
+    nothing else. The scrims sit BEHIND the cards, and the cards carry their
+    own near-opaque fill (shop 0.98 alpha), so every label a player reads sat at
+    exactly the same ratio with the setting on or off.
+      shop   13.65:1 -> 18.58:1   story 9.64:1 -> 14.56:1   overlay 10.02:1 -> 14.72:1
+    The minimap half was already working (floor/bg 5.96 -> 9.00, floor/wall
+    3.67 -> 5.51), which is why the feature read as working when tested
+    casually.
+  - The fill has to survive the card being refilled -- shop, journal and
+    settings share one card -- so the base fill, border and border width are
+    captured in meta on first apply and restored when the setting goes back
+    off. Verified: the darker fill is identical after all three screens open.
+  - Probe bug: I first computed the ratio against a composited forest colour,
+    which is the right physics and the wrong question, because the card's own
+    fill sits between them. Measuring text against what is actually behind it
+    gave the real answer.
+  - Godot 4.7.2 StyleBoxFlat has no get_border_width_all(); use
+    border_width_top. Worth remembering, it cost a parse-error round trip.
 
 Audit backlog is now exhausted: every item is done, refuted, or unreachable.
 Future iterations hunt fresh ground rather than re-reading the audits. (NOT player-reachable — scrim blocks input)

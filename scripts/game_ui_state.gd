@@ -335,6 +335,36 @@ func apply_settings(settings: Dictionary) -> void:
     _minimap.queue_redraw()
     _overlay_scrim.color = Color(0.025, 0.05, 0.035, 0.72 if _high_contrast else 0.48)
     _shop_scrim.color = Color(0.015, 0.025, 0.018, 0.82 if _high_contrast else 0.64)
+    # High Contrast has to reach the text, not just the scenery behind it. The
+    # scrim above only darkens the world; the cards carry their own near-opaque
+    # fill, so darkening the scrim left every label at the same 13.6:1 in both
+    # modes -- a setting named for contrast that changed none of it. Deepen the
+    # card fill and firm up the border so the ratio actually moves.
+    for card in _contrast_cards():
+        var style := card.get_theme_stylebox("panel") as StyleBoxFlat
+        if style == null:
+            continue
+        if not card.has_meta("base_fill"):
+            card.set_meta("base_fill", style.bg_color)
+            card.set_meta("base_border", style.border_color)
+            card.set_meta("base_border_width", style.border_width_top)
+        var base: Color = card.get_meta("base_fill")
+        var border: Color = card.get_meta("base_border")
+        if _high_contrast:
+            style.bg_color = Color(base.r * 0.42, base.g * 0.42, base.b * 0.42, minf(1.0, base.a + 0.02))
+            style.border_color = Color("#ffe19a")
+            style.set_border_width_all(3)
+        else:
+            style.bg_color = base
+            style.border_color = border
+            style.set_border_width_all(int(card.get_meta("base_border_width")))
+
+func _contrast_cards() -> Array[PanelContainer]:
+    var cards: Array[PanelContainer] = []
+    for card: Control in [_shop_card, _story_card, _overlay_card]:
+        if card != null and is_instance_valid(card):
+            cards.append(card as PanelContainer)
+    return cards
 
 func _emit_settings() -> void:
     BeautyData.save_settings(_settings)
