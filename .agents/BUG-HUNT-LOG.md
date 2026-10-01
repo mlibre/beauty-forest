@@ -8,7 +8,7 @@ Godot 4.7.2 · branch master · never push.
 
 ## Progress
 
-Completed iterations: 11 (see below)
+Completed iterations: 13 (see below)
 
 ## Iterations
 
@@ -25,6 +25,9 @@ Completed iterations: 11 (see below)
 | 9 | Invisible 1.70m walls ringing 11/13 clearings | 2d0b4c9 | done |
 | 10 | Boss/feeling spawn omit `occupied` -> wisp interpenetration | — | dropped, see below |
 | 11 | COZY button did nothing while shop/journal open | a7b9df3 | done |
+| 12 | Raising text scale never refit the HUD (card over hint bar) | 5c73fd9 | done |
+| 13 | Script runs wrote the player's real profile (text_scale=2.0) | eb2d145 | done |
+| 14 | CozyVFX per-burst allocation | — | refuted, see below |
 
 Refuted (audit's claim did not survive measurement):
 - B1. Log label over status card / off-screen -- NO. Label is text-clipped at
@@ -36,12 +39,20 @@ Refuted (audit's claim did not survive measurement):
 ## Backlog (ranked, from the three delegated audits — all need independent verification)
 
 Tier 8 (UI):
-- B3. apply_settings never refits layout; _compact_hud is stale after text_scale change
+- B3. DONE (5c73fd9)
 - B4. DONE (a7b9df3)
 - B10. DROPPED. Un-aware spawn picks land on an occupied cell 0.2% of the
   time (9/4000). _separate_wisps() pushes overlapping pairs apart every frame,
   so the worst case is a one-frame cosmetic pop. Below the fix bar.
 - B11. COZY button / C key silently no-op in SHOP and JOURNAL modes
+
+Harness (found by the hunt, not by an audit):
+- H1. TestProfile.begin() was opt-in and 11 of 14 suites skipped it, so a test
+  run could write the player's real save/settings. Fixed in BeautyData (a
+  --script run gets a throwaway dir by default). All 14 suites in sequence now
+  leave the player profile with 0 files.
+- H2. Existing 200%-text check called _fit_layout() by hand, masking B3.
+- H3. A regression must not damage real state to prove itself.
 
 Tier 6 (feel/audio):
 - B5. DONE (c333127)  - B6. CozyVFX.burst allocates mesh+2 materials per call; ~75 bursts/sec

@@ -144,6 +144,10 @@ func _on_buy_requested(key: String) -> void:
         var equipped_count := charms_equipped.size()
         if equipped_count < BeautyContent.MAX_CHARMS:
             charms_equipped[key] = true
+        elif bool(charms_equipped.get(key, false)):
+            # Already wearing one of the three, so the purchase is a pure
+            # duplicate -- see the owned check above.
+            return
         if key == "scarf":
             # Max warmth is owned by _recalculate_loadout below, which rebuilds
             # it from the equipped loadout. Bumping it here did nothing (the
@@ -151,7 +155,13 @@ func _on_buy_requested(key: String) -> void:
             # source of truth, so only the scarf's warming heal stays.
             hp = minf(hp_max, hp + 30.0)
         audio.play_chord([392.0, 523.25, 659.25], 0.62, 0.09)
-        ui.add_log("Peddle: “One %s, wrapped in a leaf. It suits you.”" % String(record["name"]))
+        if charms_equipped.has(key):
+            ui.add_log("Peddle: “One %s, wrapped in a leaf. It suits you.”" % String(record["name"]))
+        else:
+            # All three slots are taken, so this one waits in the pocket. Say so:
+            # taking the sparkles and saying "it suits you" while the charm does
+            # nothing is how a player ends up hunting for a power they never got.
+            ui.add_log("Peddle: “One %s, tucked safely in your pocket. Swap a charm on to wear it.”" % String(record["name"]))
     _award_sticker("shopper")
     _recalculate_loadout(false)
     ui.show_shop(_shop_state())

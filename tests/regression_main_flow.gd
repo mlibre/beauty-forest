@@ -469,6 +469,8 @@ func _run() -> void:
         return
     if not await _check_settings_open_from_every_modal(game):
         return
+    if not await _check_buying_past_the_charm_cap_says_so(game):
+        return
 
     print("BEAUTY_FOREST_MAIN_FLOW_OK")
     TestProfile.end()
@@ -608,6 +610,73 @@ func _check_settings_open_from_every_modal(game: Node) -> bool:
     game._start_run(1)
     await _frames(4)
     return true
+
+func _check_buying_past_the_charm_cap_says_so(game: Node) -> bool:
+    ## Filling all three charm slots and then buying a fourth charged the
+    ## sparkles and logged "One Ember Mitten... It suits you." -- while the charm
+    ## sat unequipped and did nothing, with nothing anywhere saying the slots were
+    ## full. A player pays for a power they never receive and has no idea why.
+    game._start_run(2)
+    await _frames(6)
+    game.player.global_position = game.world.merchant_position + Vector3(1.0, 0.0, 0.0)
+    await _frames(2)
+    game.sparkles = 999
+    for key in ["boots", "scarf", "echo"]:
+        game._on_buy_requested(key)
+    await _frames(2)
+    if not _check(game.charms_equipped.size() == BeautyContent.MAX_CHARMS,
+            "the fixture did not fill all %d charm slots (got %d)" % [
+                BeautyContent.MAX_CHARMS, game.charms_equipped.size()]):
+        return false
+
+    game._on_buy_requested("ember")
+    await _frames(2)
+    if not _check(bool(game.charms_owned.get("ember", false)), "the fourth charm was not recorded as owned"):
+        return false
+    if not _check(not bool(game.charms_equipped.get("ember", false)),
+            "the fourth charm should not auto-equip past the cap"):
+        return false
+    var log_text: String = game.ui._log_label.text
+    # Only the NEWEST line matters: the first three purchases legitimately said
+    # "it suits you", because those three really are being worn.
+    var last_line: String = log_text.split("\n")[-1]
+    if not _check(last_line.to_lower().contains("ember mitten"),
+            "the newest log line is not about the capped purchase: %s" % last_line):
+        return false
+    if not _check(last_line.contains("pocket"),
+            "buying a charm past the cap never says it is waiting in the pocket: %s" % last_line):
+        return false
+    if not _check(not last_line.contains("It suits you"),
+            "Peddle still promised the capped charm would be worn: %s" % last_line):
+        return false
+
+    # The shop itself must not promise a swap it cannot describe honestly either.
+    game._open_shop()
+    await _frames(3)
+    var ember_tip := ""
+    for button in _buttons_in(game.ui._shop_frame):
+        var label := (button as Button).text
+        if label.to_lower().contains("ember"):
+            ember_tip = (button as Button).tooltip_text
+            break
+    if not _check(not ember_tip.is_empty(), "the owned charm had no tooltip in the shop"):
+        return false
+    if not _check(ember_tip.contains("swap"),
+            "the shop promised a wear the cap cannot give: %s" % ember_tip):
+        return false
+    game._resume_game()
+    await _frames(3)
+    game._start_run(1)
+    await _frames(4)
+    return true
+
+func _buttons_in(node: Node) -> Array[Node]:
+    var out: Array[Node] = []
+    for child in node.get_children():
+        if child is Button:
+            out.append(child)
+        out.append_array(_buttons_in(child))
+    return out
 
 func _has_text(node: Node, needle: String) -> bool:
     for text in _texts_in(node):

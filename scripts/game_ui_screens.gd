@@ -213,16 +213,20 @@ func show_shop(state: Dictionary) -> void:
     list.add_child(_section_label("2 · COZY CHARMS — PICK UP TO %d ♥" % BeautyContent.MAX_CHARMS))
     var owned: Dictionary = state.get("owned", {})
     var equipped: Dictionary = state.get("charms", {})
+    var slots_full := equipped.size() >= BeautyContent.MAX_CHARMS
     for charm: Dictionary in BeautyContent.CHARMS:
         var key := String(charm["key"])
         if key == "tea":
             continue
         if bool(owned.get(key, false)):
-            var toggle := _shop_item(charm, int(state.get("sparkles", 0)), bool(equipped.get(key, false)), true, true)
+            var toggle := _shop_item(charm, int(state.get("sparkles", 0)), bool(equipped.get(key, false)), true, true, slots_full)
             toggle.pressed.connect(func(): charm_equip_requested.emit(key))
             list.add_child(toggle)
         else:
-            var buy := _shop_item(charm, int(state.get("sparkles", 0)), false, true, false)
+            var buy := _shop_item(charm, int(state.get("sparkles", 0)), false, true, false, slots_full)
+            if slots_full:
+                buy.tooltip_text = "%s — all %d charm slots are full, so this waits in your pocket until you swap one." % [
+                    String(charm.get("description", "")), BeautyContent.MAX_CHARMS]
             buy.pressed.connect(func(): buy_requested.emit(key))
             list.add_child(buy)
 
@@ -384,7 +388,7 @@ func close_panels() -> void:
     _cancel_story()
     _reset_touch_joystick()
 
-func _shop_item(item: Dictionary, sparkles: int, selected: bool, enabled: bool, is_owned: bool) -> Button:
+func _shop_item(item: Dictionary, sparkles: int, selected: bool, enabled: bool, is_owned: bool, slots_full: bool = false) -> Button:
     var key := String(item.get("key", ""))
     var price := int(item.get("price", 0))
     var status := "♥ WEARING" if selected else ("in pocket — tap to wear" if is_owned else ("take for ✦ %d" % price if price > 0 else "try it on"))
@@ -394,7 +398,10 @@ func _shop_item(item: Dictionary, sparkles: int, selected: bool, enabled: bool, 
     button.alignment = HORIZONTAL_ALIGNMENT_LEFT
     button.custom_minimum_size = Vector2(0, 78)
     if is_owned and not selected:
-        button.tooltip_text = "%s — already yours. Tap to wear it." % String(item.get("description", ""))
+        # Say what tapping will actually do. With all three slots taken the tap
+        # swaps rather than adds, and "tap to wear" would be a small lie.
+        var swap_note := " Tap to swap it in for a charm you are wearing." if slots_full else " Tap to wear it."
+        button.tooltip_text = "%s — already yours.%s" % [String(item.get("description", "")), swap_note]
     elif selected:
         button.tooltip_text = "%s — wearing it now. Tap to rest it." % String(item.get("description", ""))
     elif price > 0 and sparkles < price:
