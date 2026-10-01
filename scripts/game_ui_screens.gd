@@ -308,7 +308,7 @@ func show_settings(settings: Dictionary) -> void:
     list.add_child(motion)
     list.add_child(_slider_row("Text size", "text_scale", 0.75, 2.0, 0.05, "%d%%", 100.0))
     var contrast := CheckButton.new()
-    contrast.text = "High-contrast pockets and journal"
+    contrast.text = "High contrast — deeper cards and a sharper grove map"
     contrast.button_pressed = bool(_settings.get("high_contrast", false))
     contrast.toggled.connect(func(value):
         _settings["high_contrast"] = value

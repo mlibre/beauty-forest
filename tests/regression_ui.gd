@@ -342,6 +342,7 @@ func _run() -> void:
 
 	await _check_high_contrast_reaches_the_text()
 	await _check_bump_softness_drags_toward_softness()
+	await _check_accessibility_toggles_name_what_they_change()
 
 	if _failures > 0:
 		quit(1)
@@ -501,3 +502,39 @@ func _find_row(title: String) -> HBoxContainer:
 			if label != null and label.text == title:
 				return candidate
 	return null
+
+
+## Every accessibility toggle has to describe what it actually changes. The
+## High Contrast label used to say "pockets and journal", which stopped being
+## true when the fix reached all three cards and the minimap -- a label that
+## under-promises is as wrong as one that over-promises, because the player
+## cannot tell whether the control is working.
+func _check_accessibility_toggles_name_what_they_change() -> void:
+	_ui.apply_settings(BeautyData.default_settings())
+	await _frames(3)
+	_ui.show_settings(_ui._settings)
+	await _frames(4)
+	var labels: Array[String] = []
+	for node in _ui._shop_frame.find_children("*", "CheckButton", true, false):
+		var toggle := node as CheckButton
+		if toggle != null:
+			labels.append(toggle.text)
+	print("ACCESSIBILITY_TOGGLES %s" % str(labels))
+	_check(labels.size() >= 3,
+		"expected three accessibility toggles, found %d" % labels.size())
+	var joined := " ".join(labels)
+	# Each named effect must be one the code really changes.
+	_check(joined.contains("cards") or joined.contains("contrast"),
+		"the contrast toggle never says it changes the cards: %s" % joined)
+	_check(joined.contains("map"),
+		"the contrast toggle does not mention the grove map it sharpens: %s" % joined)
+	_check(not joined.contains("pockets"),
+		"the contrast toggle still claims high-contrast pockets, which do not exist: %s" % joined)
+	_check(joined.contains("motion") or joined.to_lower().contains("still"),
+		"the Still Forest toggle does not say it calms motion: %s" % joined)
+	_check(joined.contains("walk"),
+		"the Still Forest toggle does not say the walk stays readable: %s" % joined)
+	_check(joined.to_lower().contains("sound") or joined.to_lower().contains("hush"),
+		"no toggle describes the audio one: %s" % joined)
+	_ui.close_settings()
+	await _frames(2)

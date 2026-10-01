@@ -40,7 +40,8 @@ Completed iterations: 15 (see below)
 | 24 | Bump softness slider direction | e6fb47d | FIXED: dragging right made it harder |
 | 25 | Extra song time / lullaby beat window | — | refuted; settings controls closed |
 | 26 | Charm swap evicts an unnamed charm | f0b4682 | FIXED: silent eviction, now named |
-| 27 | Verse swap + free items claim ownership | — | FIXED: silent eviction and false ownership |
+| 27 | Verse swap + free items claim ownership | f38084b | FIXED: silent eviction, false ownership |
+| 28 | Accessibility toggle copy | — | FIXED: a stale label I left behind |
 
 Refuted (audit's claim did not survive measurement):
 - B1. Log label over status card / off-screen -- NO. Label is text-clipped at
@@ -318,6 +319,29 @@ Tier 2/3 (progression/logic):
     exact-match edits instead: the log half fails with "a full-slot verse swap
     said nothing about what it displaced", the copy half with "a free item
     claimed ownership: ... -- already yours".
+
+- The settings toggles (probes 99-102). Mostly refuted; one real finding that
+  was my own fault.
+  - REFUTED: the journal really does get high contrast. I expected the
+    iteration-22 fix to have missed it, because show_journal builds labels with
+    _label() rather than _shop_item(). But _shop_frame lives INSIDE _shop_card,
+    so the journal inherits the darkened fill: every label rises from
+    10.7-12.1:1 to 14.6-16.4:1. Measure the container, not the constructor.
+  - Probe bug: probe99 read a RED fill (1.0, 0.365, 0.365) as the journal
+    background. That is Godot's default panel stylebox, returned by every
+    Control that has no override -- walking ancestors blindly finds it first.
+    The real fill is _shop_card's (0.1, 0.2, 0.13, 0.98), four levels up. Same
+    family as iteration 27's lesson: dump the tree, do not assume.
+  - FIXED: the toggle still read "High-contrast pockets and journal" after the
+    iteration-22 fix extended high contrast to all three cards AND the minimap.
+    The label had gone stale because of my own change two iterations earlier.
+    Now "High contrast -- deeper cards and a sharper grove map", which names
+    what a player can actually see change.
+  - REFUTED: the tea row. Disabled at full warmth with the tooltip "You are
+    warm as a toast already -- keep these sparkles for a charm", and
+    run_state.gd:130 refuses before charging. Pressing it changed nothing.
+  - REFUTED: Still forest and Hush all sound labels both describe measured
+    behaviour (bob 0.16m->0, boss light 0.216->0; the mix stops).
 
 Audit backlog is now exhausted: every item is done, refuted, or unreachable.
 Future iterations hunt fresh ground rather than re-reading the audits. (NOT player-reachable — scrim blocks input)
