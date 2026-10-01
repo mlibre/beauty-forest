@@ -59,6 +59,8 @@ var sparkles := 0
 var charms_owned: Dictionary = {}
 var charms_equipped: Dictionary = {}
 var stanzas_equipped: Dictionary = {"petals": true, "echoes": true}
+## The charm a full-slot swap pushed into the pocket, so Peddle can name it.
+var _evicted := ""
 var mote_verse_key := ""
 var charm_effects: Dictionary = {}
 var stanza_effects: Dictionary = {}
@@ -174,19 +176,49 @@ func _on_charm_equip_requested(key: String) -> void:
         charms_equipped.erase(key)
     else:
         if charms_equipped.size() >= BeautyContent.MAX_CHARMS:
-            var next_loadout: Dictionary = {key: true}
-            var equipped_count := 1
-            for owned_key: String in charms_owned.keys():
-                if owned_key == key or equipped_count >= BeautyContent.MAX_CHARMS:
-                    continue
-                next_loadout[owned_key] = true
-                equipped_count += 1
-            charms_equipped = next_loadout
+            charms_equipped = _loadout_replacing(key)
+            var rested := _evicted_charm_name()
+            ui.add_log("Peddle: “%s on. %s rests in your pocket — tap it any time to swap back.”" % [
+                _charm_name(key), rested])
         else:
             charms_equipped[key] = true
     _recalculate_loadout(false)
     audio.play_tone(587.33, 0.24, 0.055, 1)
     ui.show_shop(_shop_state())
+
+## The loadout after swapping `key` in with every slot already full. Which worn
+## charm came off used to fall out of charms_owned.keys() order: the LAST owned
+## key that was wearing, which is neither the weakest nor the one a player would
+## pick, and the UI never said so. Iterating the WORN set instead and keeping the
+## first MAX_CHARMS-1 means the evicted charm is a stable, explainable choice,
+## and Peddle now names it out loud.
+func _loadout_replacing(key: String) -> Dictionary:
+    var next_loadout: Dictionary = {key: true}
+    var equipped_count := 1
+    for worn_key: String in charms_equipped.keys():
+        if worn_key == key:
+            continue
+        if equipped_count >= BeautyContent.MAX_CHARMS:
+            break
+        next_loadout[worn_key] = true
+        equipped_count += 1
+    _evicted = ""
+    for worn_key: String in charms_equipped.keys():
+        if not next_loadout.has(worn_key):
+            _evicted = worn_key
+            break
+    return next_loadout
+
+func _charm_name(key: String) -> String:
+    for charm: Dictionary in BeautyContent.CHARMS:
+        if String(charm["key"]) == key:
+            return String(charm["name"])
+    return key
+
+func _evicted_charm_name() -> String:
+    if _evicted == "":
+        return "The one underneath"
+    return _charm_name(_evicted)
 
 func _on_stanza_equip_requested(key: String) -> void:
     if bool(stanzas_equipped.get(key, false)):

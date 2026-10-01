@@ -37,7 +37,9 @@ Completed iterations: 15 (see below)
 | 21 | world_scenery dead declaration | — | no code change; see below |
 | 22 | high_contrast coverage | fd86185 | FIXED: contrast never reached the text |
 | 23 | damage_taken / wisp_speed / rhythm_window | — | refuted; settings sweep closed |
-| 24 | Bump softness slider direction | — | FIXED: dragging right made it harder |
+| 24 | Bump softness slider direction | e6fb47d | FIXED: dragging right made it harder |
+| 25 | Extra song time / lullaby beat window | — | refuted; settings controls closed |
+| 26 | Charm swap evicts an unnamed charm | — | FIXED: silent eviction, now named |
 
 Refuted (audit's claim did not survive measurement):
 - B1. Log label over status card / off-screen -- NO. Label is text-clipped at
@@ -225,6 +227,66 @@ Tier 2/3 (progression/logic):
   - One thing the probes caught in my own test: a print with a %s verb and two
     arguments printed its format string literally. It would have hidden the
     numbers on the one line that reports this invariant.
+
+- Extra song time, and the beat window behind it (probes 81-84). The hit test
+  looked like it might be an exact-frame flag rather than a window, which would
+  have made the slider a lie. It is not.
+  - _judge_lullaby_beat reads _lullaby_gold, a bool, so it LOOKS like an exact
+    frame test. But _tick_lullaby only raises it on a tick and
+    _judge_lullaby_beat clears it on a successful hit, so the flag stays up for
+    the whole beat interval -- 8 frames even at the tightest setting. That is a
+    real window, and it is what "extra song time" widens.
+  - At the tightest setting a press 0.30s after the gold beat scored 6/6 while
+    one 0.15s after scored 0/6, which looked backwards. Frame-by-frame
+    (probe82) shows why: the 0.30s press lands on the NEXT gold beat, which is
+    legitimately countable. Not a defect.
+  - The beat freezes while paused (_auto_combat early-returns unless mode is
+    PLAYING) and resumes with the timer still positive -- 0.7667s of time owed,
+    so the player is never handed a beat that came due during a pause.
+  - A long frame advances the step by one, not by the delta. A huge delta is
+    absorbed into the timer rather than skipped, so the song runs slow rather
+    than fast. That is the forgiving direction, and it means no beat is ever
+    offered without warning.
+  - Gold beats offered matches the ideal at real frame rates (0.016s: 0 of 0,
+    0.25s: 3 of 3). Only an absurd delta falls behind.
+  - The ceremony opens with 1.18s and a spoken count-in from Mote.
+  - Probe bug: probe83 printed "the step saturates at 30" for delta 2.0 and
+    10.0. It was counting 30 ITERATIONS, not measuring a clamp. probe84 shows
+    one call at delta=10.0 advances the step by exactly 1. No clamp exists.
+  - Settings controls are now fully closed: 3 toggles, 5 sliders, 1 reset, all
+    verified. Two had defects (high_contrast fd86185, bump softness e6fb47d),
+    both found by asking what the player sees rather than whether the math is
+    right.
+
+- The charm swap (probes 85-90). Found by asking what the player SEES, again.
+  - Dead code first: run_state.gd:147 had an elif that returned after the
+    sparkles were spent and ownership recorded. Unreachable -- it needs
+    charms_owned[key] false AND charms_equipped[key] true. Verified across 960
+    purchases in 60 random orders: 0 divergences, equipped was always a subset
+    of owned. Not a defect.
+  - FIXED: with all three slots full, tapping a pocketed charm built the
+    replacement loadout by walking charms_owned.keys() and keeping the first
+    MAX-1, so whichever worn charm fell last in insertion order was evicted --
+    never the weakest, never the one the player would choose -- and nothing in
+    the UI said a swap had happened at all. The button read "in pocket -- tap
+    to wear" and the tooltip promised "tap to swap it in", with no unequip
+    control anywhere in the shop.
+  - Now _loadout_replacing() walks the WORN set (matching what the stanza swap
+    already did correctly), so the evicted charm is a stable choice, and Peddle
+    names it: "Ember Mitten on. Echo Chime rests in your pocket -- tap it any
+    time to swap back."
+  - Verified: the evicted charm stays owned so it can be swapped back; a second
+    swap evicts the next worn charm (scarf, not echo again); 12 swaps lose no
+    ownership.
+  - Regression bug worth keeping: both charm checks read "the newest log line",
+    which is racy -- a wisp drifting home during the test pushes a line above
+    the purchase. The first revert attempt failed on the WRONG check for exactly
+    that reason. Both now search upward for the newest line mentioning the
+    charm they caused (_newest_line_mentioning).
+  - Operational note: a revert-check run inside execute_code hit the 300s cell
+    timeout and left the revert APPLIED to run_state.gd. Always re-read the file
+    after a timeout before trusting it, and prefer doing the revert in a single
+    foreground terminal call with a bounded `timeout`.
 
 Audit backlog is now exhausted: every item is done, refuted, or unreachable.
 Future iterations hunt fresh ground rather than re-reading the audits. (NOT player-reachable — scrim blocks input)

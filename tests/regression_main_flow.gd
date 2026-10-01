@@ -471,6 +471,8 @@ func _run() -> void:
         return
     if not await _check_buying_past_the_charm_cap_says_so(game):
         return
+    if not await _check_a_full_slot_swap_names_the_evicted_charm(game):
+        return
 
     print("BEAUTY_FOREST_MAIN_FLOW_OK")
     TestProfile.end()
@@ -636,10 +638,11 @@ func _check_buying_past_the_charm_cap_says_so(game: Node) -> bool:
     if not _check(not bool(game.charms_equipped.get("ember", false)),
             "the fourth charm should not auto-equip past the cap"):
         return false
-    var log_text: String = game.ui._log_label.text
-    # Only the NEWEST line matters: the first three purchases legitimately said
-    # "it suits you", because those three really are being worn.
-    var last_line: String = log_text.split("\n")[-1]
+    # Look for the line THIS purchase produced rather than the newest line in
+    # the log: the floor keeps ticking while the shop is open, and a wisp
+    # drifting home can push a line above it, which made this check fail for
+    # reasons that had nothing to do with the purchase.
+    var last_line: String = _newest_line_mentioning(game, "ember")
     if not _check(last_line.to_lower().contains("ember mitten"),
             "the newest log line is not about the capped purchase: %s" % last_line):
         return false
@@ -704,3 +707,97 @@ func _check(condition: bool, message: String) -> bool:
     push_error("BEAUTY_FOREST_MAIN_FLOW_FAILED: %s" % message)
     quit(1)
     return false
+
+
+## Swapping a pocketed charm in with every slot full used to evict whichever
+## charm fell last in charms_owned order, and said nothing at all. The player
+## watched a build change with no explanation. The eviction must be stable and
+## it must be named.
+func _check_a_full_slot_swap_names_the_evicted_charm(game: Node) -> bool:
+    game.sparkles = 100000
+    game.charms_owned = {}
+    game.charms_equipped = {}
+    for key in ["boots", "scarf", "echo", "ember"]:
+        game._on_buy_requested(key)
+        for _i in range(2):
+            await _frames(2)
+    if game.charms_equipped.size() < BeautyContent.MAX_CHARMS:
+        print("FAIL: could not fill the charm slots to test a swap")
+        return false
+
+    var worn_before: Array = game.charms_equipped.keys()
+    var owned_before: int = game.charms_owned.size()
+    game._on_charm_equip_requested("ember")
+    for _i in range(3):
+        await _frames(2)
+
+    var newest: String = _newest_line_mentioning(game, String(charm_name_for("ember")))
+    print("CHARMSWAP equipped=%s log=%s" % [str(game.charms_equipped.keys()), newest])
+
+    if not game.charms_equipped.has("ember"):
+        print("FAIL: swapping a pocketed charm in did not equip it")
+        return false
+    if game.charms_equipped.size() > BeautyContent.MAX_CHARMS:
+        print("FAIL: the swap exceeded the charm cap: %s" % str(game.charms_equipped.keys()))
+        return false
+    if game.charms_owned.size() != owned_before:
+        print("FAIL: the swap lost ownership: %d -> %d" % [
+            owned_before, game.charms_owned.size()])
+        return false
+    if not newest.contains("rests in your pocket"):
+        print("FAIL: a full-slot swap did not say which charm it set aside (%s)" % newest)
+        return false
+
+    # The charm that was set aside must be named, and must still be owned so
+    # the player can swap it back.
+    var evicted := ""
+    for key in worn_before:
+        if not game.charms_equipped.has(key):
+            evicted = key
+            break
+    if evicted == "":
+        print("FAIL: a full-slot swap evicted nothing")
+        return false
+    if not game.charms_owned.has(evicted):
+        print("FAIL: the evicted charm %s is no longer owned" % evicted)
+        return false
+    var evicted_name: String = charm_name_for(evicted)
+    if not newest.contains(evicted_name):
+        print("FAIL: the swap did not name the evicted charm %s (%s)" % [evicted_name, newest])
+        return false
+
+    # The same swap twice must evict the same charm: the rule is a rule.
+    var first_evicted := evicted
+    for key2 in ["moss", "dew", "acorn"]:
+        game.charms_owned[key2] = true
+    game._on_charm_equip_requested("moss")
+    for _i in range(3):
+        await _frames(2)
+    var second := ""
+    for key3 in worn_before:
+        if key3 != first_evicted and not game.charms_equipped.has(key3):
+            second = key3
+            break
+    print("CHARMSWAP second eviction=%s (first was %s)" % [second, first_evicted])
+    if second == "" and game.charms_equipped.size() == BeautyContent.MAX_CHARMS:
+        print("FAIL: the second full-slot swap evicted nothing")
+        return false
+    return true
+
+
+## The newest log line that mentions `needle`, searching from the bottom. Log
+## lines keep arriving while a test runs -- wisps drift home, the shop refills
+## -- so "the newest line" is not the same thing as "the line I caused".
+func _newest_line_mentioning(game: Node, needle: String) -> String:
+    var haystack: PackedStringArray = String(game.ui._log_label.text).split("\n")
+    var fallback: String = haystack[haystack.size() - 1]
+    for i in range(haystack.size() - 1, -1, -1):
+        if haystack[i].to_lower().contains(needle.to_lower()):
+            return haystack[i]
+    return fallback
+
+func charm_name_for(key: String) -> String:
+    for charm: Dictionary in BeautyContent.CHARMS:
+        if String(charm["key"]) == key:
+            return String(charm["name"])
+    return key
