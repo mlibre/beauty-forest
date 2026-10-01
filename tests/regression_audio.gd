@@ -157,6 +157,12 @@ func _run() -> void:
         most_reused = maxi(most_reused, count)
     _check(most_reused <= 4, "SFX pool repeatedly reused one voice")
 
+    # Every synthesized chord must land on zero. play_chord used a flat
+    # envelope, so the stream stopped mid-waveform at full amplitude: measured
+    # 37-41% of peak on the last sample of every hit, footstep and dash. At a
+    # 0.10s footstep throttle that is a click, repeating constantly.
+    _check_chords_release_to_silence(director)
+
     # Child players must release their streams before the parent leaves the
     # tree; otherwise short smoke teardown leaves AudioStreamPlaybackWAV refs.
     for player in director._sfx_players:
@@ -178,6 +184,34 @@ func _run() -> void:
         for failure in _failures:
             printerr("AUDIO_REGRESSION_FAIL: " + failure)
         quit(1)
+
+func _check_chords_release_to_silence(director: AudioDirector) -> void:
+    director.play_chord([261.63, 329.63, 392.0], 0.20, 0.10)
+    director.play_footstep()
+    director.play_hit()
+    director.play_level()
+    director.play_dash()
+    for key: String in director._cache.keys():
+        if not key.begins_with("chord_"):
+            continue
+        var stream := director._cache[key] as AudioStreamWAV
+        if stream == null or stream.data.size() < 4:
+            continue
+        var count: int = stream.data.size() / 2
+        var peak := 0.0
+        for index in range(count):
+            peak = maxf(peak, absf(_wav_sample(stream.data, index)))
+        _check(peak > 0.0, "a cached chord is silent")
+        var tail: float = absf(_wav_sample(stream.data, count - 1))
+        if peak > 0.0:
+            _check(tail < peak * 0.02,
+                "chord %s ends at %.1f%% of peak, which clicks" % [key.left(28), tail / peak * 100.0])
+
+func _wav_sample(data: PackedByteArray, index: int) -> float:
+    var raw: int = (int(data[index * 2 + 1]) << 8) | int(data[index * 2])
+    if raw >= 32768:
+        raw -= 65536
+    return float(raw) / 32768.0
 
 func _frames(count: int) -> void:
     for _frame in range(count):

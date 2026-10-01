@@ -325,6 +325,15 @@ func _make_tone(frequencies: Array[float], duration: float, volume: float, brigh
         var envelope := 1.0
         if decaying:
             envelope = exp(-t * 4.4) * minf(1.0, t * 28.0)
+        else:
+            # Chords hold their sustain, but the stream still has to land on
+            # zero: stopping mid-waveform at full amplitude is an audible click,
+            # and footsteps fire on a 0.10s throttle so it repeats constantly.
+            # A short linear release at the tail costs nothing and removes it.
+            var release_samples := maxi(2, int(sample_rate * 0.012))
+            var remaining := sample_count - sample
+            if remaining < release_samples:
+                envelope = float(remaining) / float(release_samples)
         var sample_value := 0.0
         for frequency: float in valid_frequencies:
             var phase := t * frequency * TAU
