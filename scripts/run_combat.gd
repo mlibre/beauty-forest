@@ -30,11 +30,11 @@ func _spawn_wisps() -> void:
         wisps.append(wisp)
     var story := BeautyContent.story_floor(floor_number)
     if story % 3 == 0 and story >= 3 and story != 12:
-        _spawn_boss("Very Big Wisp")
+        _spawn_boss()
     if BeautyContent.FEELINGS.has(story):
         _spawn_feeling(story)
 
-func _spawn_boss(display_override: String) -> void:
+func _spawn_boss() -> void:
     var spawn_room: Dictionary = dungeon["rooms"][0]
     var cell := DungeonGenerator.random_floor_cell(dungeon, _rng, Vector2(spawn_room["cx"], spawn_room["cy"]), 7.0)
     var wisp := Wisp.new()

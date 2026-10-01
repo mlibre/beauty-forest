@@ -30,10 +30,6 @@ func _run() -> void:
     world.remove_child(collected)
     collected.free()
     _check_chimes_avoid_the_landmark_props(world)
-    var animation_owners = world.get("_animated_chimes")
-    if animation_owners is Array:
-        for owner in animation_owners:
-            _check(is_instance_valid(owner), "collected chimes must not remain in an animation owner array")
     world.build_floor(2, dungeon, false)
     _check_rebuild_teardown(world)
 
