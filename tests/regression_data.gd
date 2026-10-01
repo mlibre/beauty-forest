@@ -26,6 +26,7 @@ func _run() -> void:
     _test_meta_recovery()
     _test_settings_recovery()
     _test_save_round_trips()
+    _test_missing_collection_keys_keep_the_satchel()
     _test_save_failures_preserve_data()
     _test_loadout_limits()
     _test_weighted_pick_boundaries()
@@ -166,6 +167,38 @@ func _test_save_round_trips() -> void:
     check(is_equal_approx(float(loaded_settings.get("volume", 0.0)), 1.0), "saved volume must be clamped")
     check(not FileAccess.file_exists(BeautyData.save_path() + ".tmp"), "a committed meta save must not leave its staging file")
     check(not FileAccess.file_exists(BeautyData.settings_path() + ".tmp"), "committed settings must not leave their staging file")
+
+func _test_missing_collection_keys_keep_the_satchel() -> void:
+    # An older build (or a hand-edited file) simply has no `stickers` or
+    # `facts_learned` key. The guard used to test the defaulted value, which is
+    # true for the missing case too, so the body re-indexed the absent key,
+    # threw, and `load_meta` handed back a near-empty dict that the next
+    # `save_meta` then committed over the player's real history.
+    var sparse: Dictionary = {"runs": 42, "best_floor": 9, "dragons_sung": 3, "wisps_soothed": 31}
+    var clean: Dictionary = BeautyData._clean_meta(sparse)
+    check(int(clean.get("runs", -1)) == 42, "a save missing its collection keys must keep its counters")
+    check(int(clean.get("best_floor", -1)) == 9, "a save missing its collection keys must keep its best floor")
+    check(int(clean.get("wisps_soothed", -1)) == 31, "a save missing its collection keys must keep its soothed count")
+    check((clean.get("stickers", []) as Array).is_empty(), "a missing sticker list must normalize to empty")
+    check((clean.get("facts_learned", []) as Array).is_empty(), "a missing fact list must normalize to empty")
+
+    # The whole point: a load/save round trip must not shrink the satchel.
+    var rich: Dictionary = BeautyData.default_meta()
+    rich["runs"] = 42
+    rich["best_floor"] = 9
+    rich["dragons_sung"] = 3
+    rich["stickers"] = ["first_nap", "big_hug"]
+    check(BeautyData.save_meta(rich), "the populated satchel fixture must save")
+    var handle := FileAccess.open(BeautyData.save_path(), FileAccess.WRITE)
+    handle.store_string(JSON.stringify(sparse, "  "))
+    handle.close()
+    var loaded: Dictionary = BeautyData.load_meta()
+    check(int(loaded.get("runs", -1)) == 42, "loading a keyless satchel must not wipe its counters")
+    check(BeautyData.save_meta(loaded), "re-saving a keyless satchel must succeed")
+    var reread: Dictionary = BeautyData.load_meta()
+    check(int(reread.get("runs", -1)) == 42, "a keyless satchel must survive a full load/save cycle")
+    check(int(reread.get("best_floor", -1)) == 9, "a keyless satchel must keep its best floor across a round trip")
+    check(BeautyData.save_meta(rich), "restoring the populated satchel must succeed")
 
 func _test_save_failures_preserve_data() -> void:
     var stable_meta := BeautyData.default_meta()

@@ -87,10 +87,14 @@ static func _clean_meta(source: Dictionary) -> Dictionary:
         clean[key] = _stored_count(source.get(key, 0))
     var stored_style := String(source.get("style", "standard"))
     clean["style"] = stored_style if BeautyContent.STYLE_DATA.has(stored_style) else "standard"
-    if source.get("stickers", []) is Array:
+    # Test the value we are about to iterate, not the source dictionary: an
+    # older or hand-edited satchel may simply not carry the key, and
+    # `source.get(key, []) is Array` is true for the missing case too.
+    var stored_stickers: Variant = source.get("stickers", [])
+    if stored_stickers is Array:
         var seen := {}
         var stickers: Array[String] = []
-        for value: Variant in source["stickers"] as Array:
+        for value: Variant in stored_stickers as Array:
             if typeof(value) != TYPE_STRING:
                 continue
             var key := String(value)
@@ -99,9 +103,10 @@ static func _clean_meta(source: Dictionary) -> Dictionary:
             seen[key] = true
             stickers.append(key)
         clean["stickers"] = stickers.slice(-40)
-    if source.get("facts_learned", []) is Array:
+    var stored_facts: Variant = source.get("facts_learned", [])
+    if stored_facts is Array:
         var learned: Array[String] = []
-        for value: Variant in source["facts_learned"] as Array:
+        for value: Variant in stored_facts as Array:
             if typeof(value) == TYPE_STRING:
                 learned.append(String(value))
         var retained_facts: Array = learned.slice(-120)
