@@ -19,6 +19,16 @@ func _build_interface() -> void:
     _hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _root.add_child(_hud)
 
+    # The icon readout, built first so it is the FIRST thing drawn under the
+    # play screen. Everything below it is legacy chrome that only appears on
+    # screens the player opened deliberately.
+    _vitals = CozyVitals.new()
+    _vitals.name = "Vitals"
+    _vitals.set_anchors_preset(Control.PRESET_TOP_LEFT)
+    _vitals.position = Vector2(18, 16)
+    _hud.add_child(_vitals)
+    _vitals.tooltip_text = "Your lantern's warmth, sparkles, depth and worn charms. Warmth is the ring; it empties as bumps land."
+
     var left_card := _card(Color(0.08, 0.17, 0.12, 0.83), Color("#f4d583"), 18)
     _left_card = left_card
     left_card.set_anchors_preset(Control.PRESET_TOP_LEFT)

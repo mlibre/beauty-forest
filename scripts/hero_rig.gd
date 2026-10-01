@@ -10,6 +10,10 @@ var _swing_target := 0.0
 var _walk_current := 0.0
 var _swing_current := 0.0
 var _happy := false
+## 0..1. How full the lantern is. The HUD ring, the lantern's own light and the
+## ember vignette all read from this one number, so the world and the readout
+## can never disagree.
+var _warmth := 1.0
 var _time := 0.0
 var _reduced_motion := false
 var _lantern_light: OmniLight3D
@@ -407,9 +411,31 @@ func _process(delta: float) -> void:
         _model.position.y = lerpf(_model.position.y, hop, 1.0 - exp(-delta * 14.0))
     if _lantern_light:
         var pulse := 1.0 if _reduced_motion else 1.0 + sin(_time * 2.2) * 0.07
-        _lantern_light.light_energy = (1.55 if _happy else 1.35) * pulse
+        # The lantern dims and reddens as warmth falls, so being hurt is visible
+        # in the WORLD rather than only on a HUD number. Bright gold at full
+        # warmth, a small ember at the end -- never off, never grey.
+        _lantern_light.light_energy = (1.55 if _happy else 1.35) * pulse * _warmth_scale()
+        _lantern_light.light_color = _lantern_light.light_color.lerp(_warmth_tint(), 1.0 - exp(-delta * 4.0))
     if _lantern_core:
         var s := 1.0 if _reduced_motion else 1.0 + sin(_time * 3.1) * 0.035
         _lantern_core.scale = Vector3(s, s, s)
+        var core_material := _lantern_core.material_override as StandardMaterial3D
+        if core_material != null:
+            core_material.emission_energy_multiplier = (3.0 if _happy else 2.6) * _warmth_scale()
+            core_material.emission = core_material.emission.lerp(_warmth_tint(), 1.0 - exp(-delta * 4.0))
     if _scarf:
         _scarf.rotation.z = 0.0 if _reduced_motion else sin(_time * 1.6) * 0.025
+
+func set_warmth(fraction: float) -> void:
+    ## How full the lantern is, 0..1. Driven by the director each HUD refresh.
+    _warmth = clampf(fraction, 0.0, 1.0)
+
+func _warmth_scale() -> float:
+    ## Light output by warmth. Floors at 0.45 so a low-warmth lantern is dim
+    ## and warm-toned but still lights the path -- the game must never become
+    ## unreadable or look like a power outage.
+    return lerpf(0.45, 1.0, sqrt(_warmth))
+
+func _warmth_tint() -> Color:
+    ## The lantern's colour by warmth: warm gold when thriving, ember when low.
+    return Color("#ff8a5e").lerp(Color("#ffd990"), clampf((_warmth - 0.15) / 0.55, 0.0, 1.0))

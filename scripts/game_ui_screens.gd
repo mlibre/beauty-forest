@@ -7,6 +7,7 @@ extends GameUILayout
 func show_menu(meta: Dictionary) -> void:
     _clear(_overlay_content)
     _hud.visible = false
+    set_text_chrome_visible(true)
     _show_overlay()
     var title := _label("Beauty Forest", 46, Color("#ffe6a0"))
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -98,18 +99,65 @@ func show_menu(meta: Dictionary) -> void:
 func show_pause(meta: Dictionary) -> void:
     _clear(_overlay_content)
     _hud.visible = true
+    # Pausing is the ONE moment the player asks for information, so this is
+    # where everything the icon HUD dropped comes back: level, song power, the
+    # charm list and the control keys. Read on purpose, not while walking.
+    set_text_chrome_visible(true)
     _show_overlay()
     _overlay_content.add_child(_centered_label("Take a breath ♥", 38, Color("#ffe6a0")))
     _overlay_content.add_child(_centered_label("Paused — the forest waits for you. Nothing hurries here.", 17, Color("#dce9c2")))
-    _overlay_content.add_child(_spacer(18))
+    _overlay_content.add_child(_spacer(10))
+    _overlay_content.add_child(_walker_summary())
+    _overlay_content.add_child(_spacer(14))
     _overlay_content.add_child(_centered_button("♥  Keep wandering", true, func(): resume_requested.emit()))
     _overlay_content.add_child(_centered_button("Make it gentler", false, func(): settings_open_requested.emit()))
     _overlay_content.add_child(_centered_button("Start a fresh walk", false, func(): restart_requested.emit(false)))
     _overlay_content.add_child(_centered_button("Leave for now ♥", false, func(): quit_requested.emit()))
-    _overlay_content.add_child(_spacer(12))
+    _overlay_content.add_child(_spacer(10))
+    _overlay_content.add_child(_keys_reference())
     _overlay_content.add_child(_centered_label("Deepest floor %d  ·  Wisps hugged home %d  ·  Fun facts %d" % [int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0)), int(meta.get("facts", 0))], 14, Color("#bdcea9")))
     _fit_layout()
     _focus_first_enabled(_overlay_content)
+
+## The stats the icon HUD no longer paints, as one compact two-column block.
+## Kept short on purpose: a pause screen is a breather, not a spreadsheet.
+##
+## No fixed width: the block used to ask for 560px, which is wider than a 480px
+## window, so the pause card grew to 533px and hung 26px off the left edge. The
+## rows autowrap and the responsive pass clamps them to the card instead.
+func _walker_summary() -> Control:
+    var rows: Array = [
+        ["Warmth", "%d / %d" % [_walker_hp, _walker_hp_max]],
+        ["Level", "%d  ·  %d / %d soul to next gift" % [_walker_level, _walker_xp, _walker_xp_next]],
+        ["Song power", "%d" % _walker_song],
+        ["Charms", "%s" % ("none worn — Peddle's cart has charms ♥" if _walker_charms.is_empty() else _walker_charms)],
+        ["Depth", "Floor %d — %s" % [_walker_floor, _walker_region]],
+    ]
+    var box := VBoxContainer.new()
+    box.add_theme_constant_override("separation", 4)
+    box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    for row: Array in rows:
+        var line := HBoxContainer.new()
+        line.add_theme_constant_override("separation", 10)
+        var name_label := _label(String(row[0]), 15, Color("#dce9bd"))
+        name_label.custom_minimum_size = Vector2(110, 0)
+        name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        line.add_child(name_label)
+        var value_label := _label(String(row[1]), 15, Color("#fff0c8"))
+        value_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        value_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        line.add_child(value_label)
+        box.add_child(line)
+    return box
+
+## The control keys, which the play screen no longer shows.
+func _keys_reference() -> Control:
+    var box := VBoxContainer.new()
+    box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var keys := _label("Wander: WASD / arrows / stick  ·  Dash: Shift  ·  Hug, sing & descend: E  ·  Cart: F  ·  Memories: J  ·  Cozy options: C  ·  Pause: Esc", 13, Color("#cbdcb7"))
+    keys.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    box.add_child(keys)
+    return box
 
 func show_death(floor_number: int, meta: Dictionary) -> void:
     _clear(_overlay_content)
@@ -439,6 +487,33 @@ func close_panels() -> void:
     _cancel_story()
     _reset_touch_joystick()
 
+## The little picture at the left of a shop row.
+##
+## The three wares live in three different tables that share a key namespace --
+## `moss` is both a charm and a stanza -- so each row asks for its glyph by
+## kind. A row for a key with no glyph yet gets a neutral Mote mark rather than
+## a hole, so the gap is visible and worth a bug report.
+func _wore_icon(item: Dictionary, selected: bool) -> TextureRect:
+    var kind := String(item.get("kind", "charm"))
+    var key := String(item.get("key", ""))
+    var glyph_key := key
+    if kind == "verse":
+        glyph_key = GardenGlyphs.STANZA_PREFIX + key
+    elif kind == "mote":
+        glyph_key = GardenGlyphs.VERSE_PREFIX + key
+    if not GardenGlyphs.has_glyph(glyph_key):
+        glyph_key = GardenGlyphs.MOTE
+    var icon := TextureRect.new()
+    icon.texture = GardenGlyphs.get_glyph(glyph_key)
+    icon.custom_minimum_size = Vector2(34, 34)
+    icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    # Worn things get a lit rim so the eye finds the equipped row instantly.
+    icon.modulate = Color(1.0, 1.0, 1.0) if not selected else Color(1.12, 1.08, 0.95)
+    return icon
+
 func _shop_item(item: Dictionary, sparkles: int, selected: bool, enabled: bool, is_owned: bool, slots_full: bool = false, free_item: bool = false) -> Button:
     var key := String(item.get("key", ""))
     var price := int(item.get("price", 0))
@@ -447,10 +522,36 @@ func _shop_item(item: Dictionary, sparkles: int, selected: bool, enabled: bool, 
     # that never happened. Verses now say what they are: a swap.
     var status := "♥ WEARING" if selected else (("hum this instead" if String(item.get("kind", "verse")) == "mote" else "swap it in for a verse you're humming") if free_item else ("in pocket — tap to wear" if is_owned else ("take for ✦ %d" % price if price > 0 else "try it on")))
     var price_text := "✦ %d" % price if price > 0 else "free gift"
+    # A row is a PICTURE of the thing, its name, and what it costs. The full
+    # description and the tap-consequence live in the tooltip, which the player
+    # asks for by hovering -- so browsing the cart is scanning icons, not
+    # reading 41 paragraphs.
     var button := Button.new()
-    button.text = "%s  ·  %s\n%s\n%s" % [String(item.get("name", key)), price_text, String(item.get("description", "")), status]
-    button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-    button.custom_minimum_size = Vector2(0, 78)
+    button.custom_minimum_size = Vector2(0, 52)
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 10)
+    row.set_anchors_preset(Control.PRESET_FULL_RECT)
+    row.offset_left = 12
+    row.offset_right = -12
+    row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    row.add_child(_wore_icon(item, selected))
+    var words := VBoxContainer.new()
+    words.add_theme_constant_override("separation", 0)
+    words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    words.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    words.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    var title := _label(String(item.get("name", key)), 17, Color("#fff0c8"))
+    title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    words.add_child(title)
+    var sub := _label(status, 12, Color("#bcd2a8"))
+    sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    words.add_child(sub)
+    row.add_child(words)
+    var tag := _label(price_text, 15, Color("#ffd257"))
+    tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    row.add_child(tag)
+    button.add_child(row)
     if free_item and not selected:
         # Nothing here was ever bought, so "already yours" is the wrong story.
         # The swap is the whole truth, and the log now names what steps aside.

@@ -16,32 +16,32 @@ func _ready() -> void:
     call_deferred("_fit_layout")
 
 func update_hud(state: Dictionary) -> void:
-    var hp := int(state.get("hp", 100))
-    var hp_max := maxi(1, int(state.get("hp_max", 100)))
-    var xp := int(state.get("xp", 0))
-    var xp_next := maxi(1, int(state.get("xp_next", 10)))
-    _health_label.text = "♥ Warmth  %d / %d" % [hp, hp_max]
-    _health_bar.max_value = hp_max
-    if _health_shown < 0.0 or _reduced_motion:
-        _health_bar.value = hp
-    _health_shown = float(hp)
-    _xp_bar.max_value = xp_next
-    if _xp_shown < 0.0 or _reduced_motion:
-        _xp_bar.value = xp
-    _xp_shown = float(xp)
-    _floor_label.text = "Floor %d — %s" % [int(state.get("floor", 1)), String(state.get("region_name", "Sunlit Roots"))]
-    _region_label.text = String(state.get("forecast", "A warm path through the roots"))
-    _level_label.text = "Level %d  ·  %d / %d kindness to next gift" % [int(state.get("level", 1)), xp, xp_next]
-    _stats_label.text = "Song power %d  ·  %s" % [int(state.get("attack", 10)), "Dash ready ♥" if bool(state.get("dash_ready", true)) else "Dash catching breath…"]
-    _sparkle_label.text = "✦ %d sparkles to spend" % int(state.get("sparkles", 0))
-    var charm_names: Array = state.get("charm_names", [])
-    if charm_names.is_empty():
-        _charm_label.text = "Charms 0/%d: none yet — Peddle can help ♥" % BeautyContent.MAX_CHARMS
-    else:
-        _charm_label.text = "Charms %d/%d: %s" % [charm_names.size(), BeautyContent.MAX_CHARMS, ", ".join(charm_names)]
-    _objective_label.text = String(state.get("objective", "Follow the glowing stair ↓"))
-    _hint_label.text = String(state.get("hint", "Just wander — your lantern sings alone ♥"))
-    _mote_label.text = "“%s”" % String(state.get("mote_line", "The forest keeps your place warm."))
+    # The icon readout is the whole status display now. Warmth is the lantern
+    # ring, sparkles and depth are glyphs carrying the one number each
+    # genuinely needs, and the loadout is a row of sockets -- so none of the
+    # old stat-card text ("Warmth 100 / 100", "0 / 10 kindness to next gift",
+    # "Charms 0/3: none yet") is painted during play. Those facts live in the
+    # pause menu now, which is the one screen a player opens on purpose.
+    _vitals.set_values({
+        "hp": float(state.get("hp", 100)),
+        "hp_max": maxf(1.0, float(state.get("hp_max", 100))),
+        "sparkles": int(state.get("sparkles", 0)),
+        "floor": int(state.get("floor", 1)),
+        "charm_keys": state.get("charm_keys", []),
+    })
+    # Park the rest of the run's state for the pause menu, which is where the
+    # player goes when they DO want the numbers spelled out.
+    _walker_hp = roundi(float(state.get("hp", 100)))
+    _walker_hp_max = roundi(maxf(1.0, float(state.get("hp_max", 100))))
+    _walker_level = int(state.get("level", 1))
+    _walker_xp = int(state.get("xp", 0))
+    _walker_xp_next = maxi(1, int(state.get("xp_next", 10)))
+    _walker_song = roundi(float(state.get("attack", 10)))
+    _walker_floor = int(state.get("floor", 1))
+    _walker_region = String(state.get("region_name", "Sunlit Roots"))
+    _walker_forecast = String(state.get("forecast", ""))
+    var names: Array = state.get("charm_names", [])
+    _walker_charms = ", ".join(names)
 
 func set_map(dungeon: Dictionary, player_position: Vector3) -> void:
     # Deliberately does not force `_minimap.visible`: every floor load calls

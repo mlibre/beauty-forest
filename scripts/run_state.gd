@@ -43,6 +43,9 @@ var audio: AudioDirector
 var mote: Node3D
 var mote_core: MeshInstance3D
 var mote_light: OmniLight3D
+## The diegetic "go here" glow. Lives in the world, not the HUD, so it reads as
+## part of the scene rather than another overlay.
+var _waypoint: CozyWaypoint
 
 var floor_number := 1
 var dungeon: Dictionary = {}
@@ -405,32 +408,20 @@ func _sticker_description(key: String) -> String:
 func _refresh_ui() -> void:
     if ui == null or player == null or not is_instance_valid(player):
         return
+    # The HUD is fed ICONS, not sentences. Charm KEYS drive the vitals sockets;
+    # charm NAMES are sent too, but only the pause menu ever paints them.
+    var charm_keys: Array[String] = []
+    for key: String in charms_equipped.keys():
+        charm_keys.append(key)
+    for key: String in stanzas_equipped.keys():
+        if bool(stanzas_equipped.get(key, false)):
+            charm_keys.append(key)
     var charm_names: Array[String] = []
     for key: String in charms_equipped.keys():
         for charm: Dictionary in BeautyContent.CHARMS:
             if String(charm["key"]) == key:
                 charm_names.append(String(charm["name"]))
-    var objective := "Follow the glowing stair ↓"
-    var hint := "Just wander — your lantern sings alone ♥"
-    if _near_merchant():
-        objective = "Peddle’s cart is here ♥ — press F for cozy gifts"
-        hint = "F open cart  ·  J memories  ·  C make it gentler"
-    elif _lullaby_active:
-        objective = "Sing with Mote — press E when the ring turns GOLD ♥"
-        hint = "E on GOLD  ·  missed notes just wait for you"
-    elif dragon_exists and not world.chimes.is_empty():
-        objective = "Find the blue Dream Chimes (%d/5) ♥" % (5 - world.chimes.size())
-        hint = "Walk close — chimes gather themselves ♥"
-    elif _has_feeling_floor():
-        var feeling := _near_feeling(10.0)
-        if feeling:
-            objective = "Sit with %s — wait for its GOLD halo ♥" % feeling.feeling_name
-            hint = "E nearby on GOLD  ·  two gentle rounds"
-    elif stair_visible:
-        var stair := world.get_node_or_null("Stairwell") as Node3D
-        if stair and player.global_position.distance_to(stair.global_position) < 2.3:
-            objective = "Rest by the stair — press E to wander down ♥"
-            hint = "E rest & descend  ·  +30 warmth"
+                break
     ui.update_hud({
         "floor": floor_number,
         "region_name": String(region.get("name", "Sunlit Roots")),
@@ -442,13 +433,82 @@ func _refresh_ui() -> void:
         "level": level,
         "attack": roundi(attack),
         "sparkles": sparkles,
+        "charm_keys": charm_keys,
         "charm_names": charm_names,
-        "objective": objective,
-        "hint": hint,
-        "mote_line": _mote_line,
-        "dash_ready": player.dash_cooldown <= 0.0,
     })
     ui.update_map_player(player.global_position, _minimap_markers())
+    # The lantern itself dims and reddens with warmth, so being hurt reads in
+    # the world and not only on the HUD ring.
+    if player != null and is_instance_valid(player) and player.hero != null and is_instance_valid(player.hero):
+        player.hero.set_warmth(clampf(hp / maxf(1.0, hp_max), 0.0, 1.0))
+    _update_waypoint()
+
+## Where the walk wants to go, shown as a glow in the world rather than a
+## sentence in the corner. One marker at a time: the thing that matters most on
+## this floor, which is not always the stair.
+func _update_waypoint() -> void:
+    if world == null or not is_instance_valid(world) or player == null or not is_instance_valid(player):
+        return
+    var target := Vector3.ZERO
+    var glyph := GardenGlyphs.STAIRS
+    var tint := Color("#bdf0bd")
+    var urgency := 0.0
+    var has_target := false
+    if _lullaby_active:
+        # During a lullaby the beat ring owns the screen; a floor marker would
+        # compete with it.
+        _set_waypoint_active(false)
+        return
+    if dragon_exists:
+        target = world.dragon_position
+        glyph = GardenGlyphs.DRAGON
+        tint = Color("#ffe095")
+        urgency = 0.85
+        has_target = true
+    elif _has_feeling_floor():
+        var feeling := _near_feeling(40.0)
+        if feeling != null:
+            target = feeling.global_position
+            glyph = GardenGlyphs.HEART
+            tint = Color("#ffad72") if not feeling.is_boss_vulnerable() else Color("#ffe066")
+            urgency = 0.6
+            has_target = true
+    elif not world.chimes.is_empty():
+        target = world.chimes[0].global_position
+        glyph = GardenGlyphs.CHIME
+        tint = Color("#bfe8ff")
+        urgency = 0.7
+        has_target = true
+    elif merchant_exists:
+        target = world.merchant_position
+        glyph = GardenGlyphs.CART
+        tint = Color("#ffd56e")
+        urgency = 0.35 if _near_merchant() else 0.2
+        has_target = true
+    elif stair_visible:
+        target = world.stair_position
+        glyph = GardenGlyphs.STAIRS
+        urgency = 0.0
+        has_target = true
+    if not has_target:
+        _set_waypoint_active(false)
+        return
+    _set_waypoint_active(true)
+    if _waypoint == null or not is_instance_valid(_waypoint):
+        return
+    _waypoint.global_position = target
+    _waypoint.configure(glyph, tint, urgency)
+    # Stop asking once the player is standing at the stair.
+    _waypoint.set_arrived(stair_visible and not dragon_exists and player.global_position.distance_to(world.stair_position) < 2.3)
+
+func _set_waypoint_active(active: bool) -> void:
+    if active and (_waypoint == null or not is_instance_valid(_waypoint)):
+        _waypoint = CozyWaypoint.new()
+        _waypoint.name = "Waypoint"
+        world.add_child(_waypoint)
+        _waypoint.set_reduced_motion(bool(settings.get("reduced_motion", false)))
+    if _waypoint != null and is_instance_valid(_waypoint):
+        _waypoint.visible = active
 
 func _minimap_markers() -> Array[Dictionary]:
     var markers: Array[Dictionary] = []

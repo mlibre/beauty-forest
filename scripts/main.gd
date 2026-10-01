@@ -202,6 +202,9 @@ func _start_run(start_floor: int, keep_progress: bool = false) -> void:
     mode = Mode.PLAYING
     ui.close_panels()
     ui.set_hud_visible(true)
+    # Play chrome OFF: no stat cards, no Mote chatter, no control hints. Just
+    # the lantern ring, the sparkles, the depth and the grove map.
+    ui.set_text_chrome_visible(false)
     if not keep_progress:
         attack = 10.0
         level = 1

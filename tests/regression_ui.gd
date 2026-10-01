@@ -89,12 +89,25 @@ func _touch_controls_off_screen(ui: GameUI) -> bool:
 	var stick := Rect2(ui._touch_joystick.position, ui._touch_joystick.size)
 	return stick.position.x < 0.0 or stick.position.y < 0.0 or stick.end.x > parent.x or stick.end.y > parent.y
 
+## Find a shop row by the text on it.
+##
+## A row no longer sets Button.text -- it is a composite of an icon, a name and
+## a price -- so the lookup has to read the row's own labels instead of the
+## button's string.
 func _find_shop_button(text: String) -> Button:
 	for node in _ui._shop_content.find_children("*", "Button", true, false):
 		var button := node as Button
-		if button != null and button.text.contains(text):
+		if button != null and _row_says(button, text):
 			return button
 	return null
+
+func _row_says(button: Button, text: String) -> bool:
+	if button.text.contains(text):
+		return true
+	for label in button.find_children("*", "Label", true, false):
+		if (label as Label).text.contains(text):
+			return true
+	return false
 
 func _run() -> void:
 	var game: Node = load("res://scenes/main.tscn").instantiate()

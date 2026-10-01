@@ -662,10 +662,12 @@ func _check_buying_past_the_charm_cap_says_so(game: Node) -> bool:
     await _frames(3)
     var ember_tip := ""
     for button in _buttons_in(game.ui._shop_frame):
-        var label := (button as Button).text
-        if label.to_lower().contains("ember"):
-            ember_tip = (button as Button).tooltip_text
-            break
+        # A shop row is a composite of icon + name + price, so its wares name
+        # lives in a child Label rather than on Button.text.
+        if not _has_text(button, "Ember"):
+            continue
+        ember_tip = (button as Button).tooltip_text
+        break
     if not _check(not ember_tip.is_empty(), "the owned charm had no tooltip in the shop"):
         return false
     if not _check(ember_tip.contains("swap"),
@@ -676,6 +678,18 @@ func _check_buying_past_the_charm_cap_says_so(game: Node) -> bool:
     game._start_run(1)
     await _frames(4)
     return true
+
+func _row_text(button: Button) -> String:
+    ## Everything a shop row says, joined.
+    ##
+    ## A row is a composite of an icon, a name, a status and a price, so its
+    ## wording lives in child Labels rather than on Button.text.
+    var parts: Array[String] = []
+    if not button.text.strip_edges().is_empty():
+        parts.append(button.text.strip_edges())
+    for label in button.find_children("*", "Label", true, false):
+        parts.append((label as Label).text.strip_edges())
+    return "\n".join(parts)
 
 func _buttons_in(node: Node) -> Array[Node]:
     var out: Array[Node] = []
@@ -820,7 +834,14 @@ func _check_a_full_slot_verse_swap_says_what_steps_back(game: Node) -> bool:
     for _i in range(3):
         await _frames(2)
 
-    var newest: String = String(game.ui._log_label.text.split("\n")[-1])
+    # Read the newest line that mentions the verse we just equipped. Reading
+    # the log's LAST line instead was a coin flip: a Mote chatter line landing
+    # after the swap buried the message, and the check passed or failed on
+    # timing rather than on what the game said.
+    var newest: String = ""
+    for line: String in String(game.ui._log_label.text).split("\n"):
+        if line.contains("Hearth"):
+            newest = line
     print("STANZASWAP equipped=%s log=%s" % [str(game.stanzas_equipped.keys()), newest])
     if not _check(game.stanzas_equipped.has("hearth"),
             "swapping a verse in did not equip it"):
@@ -871,7 +892,7 @@ func _check_free_items_do_not_claim_to_be_owned(game: Node) -> bool:
         var b := button as Button
         if b == null:
             continue
-        var label: String = b.text.strip_edges()
+        var label: String = _row_text(b)
         if not (label.contains("free gift")):
             continue
         free_rows += 1

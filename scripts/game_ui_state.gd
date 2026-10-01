@@ -42,11 +42,17 @@ var _mote_label: Label
 var _log_label: Label
 var _toast_label: Label
 var _minimap: CozyMinimap
+## The icon readout. This is the play screen's whole status display: warmth as
+## a ring, sparkles and depth as glyphs, the loadout as sockets.
+var _vitals: CozyVitals
 var _touch_root: Control
 var _touch_joystick: TouchJoystick
 ## The on-screen touch buttons, kept in build order so the responsive layout
 ## can measure the block they actually occupy in the bottom-right corner.
 var _touch_buttons: Array[Button] = []
+## The two text cards the icon HUD replaced. They still exist so the responsive
+## layout and its regression suite have something to measure, but they are hidden
+## during play -- see set_text_chrome_visible().
 var _left_card: PanelContainer
 var _right_card: PanelContainer
 var _overlay_scrim: ColorRect
@@ -74,6 +80,19 @@ var _reduced_motion := false
 var _high_contrast := false
 var _text_scale := 1.0
 var _compact_hud := false
+## The walker's numbers, parked by GameUI.update_hud so the pause menu can show
+## the run's full state on demand without the director building a second copy
+## of every label.
+var _walker_hp := 100
+var _walker_hp_max := 100
+var _walker_level := 1
+var _walker_xp := 0
+var _walker_xp_next := 10
+var _walker_song := 10
+var _walker_floor := 1
+var _walker_region := "Sunlit Roots"
+var _walker_charms := ""
+var _walker_forecast := ""
 var _time := 0.0
 ## Eased HUD bar values. Labels snap instantly so numbers stay exact; the bars
 ## glide toward them instead of jumping, which softens every bump and heal.
@@ -106,6 +125,23 @@ func _process(delta: float) -> void:
     _ease_bar(_xp_bar, _xp_shown, delta)
     if _minimap.is_visible_in_tree():
         _minimap.queue_redraw()
+
+func set_text_chrome_visible(visible_now: bool) -> void:
+    # `visible_now` means "SHOW the informational text chrome" (the stat cards,
+    # Mote's chatter, the control hints) -- i.e. the player is on a screen they
+    # opened deliberately. During the walk this is false and only the vitals
+    # ring, the grove map and the beat ring are drawn.
+    #
+    # This lives on the base class, not on GameUI, because GameUIScreens calls
+    # it to restore the cards when a menu opens.
+    _vitals.visible = not visible_now
+    _left_card.visible = visible_now
+    _right_card.visible = visible_now
+    _hint_label.visible = visible_now
+    _log_label.visible = visible_now
+    for optional: Control in [_region_label, _level_label, _stats_label, _sparkle_label, _charm_label, _mote_label]:
+        if is_instance_valid(optional):
+            optional.visible = visible_now
 
 func _ease_bar(bar: ProgressBar, target: float, delta: float) -> void:
     if bar == null or not is_instance_valid(bar) or target < 0.0:

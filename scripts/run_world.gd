@@ -22,6 +22,10 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
     if is_instance_valid(world):
         world.get_parent().remove_child(world)
         world.queue_free()
+    # The waypoint hangs off the world, so the teardown above frees it too.
+    # Holding the stale reference would make _set_waypoint_active() try to
+    # reparent a freed node on the next floor.
+    _waypoint = null
     notes.clear()
     wisps.clear()
 
