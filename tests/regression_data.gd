@@ -31,6 +31,7 @@ func _run() -> void:
     _test_loadout_limits()
     _test_weighted_pick_boundaries()
     _test_profile_isolation()
+    _test_unscoped_script_runs_are_isolated_too()
     _restore_file(BeautyData.save_path(), had_save, original_save)
     _restore_file(BeautyData.settings_path(), had_settings, original_settings)
     _remove_path(BeautyData.save_path() + ".tmp")
@@ -237,6 +238,59 @@ func _test_profile_isolation() -> void:
     var stable := BeautyData.default_meta()
     stable["runs"] = 5
     check(BeautyData.save_meta(stable), "restoring a clean isolated meta must succeed")
+
+func _test_unscoped_script_runs_are_isolated_too() -> void:
+    ## The redirect above only protects suites that remember to call
+    ## TestProfile.begin(). Eleven of the fourteen did not, and one of them saved
+    ## text_scale = 2.0 into the player's own config -- which then made every
+    ## later run of that suite fail its own layout checks, because the suite
+    ## depended on a clean disk it never guaranteed. So forget the redirect
+    ## entirely and the write target must STILL not be the real profile.
+    #
+    ## This plants nothing and reads nothing outside the disposable directory.
+    ## A regression must not need to damage the developer's player profile to
+    ## prove itself -- an earlier revision wrote the real config on purpose and
+    ## then had to restore it, which is the same class of hazard it was testing
+    ## for. Asserting the resolved PATH is enough: if save_path() and
+    ## settings_path() do not point at the real files, no write can land there.
+    var named := TestProfile.directory()
+    BeautyData.use_test_profile("")
+    check(BeautyData.save_path() != BeautyData.SAVE_PATH,
+        "a script run with no test profile must not write the player's real save")
+    check(BeautyData.settings_path() != BeautyData.SETTINGS_PATH,
+        "a script run with no test profile must not write the player's real settings")
+    check(BeautyData.save_path().contains("test_profiles"),
+        "an un-redirected script run must land in the disposable directory, got %s" % BeautyData.save_path())
+    check(BeautyData.settings_path().contains("test_profiles"),
+        "an un-redirected script run must land in the disposable directory, got %s" % BeautyData.settings_path())
+
+    # The resolved path must be STABLE, or a save followed by a load lands in two
+    # different throwaway folders and the round trip silently reads empty.
+    var resolved := BeautyData.save_path()
+    check(BeautyData.save_path() == resolved, "the throwaway save path changed between two reads")
+    check(BeautyData.settings_path() == BeautyData.settings_path(), "the throwaway settings path changed between two reads")
+    check(resolved != BeautyData.settings_path().path_join("../beauty_forest_save.json"),
+        "the throwaway save path must not resolve out of its directory")
+
+    # And the round trip must actually work inside that directory, or suites that
+    # forget the redirect would silently lose every write.
+    var sentinel := BeautyData.default_settings()
+    sentinel["text_scale"] = 1.75
+    check(BeautyData.save_settings(sentinel), "the unscoped settings sentinel must save somewhere")
+    check(FileAccess.file_exists(BeautyData.settings_path()),
+        "an un-redirected script run wrote nothing at all (path %s)" % BeautyData.settings_path())
+    check(is_equal_approx(float(BeautyData.load_settings().get("text_scale", 0.0)), 1.75),
+        "an un-redirected script run must be able to read back what it wrote")
+    var meta_sentinel := BeautyData.default_meta()
+    meta_sentinel["runs"] = 424242
+    check(BeautyData.save_meta(meta_sentinel), "the unscoped meta sentinel must save somewhere")
+    check(int(BeautyData.load_meta().get("runs", -1)) == 424242,
+        "an un-redirected script run must be able to read back the satchel it wrote")
+
+    # Put the named profile back so the rest of the suite still reads its fixture.
+    BeautyData.use_test_profile(named)
+    check(BeautyData.save_path() == BeautyData._profile_save_path,
+        "an explicitly named test profile must still win over the script-run fallback")
 
 func _test_loadout_limits() -> void:
     var every_stanza := {}

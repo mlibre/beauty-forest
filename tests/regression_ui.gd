@@ -23,6 +23,10 @@ var _ui: GameUI
 var _root_rect := Rect2()
 
 func _initialize() -> void:
+	# This suite writes settings, so without a throwaway profile a run would
+	# leave the PLAYER at 200% text for good -- the 200% check below saves that
+	# value straight to user://.
+	TestProfile.begin("regression_ui")
 	call_deferred("_run")
 
 func _check(condition: bool, message: String) -> void:

@@ -15,10 +15,14 @@ const MAX_META_COUNT := 1_000_000_000_000
 ## reached 143 in a real profile).
 static var _profile_save_path := ""
 static var _profile_settings_path := ""
+## Stable throwaway directory for a script run that never named a profile.
+static var _unscoped_profile := ""
 
 ## Point persistence at an isolated directory (tests, previews, demos). Pass an
 ## empty string to go back to the real player profile.
 static func use_test_profile(directory: String) -> void:
+    if not directory.is_empty():
+        _unscoped_profile = ""
     if directory.is_empty():
         _profile_save_path = ""
         _profile_settings_path = ""
@@ -27,11 +31,44 @@ static func use_test_profile(directory: String) -> void:
     _profile_save_path = directory.path_join("beauty_forest_save.json")
     _profile_settings_path = directory.path_join("beauty_forest_settings.cfg")
 
+## True when this process was launched as a script (godot --script tests/...gd).
+## Such a process is a tool, not the game: it must never write the real player
+## profile, and eleven of the fourteen suites had no TestProfile.begin() to say
+## so. regression_ui saved text_scale = 2.0 into the player's own config, which
+## then made every later run of that suite fail its own layout checks -- the
+## suite depended on a clean disk it never guaranteed.
+static func _is_script_run() -> bool:
+    for argument in OS.get_cmdline_args():
+        if argument == "--script" or argument.ends_with(".gd"):
+            return true
+    return false
+
+## The profile this process may write to. Un-redirected script runs get an
+## automatic throwaway directory instead of the player's real files, so a suite
+## that forgets TestProfile.begin() fails visibly (writes nowhere useful)
+## rather than silently corrupting a profile. TestProfile.begin() still wins, so
+## a suite that wants a named directory keeps it.
+##
+## The fallback is cached: it has to be the SAME directory for the life of the
+## process, or a save followed by a load lands in two different throwaway
+## folders and the round trip silently reads empty.
+static func _write_path_for(overridden: String, fallback: String) -> String:
+    if not overridden.is_empty():
+        return overridden
+    if not _is_script_run():
+        return fallback
+    if _unscoped_profile.is_empty():
+        var scratch := "user://test_profiles/unscoped_%d" % Time.get_ticks_usec()
+        DirAccess.make_dir_recursive_absolute(scratch)
+        _unscoped_profile = scratch
+    return _unscoped_profile.path_join(fallback.get_file())
+
 static func save_path() -> String:
-    return _profile_save_path if not _profile_save_path.is_empty() else SAVE_PATH
+    return _write_path_for(_profile_save_path, SAVE_PATH)
 
 static func settings_path() -> String:
-    return _profile_settings_path if not _profile_settings_path.is_empty() else SETTINGS_PATH
+    return _write_path_for(_profile_settings_path, SETTINGS_PATH)
+
 static func default_meta() -> Dictionary:
     return {
         "version": 2,
