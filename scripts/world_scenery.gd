@@ -326,7 +326,11 @@ func _build_ambient_life() -> void:
     process.angular_velocity_max = 80
     process.scale_min = 0.45
     process.scale_max = 1.0
-    process.color = Color(region["tip"])
+    # No process.color: the draw material below is unshaded with a fixed
+    # albedo, so the vertex color a process material emits is never read. The
+    # 0.72 alpha lives in that albedo on purpose -- routing the color through
+    # the particle path instead would need vertex_color_use_as_albedo and
+    # would multiply the alpha back to opaque.
     leaves.process_material = process
     var leaf_mesh := QuadMesh.new()
     leaf_mesh.size = Vector2(0.11, 0.055)

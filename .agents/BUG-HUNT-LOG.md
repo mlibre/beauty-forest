@@ -41,7 +41,8 @@ Completed iterations: 15 (see below)
 | 25 | Extra song time / lullaby beat window | — | refuted; settings controls closed |
 | 26 | Charm swap evicts an unnamed charm | f0b4682 | FIXED: silent eviction, now named |
 | 27 | Verse swap + free items claim ownership | f38084b | FIXED: silent eviction, false ownership |
-| 28 | Accessibility toggle copy | — | FIXED: a stale label I left behind |
+| 28 | Accessibility toggle copy | 9acdf37 | FIXED: a stale label I left behind |
+| 29 | Three particle colors nothing reads | — | FIXED: dead writes, now impossible |
 
 Refuted (audit's claim did not survive measurement):
 - B1. Log label over status card / off-screen -- NO. Label is text-clipped at
@@ -342,6 +343,38 @@ Tier 2/3 (progression/logic):
     run_state.gd:130 refuses before charging. Pressing it changed nothing.
   - REFUTED: Still forest and Hush all sound labels both describe measured
     behaviour (bob 0.16m->0, boss light 0.216->0; the mix stops).
+
+- The ending screen and world_scenery.gd (probes 103-107).
+  - REFUTED: "Wander deeper". It keeps the whole loadout (3/3 charms, 482
+    sparkles, stanzas and Mote's verse) and moves to floor 14, which wraps to
+    story floor 1 via story_floor(). Floor 14 is a real, completable floor.
+    probe104 claimed the HUD said "Charms 0/3: none yet" -- that was a probe
+    bug: it bought the charms AFTER the restart and read the HUD on a frame
+    too early. probe105 waited and found it correct and consistent forever.
+    Content reuse is by design, and meta["facts"] is a global counter, so a
+    second playthrough still teaches new facts.
+  - FIXED: three ParticleProcessMaterial.color writes that nothing could read.
+    A process material's color only reaches the screen when the draw material
+    sets vertex_color_use_as_albedo; all three emitters are unshaded with a
+    fixed albedo, so the field was dead. world_scenery.gd:329 (leaves) was the
+    one that mattered to read: it sat beside line 215's comment describing
+    exactly this mistake making the flowers bloom white. cozy_vfx.gd:30 (burst)
+    and :141 (motes) were the same. All three removed with a comment saying
+    where the color actually lives.
+  - The tempting wrong fix: enabling vertex_color_use_as_albedo instead. For
+    burst and motes it is a no-op (albedo == process color). For the leaves it
+    would have been a REGRESSION -- process.color carries alpha 1.0 while the
+    material deliberately uses 0.72, so the leaves would have gone opaque.
+    Deleting the dead line is right; the flag is not.
+  - The check that could not fail: my first version of the regression never
+    called _build_ambient_life, so the leaf emitter was never built and
+    restoring the dead write still exited 0. Green on a revert means the check
+    is measuring nothing. Adding the real builder and running the revert again
+    made it fail with "amount=65 draws_vertex=false writes_process_color=true".
+    All three sites verified individually.
+  - Probe bug: my first world_petals check built its own material, so it
+    measured my fixture instead of the game and reported GlowingPetals as
+    broken. Build through the real factory or do not check it.
 
 Audit backlog is now exhausted: every item is done, refuted, or unreachable.
 Future iterations hunt fresh ground rather than re-reading the audits. (NOT player-reachable — scrim blocks input)

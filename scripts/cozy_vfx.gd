@@ -27,7 +27,8 @@ static func burst(parent: Node, world_position: Vector3, color: Color, amount: i
     process.damping_max = 2.8
     process.scale_min = 0.65
     process.scale_max = 1.55
-    process.color = color
+    # The color lives on the draw material's albedo, not here: without
+    # vertex_color_use_as_albedo the particle path never reads this field.
     particles.process_material = process
 
     var mesh := SphereMesh.new()
@@ -138,7 +139,9 @@ static func spawn_ambient_motes(parent: Node, region: Dictionary, amount: int = 
     process.gravity = Vector3(0.03, 0.08, 0.01)
     process.scale_min = 0.25
     process.scale_max = 0.80
-    process.color = Color(region["accent"])
+    # The accent color lives on the draw material below; a process material's
+    # color is only read when the draw material opts into vertex colors, and
+    # this one does not (it is unshaded with a fixed albedo).
     particles.process_material = process
 
     var quad := QuadMesh.new()
