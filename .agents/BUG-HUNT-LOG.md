@@ -8,7 +8,7 @@ Godot 4.7.2 · branch master · never push.
 
 ## Progress
 
-Completed iterations: 13 (see below)
+Completed iterations: 15 (see below)
 
 ## Iterations
 
@@ -28,6 +28,10 @@ Completed iterations: 13 (see below)
 | 12 | Raising text scale never refit the HUD (card over hint bar) | 5c73fd9 | done |
 | 13 | Script runs wrote the player's real profile (text_scale=2.0) | eb2d145 | done |
 | 14 | CozyVFX per-burst allocation | — | refuted, see below |
+| 15 | Peddle promised a capped charm would be worn | b4788a7 | done |
+| 16 | Feeling ceremony at high rhythm_window; heart pickups | — | refuted, see below |
+| 17 | Quit path / save atomicity / sticker cap | — | refuted, see below |
+| 18 | Region ranges / ambient beds | — | refuted, see below |
 
 Refuted (audit's claim did not survive measurement):
 - B1. Log label over status card / off-screen -- NO. Label is text-clipped at
@@ -61,7 +65,55 @@ Tier 7 (rendering):
 - B7. DONE (5a25404)  - B8. DONE (2d0b4c9)
 
 Tier 2/3 (progression/logic):
-- B9. `_open_settings()` twice corrupts previous_mode (NOT player-reachable — scrim blocks input)
+- B9. `_open_settings()` twice corrupts previous_mode -- CONFIRMED dynamically
+  but NOT player-reachable (the modal scrim covers the pause card on both the
+  keyboard and touch routes). Backlog only.
+
+- Lullaby ceremony at rhythm_window 0.25/1.4/3.0 x gentle/standard/bold. The
+  player CAN die mid-ceremony (standard and bold, standing in a 15-wisp swarm,
+  HP 100 -> 0 at ~10-12s) but that is legitimate combat, not a defect: the same
+  ceremony with the hero out of the swarm completes in every style and HP RISES
+  (100 -> 135/130/150). Dying mid-ceremony leaves `_lullaby_active` true, but
+  the death screen is clean -- beat ring hidden, only the two nap buttons, E
+  inert -- and `_start_run` resets step/timer/flag, so nothing leaks into the
+  next run. A ceremony is also bounded: at the loosest window it is 21.8s.
+- Heart pickups: 60s lifetime with a visible `heart_expired` log line, collect
+  emits once (a `_collected` guard blocks the deferred double-free heal), and a
+  real soothe drops one that heals on contact (40 -> 140, capped at hp_max).
+  Verified through the game's own spawn path, not a hand-built fixture.
+  (Probes 54/55 both "failed" first; both were probe bugs -- `setup()` takes
+  four args, and lifetime runs on processed frames not physics frames.)
+
+- Quit path (probe 57/58). quit_gracefully() never saves, but it does not need
+  to: every `meta[...]` write in the codebase is immediately followed by
+  `save_meta` (7 call sites, checked). Measured RAM-vs-disk diffs = [] after a
+  run start, after a soothe, and after a cherry-picked sticker award. `runs`,
+  `sparkles`, `level`, `xp` are deliberately run-only -- a fresh walk is
+  supposed to start over. Three rapid quits collapse into one pending quit
+  (the `_quitting` guard holds), and the drain window leaves the audio tree
+  consistent.
+- Write atomicity (probe 59). 200 back-to-back settings writes and 100 meta
+  writes, the shape a slider drag produces: 0 failures, final read valid, no
+  partial reads, no `.tmp` leftovers. The stage-then-rename in save_settings
+  and save_meta holds under repetition.
+- `stickers.slice(-40)` (run_state.gd:337) is unreachable: STICKERS has 11
+  entries and _award_sticker refuses duplicates. Harmless, but it is dead
+  defensive code -- flagged, not removed, because it is a guard on persisted
+  data that a hand-edited save could exceed.
+
+- Region + ambient system (probes 60/61/62). Ranges are contiguous 1-4, 5-8,
+  9-12, 13-13: no gap, no overlap, no inverted range, no region no floor
+  reaches, and the last range ends exactly on CAMPAIGN_LENGTH. All four regions
+  get a DISTINCT cached ambient (4 streams for 4 regions), every one playing,
+  and `_ambient_should_play` is re-armed across a floor change including
+  13 -> 12. Ambient peak decoded properly is 0.1972 of full scale against
+  0.1889 predicted by the generating math -- it is as loud as intended.
+  (Probe 61 read byte PAIRS as single samples and reported a bogus 0.008 peak;
+  62 decoded little-endian s16 by hand and got the real number. That is the
+  same class of mistake as reading custom_minimum_size instead of a real rect.)
+
+Audit backlog is now exhausted: every item is done, refuted, or unreachable.
+Future iterations hunt fresh ground rather than re-reading the audits. (NOT player-reachable — scrim blocks input)
 - B10. `_spawn_boss`/`_spawn_feeling` omit the `occupied` dict -> 0.75% two wisps interpenetrate
 - B11. HeroRig staff rotation.x written by both hero_rig.gd:398 and an anim track
 
