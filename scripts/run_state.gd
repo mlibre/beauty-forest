@@ -59,8 +59,9 @@ var sparkles := 0
 var charms_owned: Dictionary = {}
 var charms_equipped: Dictionary = {}
 var stanzas_equipped: Dictionary = {"petals": true, "echoes": true}
-## The charm a full-slot swap pushed into the pocket, so Peddle can name it.
+## What a full-slot swap pushed aside, so Peddle or Mote can name it.
 var _evicted := ""
+var _evicted_stanza := ""
 var mote_verse_key := ""
 var charm_effects: Dictionary = {}
 var stanza_effects: Dictionary = {}
@@ -225,19 +226,46 @@ func _on_stanza_equip_requested(key: String) -> void:
         stanzas_equipped.erase(key)
     else:
         if stanzas_equipped.size() >= BeautyContent.MAX_STANZAS:
-            var next_stanzas: Dictionary = {key: true}
-            var stanza_count := 1
-            for existing: String in stanzas_equipped.keys():
-                if existing == key or stanza_count >= BeautyContent.MAX_STANZAS:
-                    continue
-                next_stanzas[existing] = true
-                stanza_count += 1
-            stanzas_equipped = next_stanzas
+            stanzas_equipped = _stanzas_replacing(key)
+            ui.add_log("Mote: “%s it is. %s steps back for now — tap it again any time.”" % [
+                _stanza_name(key), _evicted_stanza_name()])
         else:
             stanzas_equipped[key] = true
     _recalculate_loadout(false)
     audio.play_tone(659.25, 0.24, 0.055, 1)
     ui.show_shop(_shop_state())
+
+## The stanza loadout after a swap. Same shape as _loadout_replacing: name what
+## steps aside, because the shop offers "try it on" for every verse and the
+## player has no other way to tell that one of the two they were humming just
+## stopped being sung.
+func _stanzas_replacing(key: String) -> Dictionary:
+    var next_stanzas: Dictionary = {key: true}
+    var stanza_count := 1
+    for existing: String in stanzas_equipped.keys():
+        if existing == key:
+            continue
+        if stanza_count >= BeautyContent.MAX_STANZAS:
+            break
+        next_stanzas[existing] = true
+        stanza_count += 1
+    _evicted_stanza = ""
+    for existing: String in stanzas_equipped.keys():
+        if not next_stanzas.has(existing):
+            _evicted_stanza = existing
+            break
+    return next_stanzas
+
+func _stanza_name(key: String) -> String:
+    for stanza: Dictionary in BeautyContent.STANZAS:
+        if String(stanza["key"]) == key:
+            return String(stanza["name"])
+    return key
+
+func _evicted_stanza_name() -> String:
+    if _evicted_stanza == "":
+        return "The other verse"
+    return _stanza_name(_evicted_stanza)
 
 func _on_mote_verse_requested(key: String) -> void:
     mote_verse_key = key

@@ -234,7 +234,7 @@ func show_shop(state: Dictionary) -> void:
     var stanzas: Dictionary = state.get("stanzas", {})
     for stanza: Dictionary in BeautyContent.STANZAS:
         var key := String(stanza["key"])
-        var toggle := _shop_item(stanza, 0, bool(stanzas.get(key, false)), true, true)
+        var toggle := _shop_item(stanza, 0, bool(stanzas.get(key, false)), true, true, false, true)
         toggle.pressed.connect(func(): stanza_equip_requested.emit(key))
         list.add_child(toggle)
 
@@ -243,7 +243,10 @@ func show_shop(state: Dictionary) -> void:
     for option: Dictionary in BeautyContent.MOTE_VERSES:
         var key := String(option["key"])
         var selected := String(verse.get("key", "")) == key
-        var toggle := _shop_item(option, 0, selected, true, true)
+        # Exclusive and free, like the verses: nobody owns a counter-melody.
+        var mote_option: Dictionary = option.duplicate()
+        mote_option["kind"] = "mote"
+        var toggle := _shop_item(mote_option, 0, selected, true, true, false, true)
         toggle.pressed.connect(func(): mote_verse_requested.emit(key))
         list.add_child(toggle)
 
@@ -436,16 +439,24 @@ func close_panels() -> void:
     _cancel_story()
     _reset_touch_joystick()
 
-func _shop_item(item: Dictionary, sparkles: int, selected: bool, enabled: bool, is_owned: bool, slots_full: bool = false) -> Button:
+func _shop_item(item: Dictionary, sparkles: int, selected: bool, enabled: bool, is_owned: bool, slots_full: bool = false, free_item: bool = false) -> Button:
     var key := String(item.get("key", ""))
     var price := int(item.get("price", 0))
-    var status := "♥ WEARING" if selected else ("in pocket — tap to wear" if is_owned else ("take for ✦ %d" % price if price > 0 else "try it on"))
+    # A verse is nobody's to own -- the shop listed every unworn one as "in
+    # pocket -- tap to wear" and "already yours", which describes a purchase
+    # that never happened. Verses now say what they are: a swap.
+    var status := "♥ WEARING" if selected else (("hum this instead" if String(item.get("kind", "verse")) == "mote" else "swap it in for a verse you're humming") if free_item else ("in pocket — tap to wear" if is_owned else ("take for ✦ %d" % price if price > 0 else "try it on")))
     var price_text := "✦ %d" % price if price > 0 else "free gift"
     var button := Button.new()
     button.text = "%s  ·  %s\n%s\n%s" % [String(item.get("name", key)), price_text, String(item.get("description", "")), status]
     button.alignment = HORIZONTAL_ALIGNMENT_LEFT
     button.custom_minimum_size = Vector2(0, 78)
-    if is_owned and not selected:
+    if free_item and not selected:
+        # Nothing here was ever bought, so "already yours" is the wrong story.
+        # The swap is the whole truth, and the log now names what steps aside.
+        var swap_note := " Tap to swap it in; one of your two verses will step back." if String(item.get("kind", "verse")) == "verse" else " Tap to hum this one instead."
+        button.tooltip_text = "%s — free to hum any time.%s" % [String(item.get("description", "")), swap_note]
+    elif is_owned and not selected:
         # Say what tapping will actually do. With all three slots taken the tap
         # swaps rather than adds, and "tap to wear" would be a small lie.
         var swap_note := " Tap to swap it in for a charm you are wearing." if slots_full else " Tap to wear it."

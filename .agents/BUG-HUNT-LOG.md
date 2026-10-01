@@ -39,7 +39,8 @@ Completed iterations: 15 (see below)
 | 23 | damage_taken / wisp_speed / rhythm_window | — | refuted; settings sweep closed |
 | 24 | Bump softness slider direction | e6fb47d | FIXED: dragging right made it harder |
 | 25 | Extra song time / lullaby beat window | — | refuted; settings controls closed |
-| 26 | Charm swap evicts an unnamed charm | — | FIXED: silent eviction, now named |
+| 26 | Charm swap evicts an unnamed charm | f0b4682 | FIXED: silent eviction, now named |
+| 27 | Verse swap + free items claim ownership | — | FIXED: silent eviction and false ownership |
 
 Refuted (audit's claim did not survive measurement):
 - B1. Log label over status card / off-screen -- NO. Label is text-clipped at
@@ -287,6 +288,36 @@ Tier 2/3 (progression/logic):
     timeout and left the revert APPLIED to run_state.gd. Always re-read the file
     after a timeout before trusting it, and prefer doing the revert in a single
     foreground terminal call with a bounded `timeout`.
+
+- The verse swap, and everything the shop claims about free things (probes
+  91-98). The sibling of iteration 26, and it had the same defect plus a second
+  one underneath.
+  - FIXED, part 1: with both verse slots full the swap evicted one and the log
+    did not change AT ALL -- probe91 measured `did the log change at all? false`.
+    Mote now says what steps back: "Verse of Hearth it is. Verse of Echoes
+    steps back for now -- tap it again any time."
+  - FIXED, part 2: the shop listed every unworn verse AND every unchosen
+    counter-melody as "in pocket -- tap to wear" with the tooltip "already
+    yours. Tap to wear it." Both are free gifts nobody owns; there is no
+    purchase and no pocket, so that copy described a transaction that never
+    happened. They now read "swap it in for a verse you're humming" and "hum
+    this instead", with tooltips that say what a tap actually does. 17 of 17
+    free rows verified.
+  - Five probes were needed because I could not find the shop rows. They live
+    inside a ScrollContainer -> VBoxContainer under _shop_frame, and
+    _shop_content is only the settings list. Probes 94, 95 and 96 all reported
+    "0 buttons", and probe92's "0 lies" was VACUOUS rather than a pass -- it had
+    been reading an empty tree. Only probe98, which dumped the shape first,
+    found the 26 rows. Lesson: when a search returns zero results in a codebase
+    that should have some, dump the structure before concluding anything.
+  - probe93 asserted in its own print that the mote swap was "Currently
+    silent" without having checked; the very next lines showed the log DID
+    change. An unverified claim in a probe's own output is still a claim.
+  - First revert attempt produced unbalanced parentheses in game_ui_screens.gd
+    and the suite failed to even parse. Reverted each half separately with
+    exact-match edits instead: the log half fails with "a full-slot verse swap
+    said nothing about what it displaced", the copy half with "a free item
+    claimed ownership: ... -- already yours".
 
 Audit backlog is now exhausted: every item is done, refuted, or unreachable.
 Future iterations hunt fresh ground rather than re-reading the audits. (NOT player-reachable — scrim blocks input)

@@ -473,6 +473,10 @@ func _run() -> void:
         return
     if not await _check_a_full_slot_swap_names_the_evicted_charm(game):
         return
+    if not await _check_a_full_slot_verse_swap_says_what_steps_back(game):
+        return
+    if not await _check_free_items_do_not_claim_to_be_owned(game):
+        return
 
     print("BEAUTY_FOREST_MAIN_FLOW_OK")
     TestProfile.end()
@@ -801,3 +805,93 @@ func charm_name_for(key: String) -> String:
         if String(charm["key"]) == key:
             return String(charm["name"])
     return key
+
+
+## The verse swap is the sibling of the charm swap above: with both slots full it
+## evicts one, and it used to do so in total silence -- the log did not change
+## at all. Mote now names what steps back.
+func _check_a_full_slot_verse_swap_says_what_steps_back(game: Node) -> bool:
+    game.stanzas_equipped = {"petals": true, "echoes": true}
+    game._recalculate_loadout(false)
+    for _i in range(2):
+        await _frames(2)
+    var before: Array = game.stanzas_equipped.keys()
+    game._on_stanza_equip_requested("hearth")
+    for _i in range(3):
+        await _frames(2)
+
+    var newest: String = String(game.ui._log_label.text.split("\n")[-1])
+    print("STANZASWAP equipped=%s log=%s" % [str(game.stanzas_equipped.keys()), newest])
+    if not _check(game.stanzas_equipped.has("hearth"),
+            "swapping a verse in did not equip it"):
+        return false
+    if not _check(game.stanzas_equipped.size() <= BeautyContent.MAX_STANZAS,
+            "the verse swap exceeded the cap: %s" % str(game.stanzas_equipped.keys())):
+        return false
+
+    var stepped_aside := ""
+    for key in before:
+        if not game.stanzas_equipped.has(key):
+            stepped_aside = key
+            break
+    if not _check(stepped_aside != "", "a full-slot verse swap evicted nothing"):
+        return false
+    if not _check(newest.contains("steps back"),
+            "a full-slot verse swap said nothing about what it displaced (%s)" % newest):
+        return false
+    var wanted := ""
+    for stanza: Dictionary in BeautyContent.STANZAS:
+        if String(stanza["key"]) == stepped_aside:
+            wanted = String(stanza["name"])
+            break
+    if not _check(newest.contains(wanted),
+            "the verse swap did not name %s (%s)" % [wanted, newest]):
+        return false
+    # Every verse is free, so the one that stepped back must be tap-able again.
+    game._on_stanza_equip_requested(stepped_aside)
+    for _i in range(3):
+        await _frames(2)
+    if not _check(game.stanzas_equipped.has(stepped_aside),
+            "the displaced verse could not be swapped straight back"):
+        return false
+    return true
+
+## Verses and Mote's counter-melodies are free gifts that nobody owns, and the
+## shop listed every unworn one as "in pocket -- tap to wear" and "already
+## yours". That describes a purchase which never happened. Nothing here may
+## claim a pocket or an ownership.
+func _check_free_items_do_not_claim_to_be_owned(game: Node) -> bool:
+    game.ui.show_shop(game._shop_state())
+    for _i in range(4):
+        await _frames(2)
+    # The rows live inside a ScrollContainer, so search the whole frame subtree.
+    var free_rows := 0
+    var free_items := BeautyContent.STANZAS.size() + BeautyContent.MOTE_VERSES.size()
+    for button in _buttons_in(game.ui._shop_frame):
+        var b := button as Button
+        if b == null:
+            continue
+        var label: String = b.text.strip_edges()
+        if not (label.contains("free gift")):
+            continue
+        free_rows += 1
+        # A worn item says "wearing it now", which is true. An UNWORN one must
+        # not describe a pocket or a purchase.
+        if label.contains("♥ WEARING"):
+            continue
+        if not _check(not label.contains("in pocket"),
+                "a free item claimed a pocket: %s" % label):
+            return false
+        if not _check(not b.tooltip_text.contains("already yours"),
+                "a free item claimed ownership: %s" % b.tooltip_text):
+            return false
+    print("FREE_ITEMS rows=%d of %d expected, none claim ownership or a pocket" % [
+        free_rows, free_items])
+    if not _check(free_rows == free_items,
+            "expected %d free rows (every verse and counter-melody), found %d" % [
+                free_items, free_rows]):
+        return false
+    game.ui.close_panels()
+    for _i in range(2):
+        await _frames(2)
+    return true
