@@ -132,6 +132,19 @@ godot --headless --path <project> --export-release "<preset>" <output>
 - The standard official editor does not provide a general built-in GDScript unit-test runner; there is no `--test` flag in `godot --help`. Use project-owned test runners/scenes and report their exact behavior.
 - Never weaken a valid test merely to make a run pass. If a check cannot run, report the blocker instead of claiming success.
 
+## Headless testing traps (each one produced a false failure before it was found)
+
+- **A defaulted `get` makes an inverted guard.** `if source.get("stickers", []) is Array:` is true when the key is MISSING, because the default is already an Array — the body then re-indexes `source[key]` and throws. Test the value you iterate, not the source dictionary.
+- **Keep one source of truth for a derived constant.** Two formulas for the same hit test (`0.72` fixed aim vs `0.70 * visual_scale` connect sphere) silently diverge the moment one becomes scale-aware. Compute the point once and use it for both.
+- **The first element of a sorted list is not "the biggest".** Rooms already sorted largest-first make a re-scan for `max(area)` return `rooms[0]` — often the spawn room. Assert the prop is NOT in the spawn clearing rather than only asserting it exists.
+- **A flag cleared by `stop_*` needs an owner.** A ceremony that clears `_ambient_should_play` leaves it false until some unrelated path re-arms it. Every branch that returns control to the player must re-arm.
+- **`await process_frame` is not 60 fps headless.** Never derive gameplay timing from frame counts; use `Time.get_ticks_msec()`.
+- **`queue_free()` does not invalidate immediately.** The node stays `is_instance_valid` until the frame ends; observe the outcome through a signal, not validity.
+- **Probe facts, not theories.** A probe that stands still in a swarm dies and looks like a balance defect; one that kites survives. Check the probe's behaviour is even legal before reporting a failure as a defect — and treat every probe FAIL as suspect test code first.
+- **A synthetic fixture may not reproduce the real generator.** Hand-picked rooms never exercise the generator's ordering; build regressions from the real generator when the defect lives in generated layout.
+- **Match indentation per file.** These suites use 4 spaces; a stray tab is a hard parse error, not a warning.
+- **GDScript needs explicit types on Variant expressions.** `:=` on an untyped call result fails to parse; annotate `var x: bool = ...`.
+
 ## Finish checklist
 
 - The implementation matches the project's exact Godot version, renderer, physics backend, feature tags, and platform constraints.
