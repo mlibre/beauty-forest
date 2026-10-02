@@ -35,7 +35,6 @@ var _level_label: Label
 var _stats_label: Label
 var _sparkle_label: Label
 var _charm_label: Label
-var _objective_label: Label
 var _hint_label: Label
 var _mote_label: Label
 var _log_label: Label
@@ -94,6 +93,11 @@ var _walker_charms := ""
 var _walker_charm_count := 0
 var _walker_sparkles := 0
 var _walker_forecast := ""
+## What the glowing waypoint is actually pointing at, in words. The corner card
+## used to read "Wander toward the glowing stair" on every floor, including
+## dragon floors where the stairwell is hidden and the marker is over Snoozle --
+## so the one screen a player pauses on pointed them at nothing.
+var _walker_objective := ""
 var _time := 0.0
 ## Eased HUD bar values. Labels snap instantly so numbers stay exact; the bars
 ## glide toward them instead of jumping, which softens every bump and heal.

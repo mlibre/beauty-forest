@@ -463,10 +463,15 @@ func _update_waypoint() -> void:
     var tint := Color("#bdf0bd")
     var urgency := 0.0
     var has_target := false
+    # The words for whatever this picks, published for the pause menu. It used
+    # to be a fixed "Wander toward the glowing stair", which sent the player
+    # looking for a stairwell that dragon floors do not have.
+    var objective := ""
     if _lullaby_active:
         # During a lullaby the beat ring owns the screen; a floor marker would
         # compete with it.
         _set_waypoint_active(false)
+        ui._walker_objective = "Sing the lullaby — the glow will wait"
         return
     if dragon_exists:
         target = world.dragon_position
@@ -474,6 +479,7 @@ func _update_waypoint() -> void:
         tint = Color("#ffe095")
         urgency = 0.85
         has_target = true
+        objective = "Wander to the glow over Snoozle and start the lullaby"
     elif _has_feeling_floor():
         var feeling := _near_feeling(40.0)
         if feeling != null:
@@ -482,23 +488,28 @@ func _update_waypoint() -> void:
             tint = Color("#ffad72") if not feeling.is_boss_vulnerable() else Color("#ffe066")
             urgency = 0.6
             has_target = true
+            objective = "Sit with the Very Big Wisp and sing it down"
     elif not world.chimes.is_empty():
         target = world.chimes[0].global_position
         glyph = GardenGlyphs.CHIME
         tint = Color("#bfe8ff")
         urgency = 0.7
         has_target = true
+        objective = "Follow the chime — it is holding a fact for you"
     elif merchant_exists:
         target = world.merchant_position
         glyph = GardenGlyphs.CART
         tint = Color("#ffd56e")
         urgency = 0.35 if _near_merchant() else 0.2
         has_target = true
+        objective = "Wander to Peddle's cart and browse the cozy things"
     elif stair_visible:
         target = world.stair_position
         glyph = GardenGlyphs.STAIRS
         urgency = 0.0
         has_target = true
+        objective = "Wander toward the glowing stair"
+    ui._walker_objective = objective
     if not has_target:
         _set_waypoint_active(false)
         return

@@ -45,8 +45,6 @@ func _fit_layout() -> void:
         if is_instance_valid(_mote_label):
             _mote_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
             _mote_label.custom_minimum_size.y = 48.0
-        if is_instance_valid(_objective_label):
-            _objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     if _compact_hud:
         # A landscape phone-sized window cannot show the full desktop cards
         # side by side. Keep the essential warmth/floor/objective readouts,
@@ -101,9 +99,6 @@ func _fit_layout() -> void:
                 # the card can actually fit beside (or above) the status card.
                 _mote_label.custom_minimum_size.x = right_inner * (0.78 if narrow else 1.0)
                 _mote_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-            if is_instance_valid(_objective_label):
-                _objective_label.custom_minimum_size.x = right_inner * (0.78 if narrow else 1.0)
-                _objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         _right_card.reset_size()
         # Container sizes do not settle inside this same call, so place the
         # card from the minimums it is guaranteed to occupy.

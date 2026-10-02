@@ -83,10 +83,6 @@ func _build_interface() -> void:
     _mote_label.custom_minimum_size = Vector2(320, 48)
     right.add_child(_mote_label)
     right.add_child(_separator())
-    right.add_child(_label("YOUR NEXT KIND STEP ↓", 12, Color("#dce9bd")))
-    _objective_label = _label("Wander toward the glowing stair", 15, Color("#fff1c8"))
-    _objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    right.add_child(_objective_label)
 
     _minimap = CozyMinimap.new()
     _minimap.position = Vector2(-190, -202)

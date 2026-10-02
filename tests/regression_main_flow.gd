@@ -481,6 +481,8 @@ func _run() -> void:
         return
     if not await _check_the_pause_cards_show_the_real_run(game):
         return
+    if not await _check_the_next_step_names_the_real_target(game):
+        return
 
     print("BEAUTY_FOREST_MAIN_FLOW_OK")
     TestProfile.end()
@@ -977,6 +979,35 @@ func _check_a_full_slot_verse_swap_says_what_steps_back(game: Node) -> bool:
     if not _check(game.stanzas_equipped.has(stepped_aside),
             "the displaced verse could not be swapped straight back"):
         return false
+    return true
+
+func _check_the_next_step_names_the_real_target(game: Node) -> bool:
+    ## The pause screen's corner card read "Wander toward the glowing stair" on
+    ## every floor, because nothing ever wrote _objective_label. But the game
+    ## picks its waypoint target through a six-step priority -- Snoozle, a Big
+    ## Feeling, a chime, Peddle's cart, then the stair -- and on a dragon floor
+    ## the stairwell is deliberately hidden (stair_visible = false). So on those
+    ## floors the one screen a player pauses on pointed them at a stairwell that
+    ## is not in the room. The words now come from the same branch that aims the
+    ## glow, so the sentence and the marker cannot disagree.
+    for floor_num: int in [1, 2, 5]:
+        game._start_run(floor_num)
+        await _frames(8)
+        game._pause_game()
+        await _frames(4)
+        var said: String = game.ui._walker_objective
+        if said.is_empty():
+            return _check(false, "floor %d named no next step at all" % floor_num)
+        # Whichever target this floor really has, the sentence must not be the
+        # stair one -- unless the stair is genuinely what the glow is over.
+        if game.dragon_exists and said.contains("glowing stair"):
+            return _check(false, "on dragon floor %d the pause menu sent the player to a stairwell that is hidden" % floor_num)
+        if floor_num == 2 and game.merchant_exists and said.contains("glowing stair"):
+            return _check(false, "on merchant floor %d the pause menu ignored Peddle's cart" % floor_num)
+        if floor_num == 1 and not said.contains("glowing stair"):
+            return _check(false, "on a plain floor the pause menu stopped naming the stair: '%s'" % said)
+        game._resume_game()
+        await _frames(3)
     return true
 
 func _check_the_pause_cards_show_the_real_run(game: Node) -> bool:

@@ -154,6 +154,8 @@ func _walker_summary() -> Control:
         ["Charms", "%s" % ("none worn — Peddle's cart has charms ♥" if _walker_charms.is_empty() else _walker_charms)],
         ["Depth", depth],
     ]
+    if not _walker_objective.is_empty():
+        rows.append(["Next", _walker_objective])
     var box := VBoxContainer.new()
     box.add_theme_constant_override("separation", 4)
     box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
