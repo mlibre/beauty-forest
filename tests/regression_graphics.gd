@@ -10,12 +10,13 @@ func _initialize() -> void:
 ## into _failures and exits non-zero, matching regression_audio.gd.
 var _failures: Array[String] = []
 
-func _check(condition: bool, message: String) -> void:
+func _check(condition: bool, message: String) -> bool:
     if not condition:
         _failures.append(message)
+    return condition
 
 func _run() -> void:
-    _check_soft_motes()
+    await _check_soft_motes()
     _check_minimap_safe_area()
     _check_sunbeam_actually_emits()
     await _check_no_particle_writes_a_color_it_cannot_draw()
@@ -73,20 +74,36 @@ func _check_soft_motes() -> void:
     var parent := Node3D.new()
     root.add_child(parent)
     var particles := CozyVFX.spawn_ambient_motes(parent, {"accent": "#fff0a5"}, 12)
-    assert(particles != null)
-    var quad := particles.draw_pass_1 as QuadMesh
-    assert(quad != null)
+    if _check(particles != null, "the ambient mote emitter was not spawned"):
+        await _check_mote_sprite(particles)
+    await _discard(parent)
+
+func _check_mote_sprite(emitter: GPUParticles3D) -> void:
+    var quad := emitter.draw_pass_1 as QuadMesh
+    if not _check(quad != null, "the mote emitter has no quad to draw"):
+        return
     var material := quad.material as StandardMaterial3D
-    assert(material != null)
+    if not _check(material != null, "the mote quad has no material"):
+        return
     var texture := material.albedo_texture as GradientTexture2D
-    assert(texture != null)
-    assert(texture.fill == GradientTexture2D.FILL_RADIAL)
-    assert(texture.gradient != null)
-    assert(texture.gradient.colors[0].a > texture.gradient.colors[-1].a)
-    assert(is_equal_approx(texture.gradient.colors[-1].a, 0.0))
-    parent.queue_free()
+    if not _check(texture != null, "the mote material has no gradient texture"):
+        return
+    _check(texture.fill == GradientTexture2D.FILL_RADIAL,
+        "the mote texture is not radial, so it reads as a hard disc")
+    if not _check(texture.gradient != null, "the mote texture has no gradient to fade through"):
+        return
+    _check(texture.gradient.colors[0].a > texture.gradient.colors[-1].a,
+        "the mote sprite does not fade out")
+    _check(is_equal_approx(texture.gradient.colors[-1].a, 0.0),
+        "the mote sprite does not fade to fully transparent")
+
+## Frees a probe node and records whether it actually went away, so a leak is a
+## failure rather than an assert that only prints.
+func _discard(node: Node) -> void:
+    var label := str(node.name)
+    node.queue_free()
     await process_frame
-    assert(not is_instance_valid(parent))
+    _check(not is_instance_valid(node), "the probe node %s was not freed" % label)
 
 func _check_minimap_safe_area() -> void:
     var minimap := CozyMinimap.new()
@@ -97,11 +114,16 @@ func _check_minimap_safe_area() -> void:
         var origin: Vector2 = layout["origin"]
         # The grove texture is blitted CELL_BLEED past its rect on every side,
         # so the painted edge is what has to stay inside the margin.
-        var painted := Rect2(origin - Vector2(CozyMinimap.CELL_BLEED, CozyMinimap.CELL_BLEED), map_size + Vector2(CozyMinimap.CELL_BLEED, CozyMinimap.CELL_BLEED) * 2.0)
-        assert(painted.position.y >= CozyMinimap.MAP_MARGIN)
-        assert(painted.position.x >= CozyMinimap.MAP_MARGIN)
-        assert(painted.end.x <= minimap.size.x - CozyMinimap.MAP_MARGIN)
-        assert(painted.end.y <= minimap.size.y - CozyMinimap.MAP_MARGIN)
+        var painted := Rect2(origin - Vector2(CozyMinimap.CELL_BLEED, CozyMinimap.CELL_BLEED),
+            map_size + Vector2(CozyMinimap.CELL_BLEED, CozyMinimap.CELL_BLEED) * 2.0)
+        _check(painted.position.y >= CozyMinimap.MAP_MARGIN,
+            "the grove map paints %.2fpx above its top margin" % (CozyMinimap.MAP_MARGIN - painted.position.y))
+        _check(painted.position.x >= CozyMinimap.MAP_MARGIN,
+            "the grove map paints %.2fpx left of its margin" % (CozyMinimap.MAP_MARGIN - painted.position.x))
+        _check(painted.end.x <= minimap.size.x - CozyMinimap.MAP_MARGIN,
+            "the grove map paints %.2fpx past its right margin" % (painted.end.x - (minimap.size.x - CozyMinimap.MAP_MARGIN)))
+        _check(painted.end.y <= minimap.size.y - CozyMinimap.MAP_MARGIN,
+            "the grove map paints %.2fpx past its bottom margin" % (painted.end.y - (minimap.size.y - CozyMinimap.MAP_MARGIN)))
     minimap.free()
 ## A ParticleProcessMaterial's color only reaches the screen when the draw
 ## material sets vertex_color_use_as_albedo. Every emitter in this game is
