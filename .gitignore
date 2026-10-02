@@ -5,3 +5,6 @@
 # Godot regenerates this from --doctool; it is 6.7MB of reference data that
 # nothing in the project reads.
 extension_api.json
+
+# Written by tests/capture_glyphs.gd to compare one render against the next.
+glyph_sheet.png
