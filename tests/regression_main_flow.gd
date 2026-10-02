@@ -1,25 +1,28 @@
-extends SceneTree
+extends TestCase
 
 ## Regression coverage for central run-state transitions. In particular, an
 ## automatic song-note already in flight must not grant combat rewards while
 ## the game is paused or behind another modal.
+##
+## Loadout and shop behaviour lives in regression_loadout.gd; this suite is
+## about what the run state and the screens do with it.
 
 func _initialize() -> void:
+    suite_name = "BEAUTY_FOREST_MAIN_FLOW"
+    TestProfile.begin("main_flow")
     call_deferred("_run")
 
 func _run() -> void:
-    # Never let this suite write the player's real profile.
-    TestProfile.begin("main_flow")
     var packed: PackedScene = load("res://scenes/main.tscn")
     var game: Node = packed.instantiate()
     root.add_child(game)
-    await _frames(2)
+    await frames(2)
 
     game._start_run(1)
-    await _frames(4)
-    if not _check(game.mode == game.Mode.PLAYING, "run did not enter PLAYING"):
+    await frames(4)
+    if not ok(game.mode == game.Mode.PLAYING, "run did not enter PLAYING"):
         return
-    if not _check(not game.wisps.is_empty(), "floor spawned no wisps"):
+    if not ok(not game.wisps.is_empty(), "floor spawned no wisps"):
         return
 
     # A heart's warmth is fixed when it drops. Changing charms before walking
@@ -31,7 +34,7 @@ func _run() -> void:
     game.charms_equipped.clear()
     game.charm_effects = {"heart_heal": 10.0}
     game._on_heart_collected(stored_heart)
-    if not _check(is_equal_approx(game.hp, 70.0), "a heart used the current charm loadout instead of its stored warmth (%f, expected 70.0)" % game.hp):
+    if not ok(is_equal_approx(game.hp, 70.0), "a heart used the current charm loadout instead of its stored warmth (%f, expected 70.0)" % game.hp):
         stored_heart.free()
         return
     stored_heart.free()
@@ -44,7 +47,7 @@ func _run() -> void:
     game.level_hp_bonus = 40.0
     game.charms_owned["boots"] = true
     game._on_charm_equip_requested("boots")
-    if not _check(is_equal_approx(game.hp_max, 140.0), "wearing a charm erased level-up max warmth (%f, expected 140.0)" % game.hp_max):
+    if not ok(is_equal_approx(game.hp_max, 140.0), "wearing a charm erased level-up max warmth (%f, expected 140.0)" % game.hp_max):
         return
 
     # Buying the Wool Scarf grants +30 max warmth exactly once, and only while
@@ -59,11 +62,11 @@ func _run() -> void:
     game.stanzas_equipped = {"petals": true, "echoes": true}
     game.mote_verse_key = ""
     game._recalculate_loadout(false)
-    if not _check(is_equal_approx(game.hp_max, 100.0), "the scarf fixture did not start from 100 max warmth (%f)" % game.hp_max):
+    if not ok(is_equal_approx(game.hp_max, 100.0), "the scarf fixture did not start from 100 max warmth (%f)" % game.hp_max):
         return
     game.sparkles = 40
     game._on_buy_requested("scarf")
-    if not _check(is_equal_approx(game.hp_max, 130.0), "a worn Wool Scarf gave %f max warmth, expected 130.0" % game.hp_max):
+    if not ok(is_equal_approx(game.hp_max, 130.0), "a worn Wool Scarf gave %f max warmth, expected 130.0" % game.hp_max):
         return
     # Three worn charms leave no slot, so the scarf stays in the pocket and must
     # not inflate max warmth behind the player's back.
@@ -72,10 +75,10 @@ func _run() -> void:
     game._recalculate_loadout(false)
     var pocketed_before: float = game.hp_max
     game._on_buy_requested("scarf")
-    if not _check(is_equal_approx(game.hp_max, pocketed_before), "a pocketed Wool Scarf changed max warmth (%f -> %f)" % [pocketed_before, game.hp_max]):
+    if not ok(is_equal_approx(game.hp_max, pocketed_before), "a pocketed Wool Scarf changed max warmth (%f -> %f)" % [pocketed_before, game.hp_max]):
         return
     game._resume_game()
-    await _frames(2)
+    await frames(2)
 
     # Escape must close a modal through the same path as its visible button.
     # The direct state callback used to resume gameplay while leaving Peddle's
@@ -84,16 +87,16 @@ func _run() -> void:
     game.merchant_exists = true
     game.player.global_position = game.world.merchant_position
     game._open_shop()
-    await _frames(2)
-    if not _check(game.mode == game.Mode.SHOP, "shop did not open for modal-dismiss regression"):
+    await frames(2)
+    if not ok(game.mode == game.Mode.SHOP, "shop did not open for modal-dismiss regression"):
         return
     game._close_modal()
-    await _frames(2)
-    if not _check(game.mode == game.Mode.PLAYING, "Escape did not close the shop"):
+    await frames(2)
+    if not ok(game.mode == game.Mode.PLAYING, "Escape did not close the shop"):
         return
-    if not _check(not game.ui._shop_card.visible and not game.ui._shop_scrim.visible, "Escape left the shop card and scrim visible"):
+    if not ok(not game.ui._shop_card.visible and not game.ui._shop_scrim.visible, "Escape left the shop card and scrim visible"):
         return
-    if not _check(game.player.control_enabled, "Escape left the player disabled after closing the shop"):
+    if not ok(game.player.control_enabled, "Escape left the player disabled after closing the shop"):
         return
 
     # A Big Feeling is meant to be soothed by SITTING with it (two gentle
@@ -105,18 +108,18 @@ func _run() -> void:
     for wisp: Wisp in game.wisps:
         if wisp.is_feeling:
             feeling = wisp
-    if not _check(feeling != null, "the feeling floor spawned no Big Feeling"):
+    if not ok(feeling != null, "the feeling floor spawned no Big Feeling"):
         return
     feeling.global_position = game.player.global_position + Vector3(1.2, 0.0, 0.0)
     feeling._boss_window = 1.0  # the gold window is open
     var feeling_health: float = feeling.health
     game._do_pulse(feeling, 2.2)
-    if not _check(is_equal_approx(feeling.health, feeling_health), "the automatic pulse damaged a Big Feeling (%f -> %f)" % [feeling_health, feeling.health]):
+    if not ok(is_equal_approx(feeling.health, feeling_health), "the automatic pulse damaged a Big Feeling (%f -> %f)" % [feeling_health, feeling.health]):
         return
     game._do_pulse(feeling, 2.2)
-    if not _check(is_equal_approx(feeling.health, feeling_health), "repeated automatic pulses damaged a Big Feeling (%f -> %f)" % [feeling_health, feeling.health]):
+    if not ok(is_equal_approx(feeling.health, feeling_health), "repeated automatic pulses damaged a Big Feeling (%f -> %f)" % [feeling_health, feeling.health]):
         return
-    if not _check(feeling.alive and not feeling.soothed, "the automatic pulse soothed a Big Feeling on its own"):
+    if not ok(feeling.alive and not feeling.soothed, "the automatic pulse soothed a Big Feeling on its own"):
         return
 
     # The intended path must still work: sit with it and hum on the gold.
@@ -126,7 +129,7 @@ func _run() -> void:
             game._feeling_rest = 0  # the breathing beats have elapsed
         game._lullaby_gold = true
         game._judge_feeling_beat()
-    if not _check(feeling.soothed or not is_instance_valid(feeling), "the Big Feeling could not be soothed by sitting with it"):
+    if not ok(feeling.soothed or not is_instance_valid(feeling), "the Big Feeling could not be soothed by sitting with it"):
         return
 
     # A heal that cannot happen must never be charged for. Pause the live
@@ -136,18 +139,18 @@ func _run() -> void:
     game.hp = game.hp_max
     game.sparkles = 9
     game._on_buy_requested("tea")
-    await _frames(2)
-    if not _check(game.sparkles == 9, "buying Warm Tea at full warmth charged %d sparkles for nothing" % (9 - game.sparkles)):
+    await frames(2)
+    if not ok(game.sparkles == 9, "buying Warm Tea at full warmth charged %d sparkles for nothing" % (9 - game.sparkles)):
         return
     game.hp = game.hp_max - 40.0
     game._on_buy_requested("tea")
-    await _frames(2)
-    if not _check(game.sparkles == 6, "a needed Warm Tea did not cost 3 sparkles (%d left)" % game.sparkles):
+    await frames(2)
+    if not ok(game.sparkles == 6, "a needed Warm Tea did not cost 3 sparkles (%d left)" % game.sparkles):
         return
-    if not _check(game.hp == game.hp_max, "Warm Tea did not restore the warmth it promised"):
+    if not ok(game.hp == game.hp_max, "Warm Tea did not restore the warmth it promised"):
         return
     game._resume_game()
-    await _frames(2)
+    await frames(2)
 
     var target: Wisp = game.wisps[0]
     var retained: Array[Wisp] = [target]
@@ -177,27 +180,27 @@ func _run() -> void:
     await physics_frame
     await physics_frame
 
-    if not _check(game.mode == game.Mode.PAUSED, "pause did not retain PAUSED mode"):
+    if not ok(game.mode == game.Mode.PAUSED, "pause did not retain PAUSED mode"):
         return
-    if not _check(is_instance_valid(target) and not target.soothed, "an in-flight song-note progressed combat while paused"):
+    if not ok(is_instance_valid(target) and not target.soothed, "an in-flight song-note progressed combat while paused"):
         return
-    if not _check(game.xp == 0, "combat XP was granted while paused"):
+    if not ok(game.xp == 0, "combat XP was granted while paused"):
         return
-    if not _check(game.sparkles == 0, "combat sparkles were granted while paused"):
+    if not ok(game.sparkles == 0, "combat sparkles were granted while paused"):
         return
 
     game._resume_game()
-    await _frames(8)
-    if not _check(not is_instance_valid(target) or target.soothed, "the automatic note did not resolve after resuming"):
+    await frames(8)
+    if not ok(not is_instance_valid(target) or target.soothed, "the automatic note did not resolve after resuming"):
         return
-    if not _check(game.xp > 0, "combat XP was lost after resuming"):
+    if not ok(game.xp > 0, "combat XP was lost after resuming"):
         return
-    if not _check(game.sparkles > 0, "combat sparkles were lost after resuming"):
+    if not ok(game.sparkles > 0, "combat sparkles were lost after resuming"):
         return
 
     # Touch callbacks must obey the same gameplay boundary as keyboard input.
     var stair: Node3D = game.world.get_node("Stairwell") as Node3D
-    if not _check(stair != null, "floor stairwell was unavailable for touch regression"):
+    if not ok(stair != null, "floor stairwell was unavailable for touch regression"):
         return
     game.stair_visible = true
     stair.visible = true
@@ -206,26 +209,26 @@ func _run() -> void:
     var paused_floor: int = game.floor_number
     var paused_world: ForestWorld = game.world
     game.ui.touch_interact_requested.emit()
-    await _frames(4)
-    if not _check(game.mode == game.Mode.PAUSED, "touch interaction changed paused mode"):
+    await frames(4)
+    if not ok(game.mode == game.Mode.PAUSED, "touch interaction changed paused mode"):
         return
-    if not _check(game.floor_number == paused_floor, "touch interaction descended while paused"):
+    if not ok(game.floor_number == paused_floor, "touch interaction descended while paused"):
         return
-    if not _check(game.world == paused_world, "touch interaction replaced the paused world"):
+    if not ok(game.world == paused_world, "touch interaction replaced the paused world"):
         return
-    if not _check(not game.player.control_enabled, "paused player regained control after touch interaction"):
+    if not ok(not game.player.control_enabled, "paused player regained control after touch interaction"):
         return
 
     game._resume_game()
     game.ui.touch_interact_requested.emit()
-    await _frames(4)
-    if not _check(game.mode == game.Mode.PLAYING, "playing touch interaction left PLAYING mode"):
+    await frames(4)
+    if not ok(game.mode == game.Mode.PLAYING, "playing touch interaction left PLAYING mode"):
         return
-    if not _check(game.floor_number == paused_floor + 1, "playing touch interaction did not descend"):
+    if not ok(game.floor_number == paused_floor + 1, "playing touch interaction did not descend"):
         return
-    if not _check(game.world != paused_world, "playing touch interaction did not replace the floor"):
+    if not ok(game.world != paused_world, "playing touch interaction did not replace the floor"):
         return
-    if not _check(game.player.control_enabled, "playing interaction left the player disabled"):
+    if not ok(game.player.control_enabled, "playing interaction left the player disabled"):
         return
 
     # The frame that ends the run must end it. A lethal contact bump switches
@@ -234,15 +237,15 @@ func _run() -> void:
     # running: on a dragon floor the final Dream Chime gathered in the same
     # frame, so the lullaby began and painted "The Lullaby" over the nap screen.
     game._start_run(1)
-    await _frames(4)
+    await frames(4)
     game._load_floor(5, false)
-    await _frames(6)
+    await frames(6)
     var killer: Wisp = null
     for wisp: Wisp in game.wisps:
         if is_instance_valid(wisp) and wisp.alive and not wisp.is_big and not wisp.is_feeling:
             killer = wisp
             break
-    if not _check(killer != null, "the dragon floor spawned no plain wisp to end the run with"):
+    if not ok(killer != null, "the dragon floor spawned no plain wisp to end the run with"):
         return
     killer.set_shielded(false)
     killer.global_position = game.player.global_position + Vector3(0.5, 0.0, 0.0)
@@ -260,14 +263,14 @@ func _run() -> void:
     game.player.invulnerable_time = 0.0
     await physics_frame
     await physics_frame
-    if not _check(game.mode == game.Mode.DEAD, "the lethal bump did not end the run (mode %d)" % game.mode):
+    if not ok(game.mode == game.Mode.DEAD, "the lethal bump did not end the run (mode %d)" % game.mode):
         return
-    if not _check(not game._lullaby_active, "a song ceremony started on the frame that ended the run"):
+    if not ok(not game._lullaby_active, "a song ceremony started on the frame that ended the run"):
         return
-    if not _check(not game.ui._story_card.visible, "the lullaby story card was left on top of the nap screen"):
+    if not ok(not game.ui._story_card.visible, "the lullaby story card was left on top of the nap screen"):
         return
     game._start_run(1)
-    await _frames(4)
+    await frames(4)
 
     # The short final lullaby epilogue must not let the remaining wisps finish
     # the player while the ending story is still playing. A dragon song is a
@@ -297,43 +300,43 @@ func _run() -> void:
     game.player.move_direction = Vector3(1.0, 0.0, 0.0)
     game.player.dash_cooldown = 0.0
     game._touch_dash()
-    if not _check(is_zero_approx(game.player.dash_time), "touch Dash still started during the finale epilogue"):
+    if not ok(is_zero_approx(game.player.dash_time), "touch Dash still started during the finale epilogue"):
         return
     # Hug/Sing is gated the same way Dash is. During the epilogue the controls
     # are off and the ending story owns the screen, but E and the touch button
     # still answered with a stray "wander toward whatever is glowing" line.
     game.ui._log_label.text = ""
     game.ui.touch_interact_requested.emit()
-    await _frames(2)
-    if not _check(game.ui._log_label.text.is_empty(), "Hug/Sing still answered during the finale epilogue: %s" % game.ui._log_label.text):
+    await frames(2)
+    if not ok(game.ui._log_label.text.is_empty(), "Hug/Sing still answered during the finale epilogue: %s" % game.ui._log_label.text):
         return
     game.ui._log_label.text = ""
     game._try_interact()
-    await _frames(2)
-    if not _check(game.ui._log_label.text.is_empty(), "E still answered during the finale epilogue: %s" % game.ui._log_label.text):
+    await frames(2)
+    if not ok(game.ui._log_label.text.is_empty(), "E still answered during the finale epilogue: %s" % game.ui._log_label.text):
         return
-    if not _check(game.ui._story_card.visible, "the finale story was replaced by an interaction"):
+    if not ok(game.ui._story_card.visible, "the finale story was replaced by an interaction"):
         return
-    await _frames(8)
-    if not _check(game.mode == game.Mode.PLAYING, "a successful finale was interrupted by a wisp"):
+    await frames(8)
+    if not ok(game.mode == game.Mode.PLAYING, "a successful finale was interrupted by a wisp"):
         return
-    if not _check(is_equal_approx(game.hp, 1.0), "a successful finale let a wisp damage the player"):
+    if not ok(is_equal_approx(game.hp, 1.0), "a successful finale let a wisp damage the player"):
         return
-    if not _check(not game.player.control_enabled, "the player could still wander during the finale epilogue"):
+    if not ok(not game.player.control_enabled, "the player could still wander during the finale epilogue"):
         return
     game._open_journal()
-    await _frames(2)
-    if not _check(game.mode == game.Mode.JOURNAL, "the journal did not open during the finale epilogue"):
+    await frames(2)
+    if not ok(game.mode == game.Mode.JOURNAL, "the journal did not open during the finale epilogue"):
         return
     game._on_journal_closed()
-    await _frames(2)
-    if not _check(not game.player.control_enabled, "closing the journal re-enabled control during the finale epilogue"):
+    await frames(2)
+    if not ok(not game.player.control_enabled, "closing the journal re-enabled control during the finale epilogue"):
         return
     game._pause_game()
-    await _frames(2)
+    await frames(2)
     game._resume_game()
-    await _frames(2)
-    if not _check(not game.player.control_enabled, "resuming a paused finale re-enabled player control"):
+    await frames(2)
+    if not ok(not game.player.control_enabled, "resuming a paused finale re-enabled player control"):
         return
     game.ending_pending = false
     game.ending_countdown = 0.0
@@ -347,23 +350,23 @@ func _run() -> void:
     game.ending_countdown = 0.01
     game._pause_game()
     var paused_countdown: float = game.ending_countdown
-    await _frames(6)
-    if not _check(game.mode == game.Mode.PAUSED, "finale delay advanced while paused"):
+    await frames(6)
+    if not ok(game.mode == game.Mode.PAUSED, "finale delay advanced while paused"):
         return
-    if not _check(game.ending_pending, "finale pending state was cleared while paused"):
+    if not ok(game.ending_pending, "finale pending state was cleared while paused"):
         return
-    if not _check(is_equal_approx(game.ending_countdown, paused_countdown), "finale countdown changed while paused"):
+    if not ok(is_equal_approx(game.ending_countdown, paused_countdown), "finale countdown changed while paused"):
         return
-    if not _check(game.ui._hud.visible, "pause UI was replaced by the ending UI"):
+    if not ok(game.ui._hud.visible, "pause UI was replaced by the ending UI"):
         return
 
     game._resume_game()
-    await _frames(4)
-    if not _check(game.mode == game.Mode.ENDING, "finale did not complete during PLAYING"):
+    await frames(4)
+    if not ok(game.mode == game.Mode.ENDING, "finale did not complete during PLAYING"):
         return
-    if not _check(not game.ending_pending, "completed finale remained pending"):
+    if not ok(not game.ending_pending, "completed finale remained pending"):
         return
-    if not _check(not game.ui._hud.visible, "ending UI did not replace the gameplay HUD"):
+    if not ok(not game.ui._hud.visible, "ending UI did not replace the gameplay HUD"):
         return
 
     # "Wander deeper" continues the SAME walk. Sparkles, level and charms
@@ -378,22 +381,22 @@ func _run() -> void:
     var ending_floor: int = game.floor_number
     var visits_before_continue := int(game.meta.get("runs", 0))
     game._on_restart_requested(true)
-    await _frames(6)
-    if not _check(game.mode == game.Mode.PLAYING, "continuing deeper did not return to PLAYING"):
+    await frames(6)
+    if not ok(game.mode == game.Mode.PLAYING, "continuing deeper did not return to PLAYING"):
         return
-    if not _check(game.floor_number == ending_floor + 1, "continuing deeper did not go one floor down"):
+    if not ok(game.floor_number == ending_floor + 1, "continuing deeper did not go one floor down"):
         return
-    if not _check(int(game.meta.get("runs", 0)) == visits_before_continue, "continuing deeper counted a second visit for the same walk"):
+    if not ok(int(game.meta.get("runs", 0)) == visits_before_continue, "continuing deeper counted a second visit for the same walk"):
         return
-    if not _check(game.sparkles == earned_sparkles, "continuing deeper wiped earned sparkles (%d, expected %d)" % [game.sparkles, earned_sparkles]):
+    if not ok(game.sparkles == earned_sparkles, "continuing deeper wiped earned sparkles (%d, expected %d)" % [game.sparkles, earned_sparkles]):
         return
-    if not _check(game.level == earned_level, "continuing deeper wiped the lantern level (%d, expected %d)" % [game.level, earned_level]):
+    if not ok(game.level == earned_level, "continuing deeper wiped the lantern level (%d, expected %d)" % [game.level, earned_level]):
         return
-    if not _check(bool(game.charms_owned.get("boots", false)), "continuing deeper wiped an owned charm"):
+    if not ok(bool(game.charms_owned.get("boots", false)), "continuing deeper wiped an owned charm"):
         return
-    if not _check(bool(game.charms_equipped.get("boots", false)), "continuing deeper unwore equipped charms"):
+    if not ok(bool(game.charms_equipped.get("boots", false)), "continuing deeper unwore equipped charms"):
         return
-    if not _check(game.xp >= earned_xp, "continuing deeper wiped lantern soul"):
+    if not ok(game.xp >= earned_xp, "continuing deeper wiped lantern soul"):
         return
 
     # Dream chimes promise to gather themselves once the hero walks close
@@ -402,7 +405,7 @@ func _run() -> void:
     # nothing happen and the dragon floor became unclear to finish.
     game.dragon_exists = true
     game.world.build_dream_chimes(game.dungeon["rooms"][0])
-    if not _check(game.world.chimes.size() == 5, "the dragon floor did not build five chimes"):
+    if not ok(game.world.chimes.size() == 5, "the dragon floor did not build five chimes"):
         return
     # Silence automatic combat so its chatter cannot push the pickup line out
     # of the four-line log window, and park the other four chimes far away so
@@ -421,11 +424,11 @@ func _run() -> void:
     game.ui._log_label.text = ""
     for _step in range(90):
         await physics_frame
-    if not _check(not is_instance_valid(chime), "the chime never gathered to the waiting hero"):
+    if not ok(not is_instance_valid(chime), "the chime never gathered to the waiting hero"):
         return
     # The pickup log must agree with the HUD objective: it counts secured
     # chimes upward (1/5), not the remaining ones downward (4/5).
-    if not _check(game.ui._log_label.text.contains("Dream Chime secured! (1/5)"), "the chime pickup log disagreed with the secured count: %s" % game.ui._log_label.text):
+    if not ok(game.ui._log_label.text.contains("Dream Chime secured! (1/5)"), "the chime pickup log disagreed with the secured count: %s" % game.ui._log_label.text):
         return
     game.dragon_exists = false
 
@@ -433,7 +436,7 @@ func _run() -> void:
     # descend at once, and the deferred "all done being happy" must not reach the
     # hero that replaced them.
     game._start_run(1)
-    await _frames(4)
+    await frames(4)
     game.pulse_cooldown = 9999.0
     game.note_cooldown = 9999.0
     var celebration_wisp: Wisp = null
@@ -441,24 +444,24 @@ func _run() -> void:
         if is_instance_valid(candidate) and candidate.alive and not candidate.soothed:
             celebration_wisp = candidate
             break
-    if not _check(celebration_wisp != null, "no live wisp was available for the celebration timer regression"):
+    if not ok(celebration_wisp != null, "no live wisp was available for the celebration timer regression"):
         return
     game._soothe_wisp(celebration_wisp, false)
     game._load_floor(2, false)
-    await _frames(2)
+    await frames(2)
     game.player.hero.set_happy(true)
     await game.get_tree().create_timer(1.0).timeout
-    if not _check(game.player.hero._happy, "a stale celebration timer cleared the new hero's celebration"):
+    if not ok(game.player.hero._happy, "a stale celebration timer cleared the new hero's celebration"):
         return
 
     # A fresh walk from the menu still starts clean.
     game._start_run(1)
-    await _frames(4)
-    if not _check(game.sparkles == 0, "a fresh walk kept stale sparkles"):
+    await frames(4)
+    if not ok(game.sparkles == 0, "a fresh walk kept stale sparkles"):
         return
-    if not _check(game.charms_owned.is_empty(), "a fresh walk kept stale charms"):
+    if not ok(game.charms_owned.is_empty(), "a fresh walk kept stale charms"):
         return
-    if not _check(game.level == 1, "a fresh walk kept a stale level"):
+    if not ok(game.level == 1, "a fresh walk kept a stale level"):
         return
 
     if not await _check_dragon_never_sleeps_in_the_spawn_clearing(game):
@@ -467,16 +470,6 @@ func _run() -> void:
         return
     if not await _check_ambience_returns_after_a_non_finale_dragon(game):
         return
-    if not await _check_settings_open_from_every_modal(game):
-        return
-    if not await _check_buying_past_the_charm_cap_says_so(game):
-        return
-    if not await _check_a_full_slot_swap_names_the_evicted_charm(game):
-        return
-    if not await _check_a_full_slot_verse_swap_says_what_steps_back(game):
-        return
-    if not await _check_free_items_do_not_claim_to_be_owned(game):
-        return
     if not await _check_curious_wisp_facts_can_win_the_sticker(game):
         return
     if not await _check_the_pause_cards_show_the_real_run(game):
@@ -484,12 +477,7 @@ func _run() -> void:
     if not await _check_the_next_step_names_the_real_target(game):
         return
 
-    print("BEAUTY_FOREST_MAIN_FLOW_OK")
-    TestProfile.end()
-    root.remove_child(game)
-    game.free()
-    await _frames(12)
-    quit(0)
+    finish(game, "BEAUTY_FOREST_MAIN_FLOW")
 
 func _check_dragon_never_sleeps_in_the_spawn_clearing(game: Node) -> bool:
     ## Snoozle is a 5m sleeping barrel with no collider, and the hero arrives at
@@ -498,22 +486,22 @@ func _check_dragon_never_sleeps_in_the_spawn_clearing(game: Node) -> bool:
     ## every dragon floor opened with the player standing inside the dragon.
     for floor_number in [5, 13]:
         game._load_floor(floor_number, false)
-        await _frames(4)
-        if not _check(game.dragon_exists, "floor %d should be a dragon floor" % floor_number):
+        await frames(4)
+        if not ok(game.dragon_exists, "floor %d should be a dragon floor" % floor_number):
             return false
         var spawn_room: Dictionary = game.dungeon["rooms"][0]
         var in_spawn: bool = game._point_in_room(game.world.dragon_position, spawn_room)
-        if not _check(not in_spawn,
+        if not ok(not in_spawn,
                 "floor %d put Snoozle in the spawn clearing, on top of the hero" % floor_number):
             return false
         var separation := Vector2(
             game.world.dragon_position.x - game.player.global_position.x,
             game.world.dragon_position.z - game.player.global_position.z).length()
-        if not _check(separation > 3.0,
+        if not ok(separation > 3.0,
                 "floor %d spawned the hero %.2f m from Snoozle's centre" % [floor_number, separation]):
             return false
     game._start_run(1)
-    await _frames(4)
+    await frames(4)
     return true
 
 func _check_homing_note_reaches_a_very_big_wisp(game: Node) -> bool:
@@ -522,7 +510,7 @@ func _check_homing_note_reaches_a_very_big_wisp(game: Node) -> bool:
     ## homing note converged 1.7m below the test sphere and always expired.
     for is_big in [false, true]:
         game._load_floor(3, false)
-        await _frames(4)
+        await frames(4)
         var target: Wisp = game.wisps[0]
         target.setup("Shambler", 13, is_big)
         target.global_position = game.player.global_position + Vector3(6.0, 0.0, 0.0)
@@ -540,16 +528,16 @@ func _check_homing_note_reaches_a_very_big_wisp(game: Node) -> bool:
             if connected[0] or expired[0]:
                 break
         var label := "a Very Big Wisp" if is_big else "a plain wisp"
-        if not _check(connected[0] and not expired[0],
+        if not ok(connected[0] and not expired[0],
                 "a homing song-note could not connect to %s (scale %.1f)" % [label, target.visual_scale]):
             if is_instance_valid(note):
                 note.free()
             return false
         if is_instance_valid(note):
             note.free()
-        await _frames(2)
+        await frames(2)
     game._start_run(1)
-    await _frames(4)
+    await frames(4)
     return true
 
 func _check_ambience_returns_after_a_non_finale_dragon(game: Node) -> bool:
@@ -557,428 +545,24 @@ func _check_ambience_returns_after_a_non_finale_dragon(game: Node) -> bool:
     ## but on a non-finale floor the hero keeps wandering. Nothing re-armed the
     ## ambience, so the rest of the run played silent until a pause or descent.
     game._start_run(5)
-    await _frames(6)
-    if not _check(game.audio._ambient_player.playing, "floor 5 should arrive with ambience playing"):
+    await frames(6)
+    if not ok(game.audio._ambient_player.playing, "floor 5 should arrive with ambience playing"):
         return false
     game._win_dragon()
-    await _frames(6)
-    if not _check(game.audio._ambient_player.playing and game.audio._ambient_should_play,
+    await frames(6)
+    if not ok(game.audio._ambient_player.playing and game.audio._ambient_should_play,
             "the grove stayed silent after Snoozle snoozed, though the walk continues"):
         return false
     # The finale hands the audio over to the ending, so it must stay quiet.
     game._start_run(13)
-    await _frames(6)
+    await frames(6)
     game._win_dragon()
-    await _frames(6)
-    if not _check(not game.audio._ambient_should_play,
+    await frames(6)
+    if not ok(not game.audio._ambient_should_play,
             "the finale ending should keep the grove hushed"):
         return false
     game._start_run(1)
-    await _frames(4)
-    return true
-
-func _check_settings_open_from_every_modal(game: Node) -> bool:
-    ## The COZY button stays lit and enabled while Peddle's cart or the memory
-    ## book is open, so pressing it has to do something. _open_settings used to
-    ## early-return in SHOP and JOURNAL, so the press vanished with no log line
-    ## and no panel — and settings was unreachable from either modal.
-    for origin in ["journal", "shop"]:
-        game._start_run(2)
-        await _frames(4)
-        if origin == "journal":
-            game._open_journal()
-        else:
-            # The cart only opens at Peddle's actual position.
-            game.player.global_position = game.world.merchant_position + Vector3(1.0, 0.0, 0.0)
-            await _frames(2)
-            game._open_shop()
-        await _frames(3)
-        if not _check(game.mode in [game.Mode.SHOP, game.Mode.JOURNAL],
-                "the %s did not open (mode %d)" % [origin, game.mode]):
-            return false
-        game._open_settings()
-        await _frames(3)
-        if not _check(game.mode == game.Mode.SETTINGS,
-                "COZY did nothing while the %s was open (mode stayed %d)" % [origin, game.mode]):
-            return false
-        # The cart, the memory book and the settings panel deliberately share
-        # one card, which gets refilled -- so what must change is the CONTENT,
-        # not the card. "Make it yours" is the settings heading.
-        var headings := 0
-        for label in _texts_in(game.ui._shop_frame):
-            if label.contains("Make it yours") or label.contains("memory book"):
-                headings += 1
-        if not _check(headings == 1 and _has_text(game.ui._shop_frame, "Make it yours"),
-                "the %s content was left on screen instead of the settings panel" % origin):
-            return false
-        game.ui.settings_closed.emit()
-        await _frames(3)
-        if not _check(game.mode == game.Mode.PLAYING,
-                "closing settings did not return to play from the %s (mode %d)" % [origin, game.mode]):
-            return false
-        if not _check(game.player.control_enabled,
-                "the hero was left unable to move after closing settings from the %s" % origin):
-            return false
-    if not await _check_settings_open_from_the_menu(game):
-        return false
-    if not await _check_settings_back_button_names_where_it_goes(game):
-        return false
-    game._start_run(1)
-    await _frames(4)
-    return true
-
-func _check_settings_open_from_the_menu(game: Node) -> bool:
-    ## The menu's own key line advertises "Cozy options: C", but nothing on that
-    ## screen emitted settings_open_requested and _unhandled_input returned
-    ## before the bf_settings branch in every non-playing mode -- so the only way
-    ## in was to start a run, pause it, and find COZY from there. A player who
-    ## wants the gentler forest had to be inside a run to ask for it.
-    if not await _open_settings_from_the_menu(game, "the button"):
-        return false
-    # The same promise, made by the key line, has to hold for the key itself.
-    if not await _open_settings_from_the_menu(game, "the C key"):
-        return false
-    game._show_menu()
-    await _frames(3)
-    return true
-
-func _open_settings_from_the_menu(game: Node, way: String) -> bool:
-    game._show_menu()
-    await _frames(3)
-    if not _check(game.mode == game.Mode.MENU, "the menu did not open for %s (mode %d)" % [way, game.mode]):
-        return false
-    if way == "the button":
-        var cozy: Button = null
-        for candidate in game.ui._overlay_content.find_children("*", "Button", true, false):
-            if (candidate as Button).text.contains("gentler"):
-                cozy = candidate as Button
-        if not _check(cozy != null, "the menu offered no way into the gentler-forest panel"):
-            return false
-        cozy.pressed.emit()
-    else:
-        var key := InputEventKey.new()
-        key.pressed = true
-        key.physical_keycode = KEY_C
-        game._unhandled_input(key)
-    await _frames(3)
-    if not _check(game.mode == game.Mode.SETTINGS,
-            "%s did nothing from the menu (mode stayed %d)" % [way, game.mode]):
-        return false
-    if not _check(_has_text(game.ui._shop_frame, "Make it yours"),
-            "closing the menu for %s left the menu content on screen instead of the settings panel" % way):
-        return false
-    game.ui.settings_closed.emit()
-    await _frames(3)
-    # Closing has to hand the MENU back, not close every panel and leave the
-    # player staring at an empty screen.
-    if not _check(game.mode == game.Mode.MENU,
-            "closing settings did not return to the menu after %s (mode %d)" % [way, game.mode]):
-        return false
-    return _check(game.ui._overlay_card.visible,
-            "the menu card was left hidden after closing settings opened by %s" % way)
-
-func _check_settings_back_button_names_where_it_goes(game: Node) -> bool:
-    ## The panel's Back button read "Back to the walk" from every screen that
-    ## can open it, but only one of those returns to a walk: the menu has no walk
-    ## at all, and Peddle's cart or the memory book are closed on the way in, so
-    ## the player lands in play -- the walk. The button must name the screen the
-    ## director will actually restore, or it promises a destination the game does
-    ## not deliver.
-    var wanted := {"menu": "the menu", "pause": "the pause card", "play": "the walk"}
-    for origin: String in wanted:
-        if origin == "menu":
-            game._show_menu()
-        else:
-            game._start_run(2)
-            await _frames(4)
-            if origin == "pause":
-                game._pause_game()
-        await _frames(3)
-        # From any origin the director routes the press; the origin only decides
-        # which screen we stand on before asking for the panel.
-        game._open_settings()
-        await _frames(3)
-        var label := ""
-        for candidate in game.ui._shop_frame.find_children("*", "Button", true, false):
-            if (candidate as Button).text.begins_with("♥  Back to"):
-                label = (candidate as Button).text
-        if not _check(label == "♥  Back to %s" % wanted[origin],
-                "from the %s the settings Back button says %s" % [origin, label if label != "" else "nothing"]):
-            return false
-        # Pressing Restore must not re-point the button at a hardcoded screen.
-        for candidate in game.ui._shop_frame.find_children("*", "Button", true, false):
-            if (candidate as Button).text.contains("Restore gentle defaults"):
-                (candidate as Button).pressed.emit()
-        await _frames(3)
-        label = ""
-        for candidate in game.ui._shop_frame.find_children("*", "Button", true, false):
-            if (candidate as Button).text.begins_with("♥  Back to"):
-                label = (candidate as Button).text
-        if not _check(label == "♥  Back to %s" % wanted[origin],
-                "Restore from the %s re-pointed the Back button to %s" % [origin, label if label != "" else "nothing"]):
-            return false
-        game.ui.settings_closed.emit()
-        await _frames(3)
-    return true
-
-func _check_buying_past_the_charm_cap_says_so(game: Node) -> bool:
-    ## Filling all three charm slots and then buying a fourth charged the
-    ## sparkles and logged "One Ember Mitten... It suits you." -- while the charm
-    ## sat unequipped and did nothing, with nothing anywhere saying the slots were
-    ## full. A player pays for a power they never receive and has no idea why.
-    game._start_run(2)
-    await _frames(6)
-    game.player.global_position = game.world.merchant_position + Vector3(1.0, 0.0, 0.0)
-    await _frames(2)
-    game.sparkles = 999
-    for key in ["boots", "scarf", "echo"]:
-        game._on_buy_requested(key)
-    await _frames(2)
-    if not _check(game.charms_equipped.size() == BeautyContent.MAX_CHARMS,
-            "the fixture did not fill all %d charm slots (got %d)" % [
-                BeautyContent.MAX_CHARMS, game.charms_equipped.size()]):
-        return false
-
-    game._on_buy_requested("ember")
-    await _frames(2)
-    if not _check(bool(game.charms_owned.get("ember", false)), "the fourth charm was not recorded as owned"):
-        return false
-    if not _check(not bool(game.charms_equipped.get("ember", false)),
-            "the fourth charm should not auto-equip past the cap"):
-        return false
-    # Look for the line THIS purchase produced rather than the newest line in
-    # the log: the floor keeps ticking while the shop is open, and a wisp
-    # drifting home can push a line above it, which made this check fail for
-    # reasons that had nothing to do with the purchase.
-    var last_line: String = _newest_line_mentioning(game, "ember")
-    if not _check(last_line.to_lower().contains("ember mitten"),
-            "the newest log line is not about the capped purchase: %s" % last_line):
-        return false
-    if not _check(last_line.contains("pocket"),
-            "buying a charm past the cap never says it is waiting in the pocket: %s" % last_line):
-        return false
-    if not _check(not last_line.contains("It suits you"),
-            "Peddle still promised the capped charm would be worn: %s" % last_line):
-        return false
-
-    # The shop itself must not promise a swap it cannot describe honestly either.
-    game._open_shop()
-    await _frames(3)
-    var ember_tip := ""
-    for button in _buttons_in(game.ui._shop_frame):
-        # A shop row is a composite of icon + name + price, so its wares name
-        # lives in a child Label rather than on Button.text.
-        if not _has_text(button, "Ember"):
-            continue
-        ember_tip = (button as Button).tooltip_text
-        break
-    if not _check(not ember_tip.is_empty(), "the owned charm had no tooltip in the shop"):
-        return false
-    if not _check(ember_tip.contains("swap"),
-            "the shop promised a wear the cap cannot give: %s" % ember_tip):
-        return false
-    game._resume_game()
-    await _frames(3)
-    game._start_run(1)
-    await _frames(4)
-    return true
-
-func _row_text(button: Button) -> String:
-    ## Everything a shop row says, joined.
-    ##
-    ## A row is a composite of an icon, a name, a status and a price, so its
-    ## wording lives in child Labels rather than on Button.text.
-    var parts: Array[String] = []
-    if not button.text.strip_edges().is_empty():
-        parts.append(button.text.strip_edges())
-    for label in button.find_children("*", "Label", true, false):
-        parts.append((label as Label).text.strip_edges())
-    return "\n".join(parts)
-
-func _buttons_in(node: Node) -> Array[Node]:
-    var out: Array[Node] = []
-    for child in node.get_children():
-        if child is Button:
-            out.append(child)
-        out.append_array(_buttons_in(child))
-    return out
-
-func _has_text(node: Node, needle: String) -> bool:
-    for text in _texts_in(node):
-        if text.contains(needle):
-            return true
-    return false
-
-func _texts_in(node: Node) -> Array[String]:
-    var out: Array[String] = []
-    for child in node.get_children():
-        if child is Label:
-            out.append((child as Label).text)
-        elif child is Button:
-            out.append((child as Button).text)
-        out.append_array(_texts_in(child))
-    return out
-
-func _frames(count: int) -> void:
-    for _frame in range(count):
-        await process_frame
-
-func _check(condition: bool, message: String) -> bool:
-    if condition:
-        return true
-    push_error("BEAUTY_FOREST_MAIN_FLOW_FAILED: %s" % message)
-    quit(1)
-    return false
-
-
-## Swapping a pocketed charm in with every slot full used to evict whichever
-## charm fell last in charms_owned order, and said nothing at all. The player
-## watched a build change with no explanation. The eviction must be stable and
-## it must be named.
-func _check_a_full_slot_swap_names_the_evicted_charm(game: Node) -> bool:
-    game.sparkles = 100000
-    game.charms_owned = {}
-    game.charms_equipped = {}
-    for key in ["boots", "scarf", "echo", "ember"]:
-        game._on_buy_requested(key)
-        for _i in range(2):
-            await _frames(2)
-    if game.charms_equipped.size() < BeautyContent.MAX_CHARMS:
-        print("FAIL: could not fill the charm slots to test a swap")
-        return false
-
-    var worn_before: Array = game.charms_equipped.keys()
-    var owned_before: int = game.charms_owned.size()
-    game._on_charm_equip_requested("ember")
-    for _i in range(3):
-        await _frames(2)
-
-    var newest: String = _newest_line_mentioning(game, String(charm_name_for("ember")))
-    print("CHARMSWAP equipped=%s log=%s" % [str(game.charms_equipped.keys()), newest])
-
-    if not game.charms_equipped.has("ember"):
-        print("FAIL: swapping a pocketed charm in did not equip it")
-        return false
-    if game.charms_equipped.size() > BeautyContent.MAX_CHARMS:
-        print("FAIL: the swap exceeded the charm cap: %s" % str(game.charms_equipped.keys()))
-        return false
-    if game.charms_owned.size() != owned_before:
-        print("FAIL: the swap lost ownership: %d -> %d" % [
-            owned_before, game.charms_owned.size()])
-        return false
-    if not newest.contains("rests in your pocket"):
-        print("FAIL: a full-slot swap did not say which charm it set aside (%s)" % newest)
-        return false
-
-    # The charm that was set aside must be named, and must still be owned so
-    # the player can swap it back.
-    var evicted := ""
-    for key in worn_before:
-        if not game.charms_equipped.has(key):
-            evicted = key
-            break
-    if evicted == "":
-        print("FAIL: a full-slot swap evicted nothing")
-        return false
-    if not game.charms_owned.has(evicted):
-        print("FAIL: the evicted charm %s is no longer owned" % evicted)
-        return false
-    var evicted_name: String = charm_name_for(evicted)
-    if not newest.contains(evicted_name):
-        print("FAIL: the swap did not name the evicted charm %s (%s)" % [evicted_name, newest])
-        return false
-
-    # The same swap twice must evict the same charm: the rule is a rule.
-    var first_evicted := evicted
-    for key2 in ["moss", "dew", "acorn"]:
-        game.charms_owned[key2] = true
-    game._on_charm_equip_requested("moss")
-    for _i in range(3):
-        await _frames(2)
-    var second := ""
-    for key3 in worn_before:
-        if key3 != first_evicted and not game.charms_equipped.has(key3):
-            second = key3
-            break
-    print("CHARMSWAP second eviction=%s (first was %s)" % [second, first_evicted])
-    if second == "" and game.charms_equipped.size() == BeautyContent.MAX_CHARMS:
-        print("FAIL: the second full-slot swap evicted nothing")
-        return false
-    return true
-
-
-## The newest log line that mentions `needle`, searching from the bottom. Log
-## lines keep arriving while a test runs -- wisps drift home, the shop refills
-## -- so "the newest line" is not the same thing as "the line I caused".
-func _newest_line_mentioning(game: Node, needle: String) -> String:
-    var haystack: PackedStringArray = String(game.ui._log_label.text).split("\n")
-    var fallback: String = haystack[haystack.size() - 1]
-    for i in range(haystack.size() - 1, -1, -1):
-        if haystack[i].to_lower().contains(needle.to_lower()):
-            return haystack[i]
-    return fallback
-
-func charm_name_for(key: String) -> String:
-    for charm: Dictionary in BeautyContent.CHARMS:
-        if String(charm["key"]) == key:
-            return String(charm["name"])
-    return key
-
-
-## The verse swap is the sibling of the charm swap above: with both slots full it
-## evicts one, and it used to do so in total silence -- the log did not change
-## at all. Mote now names what steps back.
-func _check_a_full_slot_verse_swap_says_what_steps_back(game: Node) -> bool:
-    game.stanzas_equipped = {"petals": true, "echoes": true}
-    game._recalculate_loadout(false)
-    for _i in range(2):
-        await _frames(2)
-    var before: Array = game.stanzas_equipped.keys()
-    game._on_stanza_equip_requested("hearth")
-    for _i in range(3):
-        await _frames(2)
-
-    # Read the newest line that mentions the verse we just equipped. Reading
-    # the log's LAST line instead was a coin flip: a Mote chatter line landing
-    # after the swap buried the message, and the check passed or failed on
-    # timing rather than on what the game said.
-    var newest: String = ""
-    for line: String in String(game.ui._log_label.text).split("\n"):
-        if line.contains("Hearth"):
-            newest = line
-    print("STANZASWAP equipped=%s log=%s" % [str(game.stanzas_equipped.keys()), newest])
-    if not _check(game.stanzas_equipped.has("hearth"),
-            "swapping a verse in did not equip it"):
-        return false
-    if not _check(game.stanzas_equipped.size() <= BeautyContent.MAX_STANZAS,
-            "the verse swap exceeded the cap: %s" % str(game.stanzas_equipped.keys())):
-        return false
-
-    var stepped_aside := ""
-    for key in before:
-        if not game.stanzas_equipped.has(key):
-            stepped_aside = key
-            break
-    if not _check(stepped_aside != "", "a full-slot verse swap evicted nothing"):
-        return false
-    if not _check(newest.contains("steps back"),
-            "a full-slot verse swap said nothing about what it displaced (%s)" % newest):
-        return false
-    var wanted := ""
-    for stanza: Dictionary in BeautyContent.STANZAS:
-        if String(stanza["key"]) == stepped_aside:
-            wanted = String(stanza["name"])
-            break
-    if not _check(newest.contains(wanted),
-            "the verse swap did not name %s (%s)" % [wanted, newest]):
-        return false
-    # Every verse is free, so the one that stepped back must be tap-able again.
-    game._on_stanza_equip_requested(stepped_aside)
-    for _i in range(3):
-        await _frames(2)
-    if not _check(game.stanzas_equipped.has(stepped_aside),
-            "the displaced verse could not be swapped straight back"):
-        return false
+    await frames(4)
     return true
 
 func _check_the_next_step_names_the_real_target(game: Node) -> bool:
@@ -992,22 +576,22 @@ func _check_the_next_step_names_the_real_target(game: Node) -> bool:
     ## glow, so the sentence and the marker cannot disagree.
     for floor_num: int in [1, 2, 5]:
         game._start_run(floor_num)
-        await _frames(8)
+        await frames(8)
         game._pause_game()
-        await _frames(4)
+        await frames(4)
         var said: String = game.ui._walker_objective
         if said.is_empty():
-            return _check(false, "floor %d named no next step at all" % floor_num)
+            return ok(false, "floor %d named no next step at all" % floor_num)
         # Whichever target this floor really has, the sentence must not be the
         # stair one -- unless the stair is genuinely what the glow is over.
         if game.dragon_exists and said.contains("glowing stair"):
-            return _check(false, "on dragon floor %d the pause menu sent the player to a stairwell that is hidden" % floor_num)
+            return ok(false, "on dragon floor %d the pause menu sent the player to a stairwell that is hidden" % floor_num)
         if floor_num == 2 and game.merchant_exists and said.contains("glowing stair"):
-            return _check(false, "on merchant floor %d the pause menu ignored Peddle's cart" % floor_num)
+            return ok(false, "on merchant floor %d the pause menu ignored Peddle's cart" % floor_num)
         if floor_num == 1 and not said.contains("glowing stair"):
-            return _check(false, "on a plain floor the pause menu stopped naming the stair: '%s'" % said)
+            return ok(false, "on a plain floor the pause menu stopped naming the stair: '%s'" % said)
         game._resume_game()
-        await _frames(3)
+        await frames(3)
     return true
 
 func _check_the_pause_cards_show_the_real_run(game: Node) -> bool:
@@ -1020,15 +604,15 @@ func _check_the_pause_cards_show_the_real_run(game: Node) -> bool:
     ## 10", "0 sparkles" and "Charms 0/3: none yet" right beside the correct
     ## figures, and the two eased bars had nothing setting their targets.
     game._start_run(3)
-    await _frames(6)
+    await frames(6)
     game.charms_owned["boots"] = true
     game.charms_equipped = {"boots": true}
     game.sparkles = 777
     game.hp = 42.0
     game._refresh_ui()
-    await _frames(4)
+    await frames(4)
     game._pause_game()
-    await _frames(4)
+    await frames(4)
 
     var expected := {
         "_floor_label": "Floor %d — %s" % [game.floor_number, String(game.region.get("name", "Sunlit Roots"))],
@@ -1039,16 +623,16 @@ func _check_the_pause_cards_show_the_real_run(game: Node) -> bool:
     }
     for field: String in expected:
         var label: Label = game.ui.get(field)
-        if not _check(label != null and label.text == expected[field],
+        if not ok(label != null and label.text == expected[field],
                 "the pause card's %s reads '%s', expected '%s'" % [field, label.text if label != null else "nothing", expected[field]]):
             return false
     # The eased bars were inert for the same reason -- _health_shown and
     # _xp_shown were never assigned, so they had nothing to glide toward.
-    if not _check(game.ui._health_bar.value > 0.0 and game.ui._health_bar.value <= 1.0,
+    if not ok(game.ui._health_bar.value > 0.0 and game.ui._health_bar.value <= 1.0,
             "the warmth bar never tracked warmth (value %f)" % game.ui._health_bar.value):
         return false
     game._resume_game()
-    await _frames(2)
+    await frames(2)
     return true
 
 func _check_curious_wisp_facts_can_win_the_sticker(game: Node) -> bool:
@@ -1066,20 +650,20 @@ func _check_curious_wisp_facts_can_win_the_sticker(game: Node) -> bool:
     # this route.
     for _i in 10:
         game._learn_fact("A level-up lantern fact")
-    if not _check(int(game.meta.get("facts", 0)) == 10,
+    if not ok(int(game.meta.get("facts", 0)) == 10,
             "ten level-up facts put %d in the Atlas, expected 10" % int(game.meta.get("facts", 0))):
         return false
-    if not _check(not (game.meta["stickers"] as Array).has("fact_finder"),
+    if not ok(not (game.meta["stickers"] as Array).has("fact_finder"),
             "ten level-up facts awarded Curious Mind, which the journal offers for soothing curious wisps"):
         return false
 
     # Ten wisp facts: this is the route the journal names, so it must win it.
     for _i in 10:
         game._learn_fact("A curious wisp tucked a fact into its glow", true)
-    if not _check((game.meta["stickers"] as Array).has("fact_finder"),
+    if not ok((game.meta["stickers"] as Array).has("fact_finder"),
             "ten curious-wisp facts did not award Curious Mind"):
         return false
-    if not _check(int(game.meta.get("facts_from_wisps", 0)) == 10,
+    if not ok(int(game.meta.get("facts_from_wisps", 0)) == 10,
             "the wisp tally read %d, expected 10" % int(game.meta.get("facts_from_wisps", 0))):
         return false
 
@@ -1087,50 +671,10 @@ func _check_curious_wisp_facts_can_win_the_sticker(game: Node) -> bool:
     # whitelist, so a counter missing from that list is silently dropped on
     # every write and the sticker resets on the next launch.
     var survived := BeautyData._clean_meta(game.meta)
-    if not _check(int(survived.get("facts_from_wisps", 0)) == 10,
+    if not ok(int(survived.get("facts_from_wisps", 0)) == 10,
             "saving dropped the wisp tally to %d, so the sticker resets on every launch" % int(survived.get("facts_from_wisps", 0))):
         return false
     game.meta["stickers"] = []
     game.meta["facts"] = 0
     game.meta["facts_from_wisps"] = 0
-    return true
-
-## Verses and Mote's counter-melodies are free gifts that nobody owns, and the
-## shop listed every unworn one as "in pocket -- tap to wear" and "already
-## yours". That describes a purchase which never happened. Nothing here may
-## claim a pocket or an ownership.
-func _check_free_items_do_not_claim_to_be_owned(game: Node) -> bool:
-    game.ui.show_shop(game._shop_state())
-    for _i in range(4):
-        await _frames(2)
-    # The rows live inside a ScrollContainer, so search the whole frame subtree.
-    var free_rows := 0
-    var free_items := BeautyContent.STANZAS.size() + BeautyContent.MOTE_VERSES.size()
-    for button in _buttons_in(game.ui._shop_frame):
-        var b := button as Button
-        if b == null:
-            continue
-        var label: String = _row_text(b)
-        if not (label.contains("free gift")):
-            continue
-        free_rows += 1
-        # A worn item says "wearing it now", which is true. An UNWORN one must
-        # not describe a pocket or a purchase.
-        if label.contains("♥ WEARING"):
-            continue
-        if not _check(not label.contains("in pocket"),
-                "a free item claimed a pocket: %s" % label):
-            return false
-        if not _check(not b.tooltip_text.contains("already yours"),
-                "a free item claimed ownership: %s" % b.tooltip_text):
-            return false
-    print("FREE_ITEMS rows=%d of %d expected, none claim ownership or a pocket" % [
-        free_rows, free_items])
-    if not _check(free_rows == free_items,
-            "expected %d free rows (every verse and counter-melody), found %d" % [
-                free_items, free_rows]):
-        return false
-    game.ui.close_panels()
-    for _i in range(2):
-        await _frames(2)
     return true
