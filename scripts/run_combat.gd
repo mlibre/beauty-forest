@@ -1,5 +1,5 @@
 class_name RunCombat
-extends RunState
+extends RunShop
 
 ## Automatic lantern combat, wisp spawning and rewards, thank-you hearts, and
 ## player damage. The song ceremonies that share this state extend it in
