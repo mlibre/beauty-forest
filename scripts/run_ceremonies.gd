@@ -147,6 +147,10 @@ func _win_dragon() -> void:
     audio.stop_ambient()
     audio.play_sleep()
     CozyVFX.burst(world, world.dragon_position + Vector3.UP * 2.2, Color("#ffe6a0"), 64, 2.8, 1.8)
+    # Snoozle is tucked in: the floor has no dragon objective anymore. Leaving
+    # this true kept the waypoint, objective text and minimap dot parked on the
+    # sleeping dragon, and the stair's arrival marker never fired.
+    dragon_exists = false
     if dragon_finale:
         player.set_control_enabled(false)
         ui.show_story("SNOOZLE PURRS", "The mountain-sized dragon opens one eye, looks at you like you’re a particularly good dream, purrs until the dust rearranges itself, and hands you a warm scale.", 3.2)

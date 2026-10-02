@@ -28,6 +28,8 @@ func _run() -> void:
         return
     if not await _check_ambience_returns_after_a_non_finale_dragon(game):
         return
+    if not await _check_dragon_clear_hands_the_way_to_the_stair(game):
+        return
 
     finish(game, "BEAUTY_FOREST_ENCOUNTERS")
 
@@ -52,6 +54,35 @@ func _check_dragon_never_sleeps_in_the_spawn_clearing(game: Node) -> bool:
         if not ok(separation > 3.0,
                 "floor %d spawned the hero %.2f m from Snoozle's centre" % [floor_number, separation]):
             return false
+    game._start_run(1)
+    await frames(4)
+    return true
+
+func _check_dragon_clear_hands_the_way_to_the_stair(game: Node) -> bool:
+    ## After Snoozle is tucked in on a non-finale floor the walk continues: the
+    ## waypoint, minimap and stair-arrival must all treat the floor as
+    ## dragon-free. `dragon_exists` used to stay true until the next floor, so
+    ## the glow stayed parked on a sleeping dragon and the stair marker never
+    ## registered arrival.
+    game._start_run(5)
+    await frames(6)
+    if not ok(game.dragon_exists, "floor 5 should open as a dragon floor"):
+        return false
+    # The real game only starts the dragon lullaby once every Dream Chime is
+    # gathered; mirror that end state so the objective after the win is the
+    # stair, not a chime pickup that cannot still be outstanding.
+    for chime in game.world.chimes:
+        if is_instance_valid(chime):
+            game.world.remove_child(chime)
+            chime.free()
+    game.world.chimes.clear()
+    game._win_dragon()
+    await frames(12)
+    if not ok(not game.dragon_exists, "dragon_exists survived the dragon being tucked in"):
+        return false
+    if not ok(game.ui._walker_objective == "Wander toward the glowing stair",
+            "after the lullaby the objective still read: %s" % game.ui._walker_objective):
+        return false
     game._start_run(1)
     await frames(4)
     return true
