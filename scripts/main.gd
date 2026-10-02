@@ -40,6 +40,7 @@ func _ready() -> void:
 
 func _connect_ui() -> void:
     ui.start_requested.connect(_on_start_requested)
+    ui.style_picked.connect(_on_style_picked)
     ui.resume_requested.connect(_resume_game)
     ui.restart_requested.connect(_on_restart_requested)
     ui.quit_requested.connect(quit_gracefully)
@@ -283,6 +284,16 @@ func _resume_game() -> void:
     player.set_control_enabled(_gameplay_controls_enabled())
     if not ending_pending:
         audio.start_ambient(String(region["key"]))
+
+func _on_style_picked(style_key: String) -> void:
+    # A trail picked on the menu must be the trail that starts, whichever way
+    # the player presses. Enter used to start `selected_style` untouched by the
+    # click, and skipped persisting the pick.
+    if not BeautyContent.STYLE_DATA.has(style_key):
+        return
+    selected_style = style_key
+    meta["style"] = style_key
+    BeautyData.save_meta(meta)
 
 func _on_start_requested(style_key: String) -> void:
     selected_style = style_key

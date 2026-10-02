@@ -32,6 +32,8 @@ func _run() -> void:
         return
     if not await _check_the_menu_paints_no_walk_marker(game):
         return
+    if not await _check_a_menu_pick_is_the_run_that_starts(game):
+        return
 
     finish(game, "BEAUTY_FOREST_SCREENS")
 
@@ -80,6 +82,35 @@ func _check_the_menu_paints_no_walk_marker(game: Node) -> bool:
     if not ok(not game.stair_visible,
             "the title floor still counts its hidden stairwell as an objective"):
         return false
+    return true
+
+    game.mode = game.Mode.MENU
+    game._load_floor(1, true)
+    await frames(4)
+    return true
+
+func _check_a_menu_pick_is_the_run_that_starts(game: Node) -> bool:
+    ## Clicking "gentle" repainted the menu heart but said nothing to the run:
+    ## Enter started the OLD selected_style, and the pick was never kept.
+    game.mode = game.Mode.MENU
+    await frames(2)
+    game.selected_style = "standard"
+    game.ui.style_picked.emit("gentle")
+    await frames(2)
+    if not ok(game.selected_style == "gentle",
+            "picking a trail on the menu did not move the run state: %s" % game.selected_style):
+        return false
+    game._start_run(1)
+    await frames(4)
+    if not ok(is_equal_approx(game.hp_max, 115.0),
+            "a gentle start should carry +15 warmth, got %.0f" % game.hp_max):
+        return false
+    game.mode = game.Mode.MENU
+    game._load_floor(1, true)
+    await frames(2)
+    game.selected_style = "standard"
+    game.ui.set_selected_style("standard")
+    await frames(2)
     return true
 
 func _check_the_pause_summary_shows_the_real_run(game: Node) -> bool:

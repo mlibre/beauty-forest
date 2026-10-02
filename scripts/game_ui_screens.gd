@@ -99,6 +99,7 @@ func show_menu(meta: Dictionary) -> void:
         button.tooltip_text = "%s — %s. Then press Wander below." % [String(style["name"]), String(style["description"])]
         button.pressed.connect(func():
             _selected_style = key
+            style_picked.emit(key)
             show_menu(meta)
         )
         styles.add_child(button)

@@ -6,6 +6,7 @@ extends CanvasLayer
 ## GameUIScreens and driven by GameUI, which extend this chain.
 
 signal start_requested(style_key: String)
+signal style_picked(style_key: String)
 signal resume_requested
 signal restart_requested(continue_deeper: bool)
 signal quit_requested
