@@ -95,11 +95,13 @@ func _check_minimap_safe_area() -> void:
         var layout := minimap._map_layout(dimensions, dimensions)
         var map_size: Vector2 = layout["map_size"]
         var origin: Vector2 = layout["origin"]
-        # Draw rects overlap by 0.35px to avoid seams between cells.
-        var cell_bottom := origin.y + map_size.y + 0.35
-        assert(cell_bottom <= minimap.size.y - CozyMinimap.MAP_MARGIN)
-        assert(origin.x >= CozyMinimap.MAP_MARGIN)
-        assert(origin.x + map_size.x + 0.35 <= minimap.size.x - CozyMinimap.MAP_MARGIN)
+        # The grove texture is blitted CELL_BLEED past its rect on every side,
+        # so the painted edge is what has to stay inside the margin.
+        var painted := Rect2(origin - Vector2(CozyMinimap.CELL_BLEED, CozyMinimap.CELL_BLEED), map_size + Vector2(CozyMinimap.CELL_BLEED, CozyMinimap.CELL_BLEED) * 2.0)
+        assert(painted.position.y >= CozyMinimap.MAP_MARGIN)
+        assert(painted.position.x >= CozyMinimap.MAP_MARGIN)
+        assert(painted.end.x <= minimap.size.x - CozyMinimap.MAP_MARGIN)
+        assert(painted.end.y <= minimap.size.y - CozyMinimap.MAP_MARGIN)
     minimap.free()
 ## A ParticleProcessMaterial's color only reaches the screen when the draw
 ## material sets vertex_color_use_as_albedo. Every emitter in this game is

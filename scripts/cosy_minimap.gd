@@ -2,6 +2,9 @@ class_name CozyMinimap
 extends Control
 
 const MAP_MARGIN := 9.0
+## Half a pixel of the grove texture is blitted past its rect on every side to
+## keep neighbouring cells from showing a seam at non-integer scales.
+const CELL_BLEED := 0.5
 
 var dungeon: Dictionary = {}
 var player_position := Vector3.ZERO
@@ -47,9 +50,7 @@ func _draw() -> void:
     var wall_color := Color("#304c35") if high_contrast else Color(0.16, 0.34, 0.21, 0.88)
     _ensure_grid_texture(width, height, floor_color, wall_color)
     if _grid_texture != null:
-        # Half a pixel of overlap keeps neighbouring cells from showing seams
-        # at non-integer scales (the old per-cell draw_rects overlapped 0.35).
-        draw_texture_rect(_grid_texture, Rect2(origin - Vector2(0.5, 0.5), map_size + Vector2(1.0, 1.0)), false)
+        draw_texture_rect(_grid_texture, Rect2(origin - Vector2(CELL_BLEED, CELL_BLEED), map_size + Vector2(CELL_BLEED, CELL_BLEED) * 2.0), false)
     for marker: Dictionary in markers:
         var marker_position := origin + Vector2(float(marker["x"]), float(marker["z"])) * scale
         draw_circle(marker_position, 2.8, marker.get("color", Color("#ffe9a0")))
@@ -72,11 +73,16 @@ func _ensure_grid_texture(width: int, height: int, floor_color: Color, wall_colo
     _grid_texture = ImageTexture.create_from_image(image)
 
 func _map_layout(width: int, height: int) -> Dictionary:
+    # The grove blit overhangs its rect by half a pixel on every side to hide
+    # cell seams, so the area the map is fitted into has to keep that bleed
+    # inside the margin -- otherwise a square map fills the area exactly and
+    # paints 0.5px past the panel border.
+    var margin := MAP_MARGIN + CELL_BLEED
     var map_area := Rect2(
-        Vector2(MAP_MARGIN, MAP_MARGIN),
+        Vector2(margin, margin),
         Vector2(
-            maxf(1.0, size.x - MAP_MARGIN * 2.0),
-            maxf(1.0, size.y - MAP_MARGIN * 2.0)
+            maxf(1.0, size.x - margin * 2.0),
+            maxf(1.0, size.y - margin * 2.0)
         )
     )
     var safe_width := maxi(1, width)
