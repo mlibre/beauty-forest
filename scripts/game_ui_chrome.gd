@@ -134,7 +134,7 @@ func _build_interface() -> void:
     _menu_scrim.visible = false
     _root.add_child(_menu_scrim)
     _overlay_scrim = ColorRect.new()
-    _overlay_scrim.color = Color(0.055, 0.12, 0.08, 0.48)
+    _overlay_scrim.color = Color(0.055, 0.12, 0.08, PAUSE_SCRIM_ALPHA)
     _overlay_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     _overlay_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
     _overlay_scrim.visible = false
@@ -173,7 +173,7 @@ func _build_interface() -> void:
     overlay_scroll.add_child(_overlay_content)
 
     _shop_scrim = ColorRect.new()
-    _shop_scrim.color = Color(0.04, 0.09, 0.06, 0.64)
+    _shop_scrim.color = Color(0.04, 0.09, 0.06, SHOP_SCRIM_ALPHA)
     _shop_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     _shop_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
     _shop_scrim.visible = false

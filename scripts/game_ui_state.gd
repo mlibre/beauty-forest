@@ -62,9 +62,20 @@ var _overlay_scrim: ColorRect
 ## that is otherwise 173-186 everywhere. The pause card still darkens
 ## properly, because there the world genuinely should step back.
 var _menu_scrim: ColorRect
-## Tuned by measurement, not by eye: this took the menu backdrop from a
-## mean luminance of 82 to 111 against 176 in gameplay.
+## The three scrim alphas, measured rather than eyeballed.
+##
+## A sweep of each value against a real render, reading the world still
+## visible AROUND the card (gameplay there measures 177):
+##
+##   menu  0.20 -> 112     pause 0.48 -> 84     cart 0.64 -> 63
+##
+## The menu is the first thing a player sees and carries the whole bright
+## golden-dusk promise, so it barely dims at all. The pause card and the cart
+## deliberately let the world recede, and are kept only as dark as the panel
+## needs to stay legible -- tests/regression_luminance.gd holds the floor.
 const MENU_SCRIM_ALPHA := 0.20
+const PAUSE_SCRIM_ALPHA := 0.48
+const SHOP_SCRIM_ALPHA := 0.64
 var _overlay_card: PanelContainer
 var _overlay_content: VBoxContainer
 var _shop_scrim: ColorRect
@@ -385,10 +396,10 @@ func apply_settings(settings: Dictionary) -> void:
         label.add_theme_font_size_override("font_size", int(round(base_size * _text_scale)))
     _minimap.high_contrast = _high_contrast
     _minimap.queue_redraw()
-    _overlay_scrim.color = Color(0.025, 0.05, 0.035, 0.72 if _high_contrast else 0.48)
+    _overlay_scrim.color = Color(0.025, 0.05, 0.035, 0.72 if _high_contrast else PAUSE_SCRIM_ALPHA)
     if is_instance_valid(_menu_scrim):
         _menu_scrim.color = Color(0.025, 0.05, 0.035, 0.42 if _high_contrast else MENU_SCRIM_ALPHA)
-    _shop_scrim.color = Color(0.015, 0.025, 0.018, 0.82 if _high_contrast else 0.64)
+    _shop_scrim.color = Color(0.015, 0.025, 0.018, 0.82 if _high_contrast else SHOP_SCRIM_ALPHA)
     # High Contrast has to reach the text, not just the scenery behind it. The
     # scrim above only darkens the world; the cards carry their own near-opaque
     # fill, so darkening the scrim left every label at the same 13.6:1 in both
