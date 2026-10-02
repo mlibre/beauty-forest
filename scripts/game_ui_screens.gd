@@ -344,7 +344,13 @@ func show_journal(meta: Dictionary, facts_learned: Array, stickers: Array) -> vo
     _fit_layout()
     _focus_first_enabled(_shop_frame)
 
-func show_settings(settings: Dictionary) -> void:
+## The gentler-forest panel.
+##
+## `return_name` is the screen this panel will hand the player back to, supplied
+## by the director, which is the only place that knows. The panel is reachable
+## from the menu, from the pause card and from Peddle's cart, so a hardcoded
+## "the walk" was a promise this button could not keep in two of the three.
+func show_settings(settings: Dictionary, return_name: String = "the walk") -> void:
     _dismiss_beat_ring()
     _settings = settings.duplicate(true)
     _cancel_story()
@@ -399,13 +405,21 @@ func show_settings(settings: Dictionary) -> void:
     reset.pressed.connect(func():
         _settings = BeautyData.default_settings()
         _emit_settings()
-        show_settings(_settings)
+        show_settings(_settings, return_name)
     )
     list.add_child(reset)
-    _shop_frame.add_child(_centered_button("♥  Back to the walk", true, func(): close_settings()))
+    # Reopening from Reset must carry the same destination as the panel the
+    # player is already looking at, or the button would silently re-point itself
+    # at "the walk" after being pressed from the menu or the cart.
+    _shop_frame.add_child(_centered_button("♥  Back to %s" % return_name, true, func(): close_settings()))
     _fit_layout()
     _focus_first_enabled(_shop_frame)
 
+## Where closing this panel will actually put the player back.
+##
+## The director knows exactly which screen it will return the player to, and
+## passes that name in, so this label and the real route cannot disagree the way
+## a hardcoded "the walk" did -- from the menu there is no walk to go back to.
 func _slider_row(title: String, key: String, minimum: float, maximum: float, step: float, format: String, display_scale: float = 1.0) -> HBoxContainer:
     var row := HBoxContainer.new()
     row.add_theme_constant_override("separation", 12)

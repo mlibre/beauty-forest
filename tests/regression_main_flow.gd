@@ -615,6 +615,8 @@ func _check_settings_open_from_every_modal(game: Node) -> bool:
             return false
     if not await _check_settings_open_from_the_menu(game):
         return false
+    if not await _check_settings_back_button_names_where_it_goes(game):
+        return false
     game._start_run(1)
     await _frames(4)
     return true
@@ -668,6 +670,50 @@ func _open_settings_from_the_menu(game: Node, way: String) -> bool:
         return false
     return _check(game.ui._overlay_card.visible,
             "the menu card was left hidden after closing settings opened by %s" % way)
+
+func _check_settings_back_button_names_where_it_goes(game: Node) -> bool:
+    ## The panel's Back button read "Back to the walk" from every screen that
+    ## can open it, but only one of those returns to a walk: the menu has no walk
+    ## at all, and Peddle's cart or the memory book are closed on the way in, so
+    ## the player lands in play -- the walk. The button must name the screen the
+    ## director will actually restore, or it promises a destination the game does
+    ## not deliver.
+    var wanted := {"menu": "the menu", "pause": "the pause card", "play": "the walk"}
+    for origin: String in wanted:
+        if origin == "menu":
+            game._show_menu()
+        else:
+            game._start_run(2)
+            await _frames(4)
+            if origin == "pause":
+                game._pause_game()
+        await _frames(3)
+        # From any origin the director routes the press; the origin only decides
+        # which screen we stand on before asking for the panel.
+        game._open_settings()
+        await _frames(3)
+        var label := ""
+        for candidate in game.ui._shop_frame.find_children("*", "Button", true, false):
+            if (candidate as Button).text.begins_with("♥  Back to"):
+                label = (candidate as Button).text
+        if not _check(label == "♥  Back to %s" % wanted[origin],
+                "from the %s the settings Back button says %s" % [origin, label if label != "" else "nothing"]):
+            return false
+        # Pressing Restore must not re-point the button at a hardcoded screen.
+        for candidate in game.ui._shop_frame.find_children("*", "Button", true, false):
+            if (candidate as Button).text.contains("Restore gentle defaults"):
+                (candidate as Button).pressed.emit()
+        await _frames(3)
+        label = ""
+        for candidate in game.ui._shop_frame.find_children("*", "Button", true, false):
+            if (candidate as Button).text.begins_with("♥  Back to"):
+                label = (candidate as Button).text
+        if not _check(label == "♥  Back to %s" % wanted[origin],
+                "Restore from the %s re-pointed the Back button to %s" % [origin, label if label != "" else "nothing"]):
+            return false
+        game.ui.settings_closed.emit()
+        await _frames(3)
+    return true
 
 func _check_buying_past_the_charm_cap_says_so(game: Node) -> bool:
     ## Filling all three charm slots and then buying a fourth charged the

@@ -347,7 +347,15 @@ func _open_settings() -> void:
     mode = Mode.SETTINGS
     _set_world_processing(false)
     player.set_control_enabled(false)
-    ui.show_settings(settings)
+    # The panel's own Back button names where it returns, so pass the screen the
+    # director will actually restore. SHOP and JOURNAL already collapse to
+    # PLAYING above, so both genuinely land on the walk.
+    var return_name := "the menu"
+    if return_to == Mode.PLAYING:
+        return_name = "the walk"
+    elif return_to == Mode.PAUSED:
+        return_name = "the pause card"
+    ui.show_settings(settings, return_name)
 
 func _on_settings_closed() -> void:
     if mode != Mode.SETTINGS:
