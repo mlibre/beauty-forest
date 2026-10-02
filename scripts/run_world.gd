@@ -107,6 +107,10 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
         # false so nothing can be hugged, sung to or hurt.
         _spawn_menu_wisps()
         world.set_objectives_visible(false, false, false)
+        # Nothing on the title floor is an objective: without this, the
+        # stair branch in _update_waypoint parked a glowing marker on an
+        # invisible stairwell through the whole menu.
+        stair_visible = false
 
     camera.global_position = player.global_position + CAMERA_OFFSET
     camera.look_at(player.global_position + Vector3.UP * 0.78, Vector3.UP)

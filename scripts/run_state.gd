@@ -253,6 +253,15 @@ func _refresh_ui() -> void:
 func _update_waypoint() -> void:
     if world == null or not is_instance_valid(world) or player == null or not is_instance_valid(player):
         return
+    if mode != Mode.PLAYING:
+        # The walk glow belongs to the walk itself. On the title backdrop it
+        # answered with a beacon over an invisible stair; on DEAD/ENDING the
+        # cards own the world. The parked text stays for PAUSED/SHOP/JOURNAL/
+        # SETTINGS, where the pause card reads it back to the player.
+        _set_waypoint_active(false)
+        if mode == Mode.MENU or mode == Mode.DEAD or mode == Mode.ENDING:
+            ui._walker_objective = ""
+        return
     var target := Vector3.ZERO
     var glyph := GardenGlyphs.STAIRS
     var tint := Color("#bdf0bd")

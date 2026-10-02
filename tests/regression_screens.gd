@@ -30,6 +30,8 @@ func _run() -> void:
         return
     if not await _check_curious_wisp_facts_can_win_the_sticker(game):
         return
+    if not await _check_the_menu_paints_no_walk_marker(game):
+        return
 
     finish(game, "BEAUTY_FOREST_SCREENS")
 
@@ -60,6 +62,24 @@ func _check_the_next_step_names_the_real_target(game: Node) -> bool:
             return ok(false, "on a plain floor the pause menu stopped naming the stair: '%s'" % said)
         game._resume_game()
         await frames(3)
+    return true
+
+func _check_the_menu_paints_no_walk_marker(game: Node) -> bool:
+    ## The title floor promised "no wisps-turned-objectives, nothing glowing"
+    ## but never cleared stair_visible, so the walk waypoint spawned and parked
+    ## itself on an invisible stairwell through the whole menu.
+    game.mode = game.Mode.MENU
+    game._load_floor(1, true)
+    await frames(8)
+    var beacons: Array = game.world.find_children("*", "CozyWaypoint", true, false)
+    if not ok(beacons.is_empty(), "a walk marker showed during the menu"):
+        return false
+    if not ok(game.ui._walker_objective.is_empty(),
+            "the menu parked a walk objective: %s" % game.ui._walker_objective):
+        return false
+    if not ok(not game.stair_visible,
+            "the title floor still counts its hidden stairwell as an objective"):
+        return false
     return true
 
 func _check_the_pause_summary_shows_the_real_run(game: Node) -> bool:
