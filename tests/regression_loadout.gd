@@ -31,6 +31,10 @@ func _run() -> void:
         return
     if not await _check_free_items_do_not_claim_to_be_owned(game):
         return
+    if not await _check_stanza_cards_paint_song_glyphs(game):
+        return
+    if not await _check_colliding_sockets_keep_their_own_art(game):
+        return
 
     finish(game, "BEAUTY_FOREST_LOADOUT")
 
@@ -260,6 +264,63 @@ func _check_free_items_do_not_claim_to_be_owned(game: Node) -> bool:
     game.ui.close_panels()
     for _i in range(2):
         await frames(2)
+    return true
+
+func _check_stanza_cards_paint_song_glyphs(game: Node) -> bool:
+    ## Lantern-song wares used to reach the cart without a `kind`, so a card
+    ## treated them as charms: every song shelf painted the hollow "unknown
+    ## key" ring, or the charm art when the key collided (moss, lullaby).
+    game.ui.show_shop(game._shop_state())
+    for _i in range(4):
+        await frames(2)
+    var stanza_cards := 0
+    for card in free_item_cards(game.ui._shop_frame):
+        if not card.item_name().begins_with("Verse of"):
+            continue
+        stanza_cards += 1
+        var glyph := card.glyph_key()
+        if not ok(glyph == GardenGlyphs.STANZA_PREFIX + card.item_key(),
+                "stanza card painted the wrong ink: %s from key %s" % [card.item_name(), glyph]):
+            return false
+    if not ok(stanza_cards == BeautyContent.STANZAS.size(),
+            "expected %d stanza cards, found %d" % [BeautyContent.STANZAS.size(), stanza_cards]):
+        return false
+    game.ui.close_panels()
+    for _i in range(2):
+        await frames(2)
+    return true
+
+func _check_colliding_sockets_keep_their_own_art(game: Node) -> bool:
+    ## `moss` is both a charm and a verse. The vitals sockets used to paint
+    ## every key that ALSO existed in the stanza table as the song glyph, so a
+    ## worn Moss Pillow showed the verse's note and nobody could wear the
+    ## charm and read it correctly.
+    game.charms_equipped["moss"] = true
+    game.stanzas_equipped["moss"] = true
+    game._refresh_ui()
+    await frames(2)
+    var keys: Array = game.ui._vitals.equipped
+    if not ok(keys.has("moss") and keys.has(GardenGlyphs.STANZA_PREFIX + "moss"),
+            "the vitals sockets lost which table each worn key is for: %s" % str(keys)):
+        return false
+    var stanza_rows := 0
+    for k: String in keys:
+        if k.begins_with(GardenGlyphs.STANZA_PREFIX):
+            stanza_rows += 1
+    if not ok(stanza_rows == game.stanzas_equipped.size(),
+            "every worn stanza should socket with its ink prefix: %s" % str(keys)):
+        return false
+    var leaked := false
+    for k: String in game.ui._walker_charm_keys:
+        if k.begins_with(GardenGlyphs.STANZA_PREFIX):
+            leaked = true
+    if not ok(not leaked and game.ui._walker_charm_keys.has("moss"),
+            "the pause charm row should hold no song keys: %s" % str(game.ui._walker_charm_keys)):
+        return false
+    game.charms_equipped.clear()
+    game.stanzas_equipped = {"petals": true, "echoes": true}
+    game._refresh_ui()
+    await frames(2)
     return true
 
 func charm_name_for(key: String) -> String:

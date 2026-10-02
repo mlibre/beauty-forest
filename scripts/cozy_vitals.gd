@@ -121,12 +121,10 @@ func _draw_slots() -> void:
 		draw_style_box(style, rect)
 		if filled:
 			var key := equipped[index]
-			# Stanzas and charms share a key namespace, so a worn song is drawn
-			# from the song table and a worn charm from the charm table.
-			var glyph_key := key
-			if BeautyContent.STANZAS.any(func(s: Dictionary) -> bool: return String(s["key"]) == key):
-				glyph_key = GardenGlyphs.STANZA_PREFIX + key
-			var glyph := GardenGlyphs.get_glyph(glyph_key)
+			# Worn songs arrive prefixed (verse:...), worn charms bare -- the
+			# key namespace is shared, so the HUD state says which table each
+			# socket is for and there is nothing to re-guess here.
+			var glyph := GardenGlyphs.get_glyph(key)
 			draw_texture_rect(glyph, rect.grow(-4.0), false)
 
 func _arc(center: Vector2, radius: float, from_angle: float, to_angle: float, color: Color, thickness: float) -> void:

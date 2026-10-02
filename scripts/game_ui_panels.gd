@@ -225,7 +225,11 @@ func show_shop(state: Dictionary) -> void:
         stanzas.size(), BeautyContent.MAX_STANZAS])
     for stanza: Dictionary in BeautyContent.STANZAS:
         var key := String(stanza["key"])
-        _ware_card(stanza_shelf, stanza.duplicate(), sparkles,
+        # Stanzas share keys with charms (`moss`, `lullaby`), so the card can
+        # only paint the song glyph when it knows which table the key is for.
+        var stanza_item := stanza.duplicate()
+        stanza_item["kind"] = "verse"
+        _ware_card(stanza_shelf, stanza_item, sparkles,
             bool(stanzas.get(key, false)), false, true, false, func(): stanza_equip_requested.emit(key))
 
     var verse: Dictionary = state.get("mote_verse", {})

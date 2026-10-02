@@ -216,7 +216,10 @@ func _refresh_ui() -> void:
         charm_keys.append(key)
     for key: String in stanzas_equipped.keys():
         if bool(stanzas_equipped.get(key, false)):
-            charm_keys.append(key)
+            # Stanzas share keys with charms (`moss`, `lullaby`), so the socket
+            # list must carry which table each key is for -- as an inked key a
+            # card or socket can paint with no guessing.
+            charm_keys.append(GardenGlyphs.STANZA_PREFIX + key)
     var charm_names: Array[String] = []
     for key: String in charms_equipped.keys():
         for charm: Dictionary in BeautyContent.CHARMS:
