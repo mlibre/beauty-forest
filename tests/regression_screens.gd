@@ -34,6 +34,8 @@ func _run() -> void:
         return
     if not await _check_a_menu_pick_is_the_run_that_starts(game):
         return
+    if not await _check_a_restart_silences_old_toasts(game):
+        return
 
     finish(game, "BEAUTY_FOREST_SCREENS")
 
@@ -111,6 +113,27 @@ func _check_a_menu_pick_is_the_run_that_starts(game: Node) -> bool:
     game.selected_style = "standard"
     game.ui.set_selected_style("standard")
     await frames(2)
+    return true
+
+func _check_a_restart_silences_old_toasts(game: Node) -> bool:
+    ## Toasts queued on the old run kept trickling in over the nap card and the
+    ## fresh floor, promising things that had already happened elsewhere.
+    game._start_run(2)
+    await frames(4)
+    game.ui.show_toast("a toast from the old walk")
+    game.ui.show_toast("and another one")
+    game._start_run(1)
+    await frames(4)
+    var stale := 0
+    for entry: Dictionary in game.ui._toast_queue:
+        if String(entry.get("message", "")).contains("old walk") or String(entry.get("message", "")).contains("another one"):
+            stale += 1
+    if not ok(stale == 0,
+            "old toasts survived a fresh start: %s" % [game.ui._toast_queue]):
+        return false
+    if not ok(not game.ui._toast_label.text.contains("old walk") and not game.ui._toast_label.text.contains("another one"),
+            "a stale toast label stayed painted after the restart: %s" % game.ui._toast_label.text):
+        return false
     return true
 
 func _check_the_pause_summary_shows_the_real_run(game: Node) -> bool:

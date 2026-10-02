@@ -208,6 +208,7 @@ func _start_run(start_floor: int, keep_progress: bool = false) -> void:
     selected_style = selected_style if BeautyContent.STYLE_DATA.has(selected_style) else "standard"
     mode = Mode.PLAYING
     ui.close_panels()
+    ui.clear_toast()
     ui.set_hud_visible(true)
     # Play chrome OFF: no stat cards, no Mote chatter, no control hints. Just
     # the lantern ring, the sparkles, the depth and the grove map.

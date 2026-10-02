@@ -78,6 +78,18 @@ func update_map_player(player_position: Vector3, markers: Array[Dictionary]) -> 
     _minimap.player_position = player_position
     _minimap.set_markers(markers)
 
+func clear_toast() -> void:
+    # A toast queued before a restart is a cue about a run that no longer
+    # exists; let the fresh one speak alone.
+    _toast_queue.clear()
+    if _toast_tween != null and _toast_tween.is_valid():
+        _toast_tween.kill()
+    _toast_tween = null
+    _toast_active = false
+    if is_instance_valid(_toast_label):
+        _toast_label.modulate.a = 0.0
+        _toast_label.text = ""
+
 func show_toast(message: String, duration: float = 2.6) -> void:
     _toast_queue.append({"message": message, "duration": maxf(0.0, duration)})
     if not _toast_active:
