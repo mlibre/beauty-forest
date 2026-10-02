@@ -471,10 +471,25 @@ func _fit_modal_card(card: PanelContainer) -> void:
     # above already caps the card to the window, so only content minimums
     # larger than the window itself can still overflow — symmetrically.
 
+## The title menu's own overlay frame. Identical to _show_overlay() except
+## that it raises the lighter menu scrim, so the forest behind the menu
+## stays a bright golden dusk instead of being pushed into the dark.
+func _show_menu_overlay() -> void:
+    _dismiss_beat_ring()
+    _cancel_story()
+    _reset_touch_joystick()
+    if is_instance_valid(_menu_scrim):
+        _menu_scrim.visible = true
+    _overlay_scrim.visible = false
+    _overlay_card.visible = true
+    _overlay_card.modulate.a = 1.0
+    _fit_layout()
+
 func _show_overlay() -> void:
     _dismiss_beat_ring()
     _cancel_story()
     _reset_touch_joystick()
+    _menu_scrim.visible = false
     _overlay_scrim.visible = true
     _overlay_card.visible = true
     _overlay_card.modulate.a = 1.0

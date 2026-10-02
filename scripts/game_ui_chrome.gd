@@ -122,6 +122,17 @@ func _build_interface() -> void:
     _toast_label.modulate.a = 0.0
     _hud.add_child(_toast_label)
 
+    # Two scrims, not one. The pause card wants the world to step back and
+    # stay there; the title menu must NOT crush the forest it is introducing.
+    # They used to share one 0.48 rect, which made the menu the darkest
+    # screen in a game that measures 173-186 everywhere else.
+    _menu_scrim = ColorRect.new()
+    _menu_scrim.name = "MenuScrim"
+    _menu_scrim.color = Color(0.055, 0.12, 0.08, MENU_SCRIM_ALPHA)
+    _menu_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    _menu_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
+    _menu_scrim.visible = false
+    _root.add_child(_menu_scrim)
     _overlay_scrim = ColorRect.new()
     _overlay_scrim.color = Color(0.055, 0.12, 0.08, 0.48)
     _overlay_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

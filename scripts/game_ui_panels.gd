@@ -280,7 +280,12 @@ func close_settings() -> void:
     _shop_card.visible = false
     settings_closed.emit()
 
+## Hide every scrim this class owns, plus the menu's. Raising one scrim from
+## three different call sites meant a forgotten `visible = false` left the
+## menu's light scrim under a panel, stacking two darkening rects on top of
+## each other -- so `close_panels` clears all of them by name.
 func close_panels() -> void:
+    _menu_scrim.visible = false
     _shop_scrim.visible = false
     _shop_card.visible = false
     _overlay_scrim.visible = false

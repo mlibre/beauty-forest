@@ -152,6 +152,12 @@ func _run() -> void:
     game._resume_game()
     await frames(2)
 
+    # Start a REAL run before reaching for a wisp. This check inherited whatever
+    # the previous one left behind, which used to be the live floor's spawn; now
+    # that the title backdrop has its own drifting wisps, `wisps[0]` would be one
+    # of those and it would never resolve.
+    game._start_run(1)
+    await frames(6)
     var target: Wisp = game.wisps[0]
     var retained: Array[Wisp] = [target]
     for wisp: Wisp in game.wisps:

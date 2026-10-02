@@ -97,6 +97,15 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
         invulnerable_time = 1.0
         _next_petal_shower = play_seconds + _rng.randf_range(32.0, 56.0)
     else:
+        # The menu is the first thing a player sees, and it was an EMPTY
+        # clearing: no wisps, no objectives, nothing glowing, under a scrim.
+        # Measured, the menu backdrop sat at a mean luminance of 99 against
+        # 176 in gameplay -- the darkest screen in a bright golden-dusk game.
+        # A few wandering wisps give the forest something to be, without
+        # turning the title card into a playable floor: they idle, nothing
+        # spawns a boss or a Big Feeling, and _gameplay_controls_enabled() is
+        # false so nothing can be hugged, sung to or hurt.
+        _spawn_menu_wisps()
         world.set_objectives_visible(false, false, false)
 
     camera.global_position = player.global_position + CAMERA_OFFSET
@@ -118,6 +127,27 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
             ui.show_toast("Peddle’s cart is nearby. Press F when you’re ready to browse.")
         if _has_feeling_floor():
             ui.show_toast("A Big Feeling wanders this floor. Wait for its GOLD halo, then press E nearby and sing with it.")
+
+## A handful of wisps for the title backdrop.
+##
+## Deliberately not _spawn_wisps(): that one scales with the floor, spawns a
+## boss every third story floor and a Big Feeling on floors 4/8/12, all of
+## which the menu must not contain. These just drift near the spawn so the
+## forest behind the title card is alive.
+func _spawn_menu_wisps() -> void:
+    var occupied: Dictionary = {}
+    var spawn_room: Dictionary = dungeon["rooms"][0]
+    for index in range(5):
+        var cell := DungeonGenerator.random_floor_cell(dungeon, _rng, Vector2(spawn_room["cx"], spawn_room["cy"]), 6.0, occupied)
+        occupied[cell] = true
+        var wisp := Wisp.new()
+        wisp.setup(BeautyContent.pick_wisp_type(1), 1)
+        wisp.set_reduced_motion(bool(settings.get("reduced_motion", false)))
+        wisp.position = DungeonGenerator.cell_to_world(cell, 0.0)
+        wisp.set_meta("attack_cooldown", _rng.randf_range(0.2, 1.1))
+        wisp.set_meta("said_grumble", false)
+        world.add_child(wisp)
+        wisps.append(wisp)
 
 func _farthest_non_dragon_room(dragon_room: Dictionary) -> Dictionary:
     var spawn_room: Dictionary = dungeon["rooms"][0]

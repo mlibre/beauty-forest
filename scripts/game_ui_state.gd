@@ -55,6 +55,16 @@ var _touch_buttons: Array[Button] = []
 var _left_card: PanelContainer
 var _right_card: PanelContainer
 var _overlay_scrim: ColorRect
+## The title menu's own scrim. Lighter than the pause card's, because the
+## menu is the first thing a player sees and the brief is a BRIGHT golden
+## forest: measured, the shared 0.48 scrim pulled the backdrop from a mean
+## luminance of 176 down to 82 -- the menu was the darkest screen in a game
+## that is otherwise 173-186 everywhere. The pause card still darkens
+## properly, because there the world genuinely should step back.
+var _menu_scrim: ColorRect
+## Tuned by measurement, not by eye: this took the menu backdrop from a
+## mean luminance of 82 to 111 against 176 in gameplay.
+const MENU_SCRIM_ALPHA := 0.20
 var _overlay_card: PanelContainer
 var _overlay_content: VBoxContainer
 var _shop_scrim: ColorRect
@@ -376,6 +386,8 @@ func apply_settings(settings: Dictionary) -> void:
     _minimap.high_contrast = _high_contrast
     _minimap.queue_redraw()
     _overlay_scrim.color = Color(0.025, 0.05, 0.035, 0.72 if _high_contrast else 0.48)
+    if is_instance_valid(_menu_scrim):
+        _menu_scrim.color = Color(0.025, 0.05, 0.035, 0.42 if _high_contrast else MENU_SCRIM_ALPHA)
     _shop_scrim.color = Color(0.015, 0.025, 0.018, 0.82 if _high_contrast else 0.64)
     # High Contrast has to reach the text, not just the scenery behind it. The
     # scrim above only darkens the world; the cards carry their own near-opaque

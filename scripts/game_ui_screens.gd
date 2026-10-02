@@ -9,7 +9,7 @@ func show_menu(meta: Dictionary) -> void:
     _clear(_overlay_content)
     _hud.visible = false
     set_text_chrome_visible(true)
-    _show_overlay()
+    _show_menu_overlay()
     var title := _label("Beauty Forest", 46, Color("#ffe6a0"))
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _overlay_content.add_child(title)
