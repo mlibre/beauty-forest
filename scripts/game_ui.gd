@@ -42,6 +42,42 @@ func update_hud(state: Dictionary) -> void:
     _walker_forecast = String(state.get("forecast", ""))
     var names: Array = state.get("charm_names", [])
     _walker_charms = ", ".join(names)
+    # charm_keys carries stanzas too -- they share one key namespace so the
+    # vitals sockets can draw both -- so the worn-charm count comes from the
+    # names, which are built from charms alone.
+    _walker_charm_count = names.size()
+    _walker_sparkles = int(state.get("sparkles", 0))
+    _sync_text_chrome()
+
+## Repaint the stat cards from the parked run state.
+##
+## The cards are the pause menu's own chrome, so they have to agree with the
+## summary block sitting in the middle of that same screen. They used to keep
+## their authored defaults forever -- update_hud fed the icon ring and parked
+## these numbers for _walker_summary, but nothing ever wrote the labels -- so
+## pausing at level 9 on floor 5 showed "Floor 1", "Level 1", "Warmth 100/100"
+## and "Charms 0/3: none yet" right beside the correct figures. The eased bars
+## were inert for the same reason: _health_shown and _xp_shown were never set.
+func _sync_text_chrome() -> void:
+    if _left_card == null or not is_instance_valid(_left_card):
+        return
+    _floor_label.text = "Floor %d — %s" % [_walker_floor, _walker_region]
+    _health_label.text = "♥ Warmth  %d / %d" % [_walker_hp, _walker_hp_max]
+    _health_shown = float(_walker_hp) / maxf(1.0, float(_walker_hp_max))
+    _health_bar.max_value = 1.0
+    _health_bar.value = _health_shown
+    _level_label.text = "Level %d  ·  %d / %d soul to next gift" % [_walker_level, _walker_xp, _walker_xp_next]
+    _xp_shown = float(_walker_xp) / maxf(1.0, float(_walker_xp_next))
+    _xp_bar.max_value = 1.0
+    _xp_bar.value = _xp_shown
+    _stats_label.text = "Song power %d  ·  Dash ready" % _walker_song
+    _sparkle_label.text = "✦ %d sparkles to spend" % _walker_sparkles
+    _charm_label.text = "Charms %d/%d: %s" % [
+        _walker_charm_count,
+        BeautyContent.MAX_CHARMS,
+        _walker_charms if not _walker_charms.is_empty() else "none yet",
+    ]
+    _charm_label.tooltip_text = "Charms help automatically. Buy them from Peddle, wear up to %d." % BeautyContent.MAX_CHARMS
 
 func set_map(dungeon: Dictionary, player_position: Vector3) -> void:
     # Deliberately does not force `_minimap.visible`: every floor load calls

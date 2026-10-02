@@ -52,11 +52,11 @@ func _fit_layout() -> void:
         # side by side. Keep the essential warmth/floor/objective readouts,
         # tuck the optional chatter away, and let the two remaining cards
         # share the top row instead of painting over one another.
-        for optional: Control in [_region_label, _level_label, _stats_label, _sparkle_label, _charm_label, _mote_label, _log_label, _hint_label]:
+        for optional: Control in [_level_label, _stats_label, _sparkle_label, _charm_label, _mote_label, _log_label, _hint_label]:
             if is_instance_valid(optional):
                 optional.visible = false
     else:
-        for restored: Control in [_region_label, _level_label, _stats_label, _sparkle_label, _charm_label, _mote_label, _log_label, _hint_label]:
+        for restored: Control in [_level_label, _stats_label, _sparkle_label, _charm_label, _mote_label, _log_label, _hint_label]:
             if is_instance_valid(restored):
                 restored.visible = true
         if is_instance_valid(_left_card):

@@ -43,8 +43,6 @@ func _build_interface() -> void:
     left.add_child(_label("YOU & YOUR LANTERN", 12, Color("#ffe39a")))
     _floor_label = _label("Floor 1 — Sunlit Roots", 20, Color("#ffe8a0"))
     left.add_child(_floor_label)
-    _region_label = _label("A warm path through the roots", 13, Color("#d8e9bd"))
-    left.add_child(_region_label)
     left.add_child(_spacer(5))
     _health_label = _label("♥ Warmth  100 / 100", 15, Color("#fff2d0"))
     _health_label.tooltip_text = "Warmth is your health. Bumps make it lower. Hearts and rest make it higher."

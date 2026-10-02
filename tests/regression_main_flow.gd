@@ -479,6 +479,8 @@ func _run() -> void:
         return
     if not await _check_curious_wisp_facts_can_win_the_sticker(game):
         return
+    if not await _check_the_pause_cards_show_the_real_run(game):
+        return
 
     print("BEAUTY_FOREST_MAIN_FLOW_OK")
     TestProfile.end()
@@ -975,6 +977,47 @@ func _check_a_full_slot_verse_swap_says_what_steps_back(game: Node) -> bool:
     if not _check(game.stanzas_equipped.has(stepped_aside),
             "the displaced verse could not be swapped straight back"):
         return false
+    return true
+
+func _check_the_pause_cards_show_the_real_run(game: Node) -> bool:
+    ## The pause screen showed two sets of numbers. Its summary block was built
+    ## from the state update_hud parks, but the corner status card kept the
+    ## strings it was born with -- nothing in the whole project ever wrote
+    ## _floor_label, _health_label, _level_label, _stats_label, _sparkle_label or
+    ## _charm_label. Pausing at level 9, 42 warmth and 777 sparkles on floor 5
+    ## therefore painted "Floor 1", "Level 1", "Warmth 100/100", "Song power
+    ## 10", "0 sparkles" and "Charms 0/3: none yet" right beside the correct
+    ## figures, and the two eased bars had nothing setting their targets.
+    game._start_run(3)
+    await _frames(6)
+    game.charms_owned["boots"] = true
+    game.charms_equipped = {"boots": true}
+    game.sparkles = 777
+    game.hp = 42.0
+    game._refresh_ui()
+    await _frames(4)
+    game._pause_game()
+    await _frames(4)
+
+    var expected := {
+        "_floor_label": "Floor %d — %s" % [game.floor_number, String(game.region.get("name", "Sunlit Roots"))],
+        "_health_label": "♥ Warmth  %d / %d" % [roundi(game.hp), roundi(game.hp_max)],
+        "_sparkle_label": "✦ %d sparkles to spend" % game.sparkles,
+        "_level_label": "Level %d  ·  %d / %d soul to next gift" % [game.level, game.xp, game.xp_next],
+        "_charm_label": "Charms %d/%d: %s" % [game.charms_equipped.size(), BeautyContent.MAX_CHARMS, "Swift Boots"],
+    }
+    for field: String in expected:
+        var label: Label = game.ui.get(field)
+        if not _check(label != null and label.text == expected[field],
+                "the pause card's %s reads '%s', expected '%s'" % [field, label.text if label != null else "nothing", expected[field]]):
+            return false
+    # The eased bars were inert for the same reason -- _health_shown and
+    # _xp_shown were never assigned, so they had nothing to glide toward.
+    if not _check(game.ui._health_bar.value > 0.0 and game.ui._health_bar.value <= 1.0,
+            "the warmth bar never tracked warmth (value %f)" % game.ui._health_bar.value):
+        return false
+    game._resume_game()
+    await _frames(2)
     return true
 
 func _check_curious_wisp_facts_can_win_the_sticker(game: Node) -> bool:

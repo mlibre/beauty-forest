@@ -30,7 +30,6 @@ var _hud: Control
 var _health_bar: ProgressBar
 var _xp_bar: ProgressBar
 var _floor_label: Label
-var _region_label: Label
 var _health_label: Label
 var _level_label: Label
 var _stats_label: Label
@@ -92,6 +91,8 @@ var _walker_song := 10
 var _walker_floor := 1
 var _walker_region := "Sunlit Roots"
 var _walker_charms := ""
+var _walker_charm_count := 0
+var _walker_sparkles := 0
 var _walker_forecast := ""
 var _time := 0.0
 ## Eased HUD bar values. Labels snap instantly so numbers stay exact; the bars
@@ -139,7 +140,7 @@ func set_text_chrome_visible(visible_now: bool) -> void:
     _right_card.visible = visible_now
     _hint_label.visible = visible_now
     _log_label.visible = visible_now
-    for optional: Control in [_region_label, _level_label, _stats_label, _sparkle_label, _charm_label, _mote_label]:
+    for optional: Control in [_level_label, _stats_label, _sparkle_label, _charm_label, _mote_label]:
         if is_instance_valid(optional):
             optional.visible = visible_now
 

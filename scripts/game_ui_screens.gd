@@ -134,16 +134,25 @@ func show_pause(meta: Dictionary) -> void:
 ## The stats the icon HUD no longer paints, as one compact two-column block.
 ## Kept short on purpose: a pause screen is a breather, not a spreadsheet.
 ##
+## The Depth row also carries the floor's forecast. It used to have a label of
+## its own in the corner status card -- "A warm path through the roots", a
+## sentence nothing ever updated -- so the card showed one stale line and the
+## summary showed another, and as the longest wrapped line in that card the
+## duplicate also pushed the card off a 360px window at 200% text.
+##
 ## No fixed width: the block used to ask for 560px, which is wider than a 480px
 ## window, so the pause card grew to 533px and hung 26px off the left edge. The
 ## rows autowrap and the responsive pass clamps them to the card instead.
 func _walker_summary() -> Control:
+    var depth := "Floor %d — %s" % [_walker_floor, _walker_region]
+    if not _walker_forecast.is_empty():
+        depth += " · %s" % _walker_forecast
     var rows: Array = [
         ["Warmth", "%d / %d" % [_walker_hp, _walker_hp_max]],
         ["Level", "%d  ·  %d / %d soul to next gift" % [_walker_level, _walker_xp, _walker_xp_next]],
         ["Song power", "%d" % _walker_song],
         ["Charms", "%s" % ("none worn — Peddle's cart has charms ♥" if _walker_charms.is_empty() else _walker_charms)],
-        ["Depth", "Floor %d — %s" % [_walker_floor, _walker_region]],
+        ["Depth", depth],
     ]
     var box := VBoxContainer.new()
     box.add_theme_constant_override("separation", 4)
