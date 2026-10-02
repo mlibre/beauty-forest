@@ -15,11 +15,8 @@ description: Use when asked to find/fix bugs thoroughly, run a sustained bug-hun
 
 1. Read `AGENTS.md`, `project.godot`, and the relevant scenes, scripts.
 2. Run `git status --short`. Preserve all existing changes; never reset, discard, or overwrite them.
-3. Establish these commands from the project root:
-   - Import/check: `godot --headless --path . --import`
-   - One script parse: `godot --headless --path . --check-only --script res://path/to/file.gd`
-4. Choose an end condition: fixed iteration budget, queue drained, or endless.
-5. Build a candidate queue across tiers 1–9. Record evidence, affected flow, severity, reproduction status, and next action; re-rank as evidence changes. Inventory authored source files against those rules rather than limiting review to today’s changes.
+3. Choose an end condition: fixed iteration budget, queue drained, or endless.
+4. Build a candidate queue across tiers 1–9. Record evidence, affected flow, severity, reproduction status, and next action; re-rank as evidence changes. Inventory authored source files against those rules rather than limiting review to today’s changes.
 
 ## One-defect iteration
 

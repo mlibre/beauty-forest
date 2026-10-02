@@ -18,12 +18,7 @@ Before changing code:
 1. Read `AGENTS.md`, `project.godot`, and the relevant scenes/scripts/shaders.
 2. Run `godot --version` and confirm the project targets Godot 4.7, Jolt Physics, and the configured renderer.
 3. Run `git status --short`. Preserve all pre-existing work; never reset, discard, or overwrite user changes.
-4. Use these project checks from the project root:
-   - Import/check: `godot --headless --path . --import`
-   - Script parse: `godot --headless --path . --check-only --script res://path/to/file.gd`
-   - Focused test: `godot --headless --path . --script res://tests/test_name.gd`
-   - All regressions: `for test in tests/regression_*.gd; do godot --headless --path . --script "res://$test" || exit 1; done`
-   - Integration smoke: `godot --headless --path . --script res://tests/runtime_smoke.gd`
+4. Use `docs/TESTING.md` for project checks 
 5. Build a candidate queue across tiers P1–P8 below and rank it by measured or strongly evidenced impact.
 
 Godot has no general `--build` benchmark flag, and this project has no export preset. Do not invent one. Profile in the engine/editor or with a deterministic project-owned probe. Report headless, renderer, device, window/viewport, scene/floor, warm-up, and sample-count conditions.

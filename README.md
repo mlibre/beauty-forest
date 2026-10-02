@@ -46,47 +46,10 @@ to browse.
 - **F11** — toggle fullscreen
 - Touch devices receive an on-screen joystick plus SING, DASH, CART, BOOK, and COZY buttons
 
-## Verification
-
-Run the native integration smoke test from this folder:
-
-```bash
-godot --headless --path . --script res://tests/runtime_smoke.gd
-```
-
 All art is generated at runtime — every glyph in the game is drawn pixel by
-pixel into an `Image`, so the project ships with no external assets. Two
-developer tools guard that, and both are worth running after any art change:
+pixel into an `Image`, so the project ships with no external assets.
 
-```bash
-godot --headless --path . --script res://tests/capture_glyphs_check.gd  # every glyph, pixel-measured
-godot --headless --path . --script res://tests/capture_text_census.gd    # visible text per screen
-```
+Save data is stored in Godot's per-user `user://` directory, separate from the
+gentler-forest settings.
 
-`capture_glyphs_check.gd` rejects any glyph that is too dark, too desaturated,
-too solid or too thin to read against sunlit grass. `capture_text_census.gd`
-counts the text a player can actually see on each screen and **exits non-zero if
-the walking screen paints any** — it is a gate, not a report. It starts a real
-run first and fails if the HUD is not on screen, so that zero is measured rather
-than vacuous, and it reads hand-painted `draw_string` captions as well as
-Labels: a caption the minimap used to carry would otherwise be invisible to the
-count.
-
-Save data is stored in Godot's per-user `user://` directory, separate from the gentler-forest settings. Suites redirect that to a throwaway profile via `TestProfile`, so they never touch a real save.
-
-### The two suites that need a display
-
-Every other suite runs headless. These two render real frames and measure them,
-so they must be run windowed — a headless build has no rasterizer, so
-`RenderingServer.frame_post_draw` never fires and the run hangs to the timeout
-and exits 124:
-
-```bash
-godot --path . --resolution 640x360 --script tests/regression_luminance.gd  # menu is as bright as the walk
-godot --path . --resolution 1280x720 --script tests/regression_scrims.gd     # cards do not dim the forest into murk
-```
-
-`regression_luminance.gd` catches a screen that renders too dark to be cheerful.
-`regression_scrims.gd` catches the opposite failure — a card that dims the world
-too far — and also checks that High Contrast still darkens *more* than the
-normal case, so the accessibility setting cannot quietly become a no-op.
+Developers: see `docs/TESTING.md` for the test suites.
