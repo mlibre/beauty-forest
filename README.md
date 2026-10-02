@@ -16,8 +16,8 @@ Or open `project.godot` in Godot and press **F6/F5**.
 
 ## What you see
 
-The walking screen paints **no text at all** — it is pictures, the way a storybook
-is. Four things are on it:
+The walking screen paints **no sentences** — it is pictures, the way a storybook
+is, with two bare numbers beside their icons. Four things are on it:
 
 - a **lantern ring** in the top-left; the arc is how much warmth you have left
 - a **sparkle** glyph and count for what you can spend
@@ -66,6 +66,9 @@ godot --headless --path . --script res://tests/capture_text_census.gd    # visib
 `capture_glyphs_check.gd` rejects any glyph that is too dark, too desaturated,
 too solid or too thin to read against sunlit grass. `capture_text_census.gd`
 counts the text a player can actually see on each screen; the walking screen is
-expected to report **0 labels / 0 chars**.
+expected to report **0 labels / 0 chars**. It starts a real run first and fails
+if the HUD is not on screen, so that zero is measured rather than vacuous, and
+it reads hand-painted `draw_string` captions as well as Labels — a caption
+the minimap used to carry would otherwise be invisible to the count.
 
 Save data is stored in Godot's per-user `user://` directory, separate from the gentler-forest settings. Suites redirect that to a throwaway profile via `TestProfile`, so they never touch a real save.
