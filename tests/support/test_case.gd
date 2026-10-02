@@ -27,24 +27,102 @@ var suite_name := "TestCase"
 ## be called from a helper that does not itself want to unwind.
 var checks_run := 0
 
+## How many checks failed. `quit()` keeps only the last exit code a caller asks
+## for, so `ok()` alone cannot be the authority: a suite that records a failure
+## and then reaches `finish()` would have its `quit(1)` overwritten by
+## `finish()`'s `quit(0)` and report success. `finish()` therefore reads this.
+var failures := 0
+
+## True once finish() or stop() has run, so the watchdog below can tell
+## "reached the end" from "unwound halfway".
+var _finished := false
+
+## Whether the stall watchdog is already running.
+var _watching := false
+
+## Frames the watchdog will let a suite go without making a new check before
+## calling it dead. Generous on purpose: between two checks a suite may legitimately
+## wait out a settle loop of up to ~80 frames, and this must never fire on a
+## healthy run -- only on one that has already failed and stopped progressing.
+const STALL_FRAMES := 600
+
 
 ## Assert, then give the caller its condition back.
 ##
 ## Returning the condition rather than forcing every call site into an early
 ## return is what keeps a long check body readable; the suites that want the
 ## guard write `if not ok(...)`.
+##
+## This does NOT quit. A suite is free to keep checking after one failure, and
+## a run that reported one problem should report every problem it found. The
+## exit code is `finish()`'s to decide.
 func ok(condition: bool, message: String) -> bool:
 	checks_run += 1
 	if condition:
 		return true
+	failures += 1
 	push_error("%s_FAILED: %s" % [suite_name, message])
-	quit(1)
+	_watch_stalls()
 	return false
+
+
+## Watch for a suite that has already failed and then stopped progressing.
+##
+## `ok()` does not quit, so a guard (`if not ok(...): return false`) can unwind
+## the whole check body and the `_run()` loop, leaving nothing to call
+## finish() or stop(). The SceneTree then spins forever: a hang is worse than a
+## failure, because it looks like a slow test and blocks whatever waits on it.
+##
+## So this runs on the first failure and quits once the failure count stops
+## moving for STALL_FRAMES. It keys on the COUNT, not on a timer alone, so a
+## suite that keeps finding new problems is never killed mid-report.
+func _watch_stalls() -> void:
+	if _watching:
+		return
+	_watching = true
+	_await_stall_watchdog()
+
+
+func _await_stall_watchdog() -> void:
+	var seen := failures
+	var quiet := 0
+	while not _finished and quiet < STALL_FRAMES:
+		await process_frame
+		if failures != seen:
+			seen = failures
+			quiet = 0
+			continue
+		quiet += 1
+	if _finished:
+		return
+	TestProfile.end()
+	push_error("%s_FAILED: stalled after %d checks (%d failed)" % [suite_name, checks_run, failures])
+	quit(1)
 
 
 ## Fail without a condition -- for a path that has no boolean to test.
 func fail(message: String) -> bool:
 	return ok(false, message)
+
+
+## Leave the suite early because a guard failed, cleanly.
+##
+## `ok()` deliberately does not quit, so a suite can report every problem it
+## found rather than only the first. That makes `return` the natural way to
+## stop once continuing would only produce noise from a broken precondition --
+## but a bare `return` from `_run()` never reaches `finish()` and the SceneTree
+## keeps running forever, which reads as a hung test rather than a failed one.
+## Every guard therefore ends in `if not ok(...): stop(game, token); return`.
+##
+## `stop()` does NOT record a second failure: `ok()` already did. It only makes
+## sure the profile is torn down and the process exits non-zero.
+func stop(game: Node, ok_token: String) -> void:
+	_finished = true
+	TestProfile.end()
+	if game != null and is_instance_valid(game):
+		root.remove_child(game)
+		game.free()
+	quit(1)
 
 
 ## Wait `count` frames. Godot lays out and settles over several frames, so a
@@ -126,10 +204,19 @@ func newest_line_mentioning(log: Label, needle: String) -> String:
 ## Finish a suite: the OK line, the profile teardown and the teardown of the
 ## scene under test. Order matters -- TestProfile.end() must come before quit()
 ## or the throwaway directory is left behind.
+##
+## This is the ONLY place a suite quits, and it decides the exit code from the
+## failure count, so a suite cannot pass by accident. The OK line is printed
+## first either way: a failing run should say what it reached, and only the exit
+## code carries the verdict.
 func finish(game: Node, ok_token: String) -> void:
+	_finished = true
 	print("%s_OK (%d checks)" % [ok_token, checks_run])
 	TestProfile.end()
 	if game != null and is_instance_valid(game):
 		root.remove_child(game)
 		game.free()
+	if failures > 0:
+		quit(1)
+		return
 	quit(0)
