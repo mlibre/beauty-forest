@@ -286,7 +286,6 @@ static func _draw_glyph(image: Image, key: String, size: int) -> Image:
 ## Lantern songs. Each one is a note or a motion, so they share a musical
 ## vocabulary: a head, a stem, and a small flourish that carries the meaning.
 static func _draw_stanza(image: Image, key: String, s: float) -> void:
-	var tint := _gold()
 	match key:
 		"petals":
 			# A note with petals drifting off it.

@@ -19,10 +19,8 @@ const SLOT_SIZE := 30.0
 const SLOT_GAP := 5.0
 
 var warmth := 1.0
-var warmth_max := 1.0
 var sparkles := 0
 var floor_number := 1
-var floor_total := BeautyContent.CAMPAIGN_LENGTH
 var equipped: Array[String] = []
 var slot_capacity := BeautyContent.MAX_CHARMS
 var high_contrast := false
@@ -42,7 +40,6 @@ func set_values(state: Dictionary) -> void:
 	var hp := float(state.get("hp", 100.0))
 	var hp_max := maxf(1.0, float(state.get("hp_max", 100.0)))
 	warmth = clampf(hp / hp_max, 0.0, 1.0)
-	warmth_max = 1.0
 	var new_sparkles := int(state.get("sparkles", 0))
 	if new_sparkles > _last_sparkles:
 		_sparkle_pop = 1.0
