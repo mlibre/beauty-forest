@@ -1,3 +1,7 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Godot regenerates this from --doctool; it is 6.7MB of reference data that
+# nothing in the project reads.
+extension_api.json
