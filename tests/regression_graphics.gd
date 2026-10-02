@@ -91,14 +91,13 @@ func _check_soft_motes() -> void:
 func _check_minimap_safe_area() -> void:
     var minimap := CozyMinimap.new()
     minimap.size = Vector2(172, 184)
-    var title_top := minimap.size.y - 7.0 - ThemeDB.fallback_font.get_ascent(CozyMinimap.TITLE_FONT_SIZE)
     for dimensions: int in [50, 54, 60, 66, 72]:
         var layout := minimap._map_layout(dimensions, dimensions)
         var map_size: Vector2 = layout["map_size"]
         var origin: Vector2 = layout["origin"]
         # Draw rects overlap by 0.35px to avoid seams between cells.
         var cell_bottom := origin.y + map_size.y + 0.35
-        assert(cell_bottom <= title_top)
+        assert(cell_bottom <= minimap.size.y - CozyMinimap.MAP_MARGIN)
         assert(origin.x >= CozyMinimap.MAP_MARGIN)
         assert(origin.x + map_size.x + 0.35 <= minimap.size.x - CozyMinimap.MAP_MARGIN)
     minimap.free()

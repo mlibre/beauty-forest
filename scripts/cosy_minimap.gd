@@ -2,8 +2,6 @@ class_name CozyMinimap
 extends Control
 
 const MAP_MARGIN := 9.0
-const MAP_FOOTER := 24.0
-const TITLE_FONT_SIZE := 9
 
 var dungeon: Dictionary = {}
 var player_position := Vector3.ZERO
@@ -58,7 +56,6 @@ func _draw() -> void:
     var player_map := origin + Vector2(player_position.x, player_position.z) * scale
     draw_circle(player_map, 3.8, Color("#fff7d4"))
     draw_circle(player_map, 1.8, Color("#e89562"))
-    draw_string(ThemeDB.fallback_font, Vector2(10, size.y - 7), "GROVE MAP", HORIZONTAL_ALIGNMENT_LEFT, -1, TITLE_FONT_SIZE, Color("#ffe9a0"))
 
 func _ensure_grid_texture(width: int, height: int, floor_color: Color, wall_color: Color) -> void:
     ## Rebuild the static grove layer only when it actually changes: a new
@@ -79,7 +76,7 @@ func _map_layout(width: int, height: int) -> Dictionary:
         Vector2(MAP_MARGIN, MAP_MARGIN),
         Vector2(
             maxf(1.0, size.x - MAP_MARGIN * 2.0),
-            maxf(1.0, size.y - MAP_MARGIN - MAP_FOOTER)
+            maxf(1.0, size.y - MAP_MARGIN * 2.0)
         )
     )
     var safe_width := maxi(1, width)

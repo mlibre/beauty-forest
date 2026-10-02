@@ -127,17 +127,16 @@ func _fit_layout() -> void:
     if is_instance_valid(_minimap):
         _minimap.visible = not _compact_hud and not hide_minimap
         var map_side := clampf(minf(viewport_size.x, viewport_size.y) * 0.19, 96.0, 172.0 if not small_height else 132.0)
-        _minimap.custom_minimum_size = Vector2(map_side, map_side + 12.0)
+        _minimap.custom_minimum_size = Vector2(map_side, map_side)
         _minimap.reset_size()
-        # CozyMinimap sets no floor of its own, so the 172x184 it was built with
-        # is only an initial size — measure the size it actually got rather than
-        # the one that was requested.
+        # CozyMinimap sets no floor of its own, so the size it was built with is
+        # only an initial size — measure the size it actually got rather than the
+        # one that was requested.
         var map_rect := _effective_rect(_minimap)
-        # The bottom-right corner is the touch cluster's, and parking the GROVE
-        # MAP in it meant SING/DASH/CART/BOOK/COZY painted straight over the
-        # map on every touchscreen. Try the corner, then straight above the
-        # cluster, then beside it; the map yields rather than hide underneath
-        # the buttons.
+        # The bottom-right corner is the touch cluster's, and parking the map
+        # there meant SING/DASH/CART/BOOK/COZY painted straight over it on every
+        # touchscreen. Try the corner, then straight above the cluster, then
+        # beside it; the map yields rather than hide underneath the buttons.
         var corner := Vector2(
             maxf(0.0, viewport_size.x - map_rect.size.x - 14.0),
             maxf(0.0, viewport_size.y - map_rect.size.y - 14.0)
@@ -374,7 +373,7 @@ func _touch_cluster_rect() -> Rect2:
     ## `is_visible_in_tree()`: the menu and the ending screens hide the whole
     ## HUD, and a fit that runs underneath them (every resize, every panel
     ## open) must still know the buttons own the corner, or it would put the
-    ## GROVE MAP straight back under them.
+    ## grove map straight back under them.
     if not is_instance_valid(_touch_root) or not _touch_root.visible:
         return Rect2()
     var cluster := Rect2()

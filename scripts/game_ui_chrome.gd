@@ -287,7 +287,7 @@ func _build_touch_controls() -> void:
     # centered desktop hint; the old positive row offset put OPTIONS (and most
     # of SHOP) off a 1280x720 viewport.
     #
-    # The whole cluster lands in the same bottom-right corner the GROVE MAP
+    # The whole cluster lands in the same bottom-right corner the grove map
     # wants, so GameUILayout measures these live rects and moves the map (and
     # the log, under the joystick) out of the way instead of letting the opaque
     # buttons paint over them.

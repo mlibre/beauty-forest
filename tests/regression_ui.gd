@@ -14,7 +14,7 @@ extends SceneTree
 ##  3. The 200% text-size setting widened the HUD and modal cards past the live
 ##     viewport, and tall modal content expanded a tiny card off-screen.
 ##  4. The on-screen touch controls own the bottom corners, but the layout
-##     parked the GROVE MAP in the bottom-right corner *under* the SING/DASH/
+##     parked the grove map in the bottom-right corner *under* the SING/DASH/
 ##     CART/BOOK/COZY cluster and the log under the joystick, so on a
 ##     touchscreen both readouts were painted over by opaque buttons.
 
@@ -71,11 +71,11 @@ func _check_touch_layout(size: Vector2i) -> void:
 	# A control that yielded (nothing on screen fits clear of the buttons) is
 	# allowed to sit anywhere in the window; only what is actually painted has
 	# to stay readable.
-	_check(not _ui._minimap.visible or not map_rect.intersects(cluster), "the touch buttons cover the GROVE MAP %s: map=%s cluster=%s" % [tag, str(map_rect), str(cluster)])
-	_check(not _ui._minimap.visible or not map_rect.intersects(right_rect), "the Mote card covers the GROVE MAP %s" % tag)
+	_check(not _ui._minimap.visible or not map_rect.intersects(cluster), "the touch buttons cover the grove map %s: map=%s cluster=%s" % [tag, str(map_rect), str(cluster)])
+	_check(not _ui._minimap.visible or not map_rect.intersects(right_rect), "the Mote card covers the grove map %s" % tag)
 	_check(not _ui._log_label.visible or not log_rect.intersects(joystick), "the touch joystick covers the log %s: log=%s joystick=%s" % [tag, str(log_rect), str(joystick)])
 	_check(not _ui._log_label.visible or not log_rect.intersects(cluster), "the touch buttons cover the log %s: log=%s cluster=%s" % [tag, str(log_rect), str(cluster)])
-	_check(parent.encloses(map_rect), "the GROVE MAP left the window %s: %s" % [tag, str(map_rect)])
+	_check(parent.encloses(map_rect), "the grove map left the window %s: %s" % [tag, str(map_rect)])
 	_check(parent.encloses(log_rect), "the log left the window %s: %s" % [tag, str(log_rect)])
 	_ui._touch_root.visible = was_visible
 	_ui._fit_layout()
