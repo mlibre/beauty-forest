@@ -67,14 +67,21 @@ var _menu_scrim: ColorRect
 ## A sweep of each value against a real render, reading the world still
 ## visible AROUND the card (gameplay there measures 177):
 ##
-##   menu  0.20 -> 112     pause 0.48 -> 84     cart 0.64 -> 63
+##   menu  0.20 -> 112     pause 0.32 -> 100     cart 0.64 -> 63
 ##
 ## The menu is the first thing a player sees and carries the whole bright
 ## golden-dusk promise, so it barely dims at all. The pause card and the cart
 ## deliberately let the world recede, and are kept only as dark as the panel
 ## needs to stay legible -- tests/regression_luminance.gd holds the floor.
 const MENU_SCRIM_ALPHA := 0.20
-const PAUSE_SCRIM_ALPHA := 0.48
+## Pause: 0.32, not the 0.48 this used to be. Measured on a real pause frame,
+## counting only forest (the HUD cards are excluded -- they are UI, and sampling
+## them reported a "murk zone" that was never there): 0.48 left the visible world
+## at 56% of its own brightness, 0.32 at 69%. The card face is opaque, so a
+## lighter scrim costs its text nothing. Darker did not read as evening; it just
+## took the light out of the forest the card is supposed to sit in front of.
+## tests/regression_scrims.gd holds both the floor and the ceiling.
+const PAUSE_SCRIM_ALPHA := 0.32
 const SHOP_SCRIM_ALPHA := 0.64
 var _overlay_card: PanelContainer
 var _overlay_content: VBoxContainer
