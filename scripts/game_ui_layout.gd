@@ -471,26 +471,21 @@ func _fit_modal_card(card: PanelContainer) -> void:
     # above already caps the card to the window, so only content minimums
     # larger than the window itself can still overflow — symmetrically.
 
-## The title menu's own overlay frame. Identical to _show_overlay() except
-## that it raises the lighter menu scrim, so the forest behind the menu
-## stays a bright golden dusk instead of being pushed into the dark.
+## The title menu's overlay frame: the same frame as _show_overlay(), but with
+## the menu's lighter scrim instead of the pause card's. Parameterised rather
+## than duplicated, because the two copies drifting apart is how the menu ended
+## up wearing the pause card's 0.48 scrim in the first place.
 func _show_menu_overlay() -> void:
-    _dismiss_beat_ring()
-    _cancel_story()
-    _reset_touch_joystick()
-    if is_instance_valid(_menu_scrim):
-        _menu_scrim.visible = true
-    _overlay_scrim.visible = false
-    _overlay_card.visible = true
-    _overlay_card.modulate.a = 1.0
-    _fit_layout()
+    _show_overlay(true)
 
-func _show_overlay() -> void:
+## Raise the overlay card. `for_menu` picks which scrim dims the world: the
+## pause card's heavy one, or the menu's light one that keeps the forest bright.
+func _show_overlay(for_menu: bool = false) -> void:
     _dismiss_beat_ring()
     _cancel_story()
     _reset_touch_joystick()
-    _menu_scrim.visible = false
-    _overlay_scrim.visible = true
+    _menu_scrim.visible = for_menu
+    _overlay_scrim.visible = not for_menu
     _overlay_card.visible = true
     _overlay_card.modulate.a = 1.0
     _fit_layout()

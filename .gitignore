@@ -8,3 +8,6 @@ extension_api.json
 
 # Written by tests/capture_glyphs.gd to compare one render against the next.
 glyph_sheet.png
+# Godot writes the import sidecar beside any tracked resource; this one is
+# only generated because the sheet above is imported on sight.
+glyph_sheet.png.import
