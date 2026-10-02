@@ -46,9 +46,6 @@ to browse.
 - **F11** — toggle fullscreen
 - Touch devices receive an on-screen joystick plus SING, DASH, CART, BOOK, and COZY buttons
 
-All art is generated at runtime — every glyph in the game is drawn pixel by
-pixel into an `Image`, so the project ships with no external assets.
-
 Save data is stored in Godot's per-user `user://` directory, separate from the
 gentler-forest settings.
 

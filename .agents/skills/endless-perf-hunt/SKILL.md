@@ -18,7 +18,7 @@ Before changing code:
 1. Read `AGENTS.md`, `project.godot`, and the relevant scenes/scripts/shaders.
 2. Run `godot --version` and confirm the project targets Godot 4.7, Jolt Physics, and the configured renderer.
 3. Run `git status --short`. Preserve all pre-existing work; never reset, discard, or overwrite user changes.
-4. Use `docs/TESTING.md` for project checks 
+4. Use `docs/TESTING.md` for the project checks and commands.
 5. Build a candidate queue across tiers P1–P8 below and rank it by measured or strongly evidenced impact.
 
 Godot has no general `--build` benchmark flag, and this project has no export preset. Do not invent one.
@@ -116,8 +116,6 @@ Never “fix” smoothness with camera shake.
 - Oversized source assets or unnecessary startup scenes
 - Import-time or editor-only cost caused by project structure
 
-Do not claim export/bundle wins without a matching export preset/template and measured artifact load.
-
 ### P8. Future headroom
 
 Report worker/off-main-thread opportunities, deeper LOD/occlusion work, or architecture migrations as backlog. Do not implement a broad platform change inside a micro-optimization iteration.
@@ -136,10 +134,9 @@ These are not performance wins:
 
 A quality cut requires explicit user approval. If approved, preserve the closest look that meets the agreed target and document the visual/perf tradeoff.
 
-`AGENTS.md` holds the design rules and `project.godot` the engine and renderer.
-Performance never outranks the rules — treat a violation as a correctness defect
-even at zero measured cost: fix it under a `fix(render):` commit rather than
-disguising it as performance work.
+A design-rule violation is a correctness defect even at zero measured cost: fix
+it under a `fix(render):` commit rather than disguising it as performance work.
+The rules live in `AGENTS.md`, which every iteration must read.
 
 ## Hunting discipline
 

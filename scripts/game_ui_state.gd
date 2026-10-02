@@ -269,6 +269,24 @@ func _label(text: String, size: int, color: Color) -> Label:
     label.add_theme_constant_override("shadow_offset_y", 2)
     return label
 
+## One glyph from the game's own icon language, sized in px and tinted.
+##
+## The building block of "show, don't tell": a heading that names a thing can
+## carry that thing's picture next to the words, and a number can carry the
+## picture of what it counts. An unknown key falls back to Mote's mark rather
+## than a blank square, so a missing glyph is visible and worth a bug report.
+func _icon(glyph_key: String, side: float, tint: Color = Color.WHITE) -> TextureRect:
+    var resolved := glyph_key if GardenGlyphs.has_glyph(glyph_key) else GardenGlyphs.MOTE
+    var icon := TextureRect.new()
+    icon.texture = GardenGlyphs.get_glyph(resolved)
+    icon.custom_minimum_size = Vector2(side, side)
+    icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    icon.modulate = tint
+    icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    return icon
+
 func _button(text: String, primary: bool) -> Button:
     var button := Button.new()
     button.text = text

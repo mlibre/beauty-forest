@@ -37,20 +37,20 @@ func _clear_panel() -> void:
 ## height to give. _shop_scroll is rebound because the previous one was freed
 ## along with the frame.
 func _panel_list(separation: int = 8) -> VBoxContainer:
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_style_scrollbars(scroll)
-	_shop_frame.add_child(scroll)
-	_shop_scroll = scroll
-	var list := VBoxContainer.new()
-	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	list.add_theme_constant_override("separation", separation)
-	scroll.add_child(list)
-	_shop_content = list
-	return list
+    var scroll := ScrollContainer.new()
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    _style_scrollbars(scroll)
+    _shop_frame.add_child(scroll)
+    _shop_scroll = scroll
+    var list := VBoxContainer.new()
+    list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    list.add_theme_constant_override("separation", separation)
+    scroll.add_child(list)
+    _shop_content = list
+    return list
 
 ## A titled shelf of wares, wrapped into as many columns as the card is wide.
 ##
@@ -60,97 +60,97 @@ func _panel_list(separation: int = 8) -> VBoxContainer:
 ## `worn_of` is the count the heading shows, so "2 charms" can be read off the
 ## heading without a line per slot.
 func _shelf(list: VBoxContainer, title: String, glyph_key: String, count: String, worn_of: String = "") -> GridContainer:
-	var heading := HBoxContainer.new()
-	heading.add_theme_constant_override("separation", 8)
-	list.add_child(heading)
-	heading.add_child(_icon(GardenGlyphs.MOTE if glyph_key.is_empty() else glyph_key, 20, Color("#ffe497")))
-	var label := _label(title, 15, Color("#ffe497"))
-	heading.add_child(label)
-	if not count.is_empty():
-		var count_label := _label(count, 15, Color("#fff0c8"))
-		heading.add_child(count_label)
-	if not worn_of.is_empty():
-		heading.add_child(_label("· %s" % worn_of, 13, Color("#bcd2a8")))
-	var grid := GridContainer.new()
-	grid.columns = 6
-	grid.add_theme_constant_override("hseparation", 10)
-	grid.add_theme_constant_override("vseparation", 10)
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	list.add_child(grid)
-	return grid
+    var heading := HBoxContainer.new()
+    heading.add_theme_constant_override("separation", 8)
+    list.add_child(heading)
+    heading.add_child(_icon(GardenGlyphs.MOTE if glyph_key.is_empty() else glyph_key, 20, Color("#ffe497")))
+    var label := _label(title, 15, Color("#ffe497"))
+    heading.add_child(label)
+    if not count.is_empty():
+    var count_label := _label(count, 15, Color("#fff0c8"))
+    heading.add_child(count_label)
+    if not worn_of.is_empty():
+    heading.add_child(_label("· %s" % worn_of, 13, Color("#bcd2a8")))
+    var grid := GridContainer.new()
+    grid.columns = 6
+    grid.add_theme_constant_override("hseparation", 10)
+    grid.add_theme_constant_override("vseparation", 10)
+    grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    list.add_child(grid)
+    return grid
 
 ## One ware on a shelf, as a picture with a name and a price.
 ##
-## `sub` and `price_text` are deliberately absent: the card paints its own
-## status in ink (lit rim = wearing, dim = unaffordable, heart = a gift) and the
-## header line explains the section, so the words that used to sit under every
-## ware -- "in pocket -- tap to wear", "swap it in for a verse you're humming",
-## "take for sparkles 5", "free gift" -- are gone from the painted screen and
-## live on in the tooltip the player asks for.
-func _ware_card(grid: GridContainer, item: Dictionary, state: Dictionary, enabled: bool, is_owned: bool, slots_full: bool = false, free_item: bool = false, pressed: Callable = Callable()) -> Button:
-	var sparkles := int(state.get("sparkles", 0))
-	var price := int(item.get("price", 0))
-	var button := Button.new()
-	var card := CozyCard.new()
-	card.name = String(item.get("key", "ware"))
-	card.item = item
-	card.price = price
-	card.selected = bool(state.get("selected_%s" % String(item.get("key", "")), false))
-	card.owned = is_owned
-	card.free_item = free_item
-	card.affordable = enabled and (is_owned or free_item or price <= sparkles)
-	card.high_contrast = _high_contrast
-	button.add_child(card)
-	# A Button sizes to its own text minimum, and this row paints no text at
-	# all, so it would collapse to the bare glyph minimum and the shelf would
-	# pile up in one column. The card sets the floor instead.
-	button.custom_minimum_size = CozyCard.new().custom_minimum_size
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.focus_mode = Control.FOCUS_NONE
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-	button.disabled = not card.affordable
-	button.tooltip_text = _ware_tooltip(item, card, slots_full)
-	button.icon = null
-	# The card is a plain child, so it must fill the button's rect and take no
-	# mouse input of its own -- otherwise it swallows the press before the
-	# button sees it.
-	card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if pressed.is_valid():
-		button.pressed.connect(pressed)
-	var border := Color("#ffe08a") if card.selected else Color("#8abf75")
-	button.add_theme_stylebox_override("normal", _button_style(Color(0, 0, 0, 0), border, 14))
-	button.add_theme_stylebox_override("hover", _button_style(Color(1.0, 0.94, 0.72, 0.14), Color("#ffe69b"), 14))
-	button.add_theme_stylebox_override("pressed", _button_style(Color(1.0, 0.90, 0.55, 0.22), Color("#fff0b0"), 14))
-	button.add_theme_stylebox_override("disabled", _button_style(Color(0, 0, 0, 0), Color(1, 1, 1, 0.16), 14))
-	grid.add_child(button)
-	return button
+## The card paints its own state in ink -- a gold rim and a halo when you are
+## wearing it, a dimmed face when you cannot afford it, a heart instead of a
+## sparkle when it is a gift -- so the words that used to sit under every ware
+## ("in pocket -- tap to wear", "swap it in for a verse you're humming", "take
+## for sparkles 5", "free gift") are gone from the painted screen. What the
+## ink cannot say lives on in the tooltip the player asks for by hovering.
+func _ware_card(grid: GridContainer, item: Dictionary, sparkles: int, worn: bool, is_owned: bool, free_item: bool, slots_full: bool, pressed: Callable) -> Button:
+    var price := int(item.get("price", 0))
+    var affordable := is_owned or free_item or price <= sparkles
+    var button := Button.new()
+    var card := CozyCard.new()
+    card.name = String(item.get("key", "ware"))
+    card.item = item
+    card.price = price
+    card.selected = worn
+    card.owned = is_owned
+    card.free_item = free_item
+    card.affordable = affordable
+    card.high_contrast = _high_contrast
+    button.add_child(card)
+    # A Button's minimum is max(custom_minimum_size, its own text), and this row
+    # paints no text at all, so without a floor the shelf would collapse into a
+    # single column. The card knows its own size; the button inherits it.
+    button.custom_minimum_size = card.custom_minimum_size
+    button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    button.focus_mode = Control.FOCUS_NONE
+    button.disabled = not affordable
+    button.tooltip_text = _ware_tooltip(item, card, sparkles, slots_full)
+    # The card is a plain child, so it has to fill the button's rect and take no
+    # mouse input itself -- otherwise it swallows the press before the button
+    # ever sees it.
+    card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    button.pressed.connect(pressed)
+    var border := Color("#ffe08a") if worn else Color("#8abf75")
+    button.add_theme_stylebox_override("normal", _button_style(Color(0, 0, 0, 0), border, 14))
+    button.add_theme_stylebox_override("hover", _button_style(Color(1.0, 0.94, 0.72, 0.14), Color("#ffe69b"), 14))
+    button.add_theme_stylebox_override("pressed", _button_style(Color(1.0, 0.90, 0.55, 0.22), Color("#fff0b0"), 14))
+    button.add_theme_stylebox_override("disabled", _button_style(Color(0, 0, 0, 0), Color(1, 1, 1, 0.16), 14))
+    grid.add_child(button)
+    return button
 
 ## What the card cannot say in ink, asked for by hovering.
 ##
-## Every state the card paints ambiguously is spelled out here: what the ware
-## does, whether tapping wears or swaps, and -- for a price you cannot meet --
-## how much is still needed. A card may look unaffordable; this is where the
-## player learns it is worth saving for.
-func _ware_tooltip(item: Dictionary, card: CozyCard, slots_full: bool) -> String:
-	var what := String(item.get("description", ""))
-	var key := String(item.get("key", ""))
-	if card.free_item:
-		var swap_note := " Tap to swap it in; one of your two verses will step back." if String(item.get("kind", "verse")) == "verse" else " Tap to hum this one instead."
-		return "%s — free to hum any time.%s" % [what, swap_note]
-	if card.selected:
-		return "%s — wearing it now. Tap to rest it." % what
-	if card.owned:
-		var swap_note := " Tap to swap it in for a charm you are wearing." if slots_full else " Tap to wear it."
-		return "%s — already yours.%s" % [what, swap_note]
-	if slots_full:
-		return "%s — all %d charm slots are full, so this waits in your pocket until you swap one." % [
-			what, BeautyContent.MAX_CHARMS]
-	if card.price > 0 and not card.affordable:
-		return "You need %d sparkles — soothe %d more wisp%s. It will keep. ♥" % [
-			card.price, card.price - int(card.get_meta("sparkles", 0)),
-			"" if card.price - int(card.get_meta("sparkles", 0)) == 1 else "s"]
-	return what
+## Every state the card paints only suggestively is spelled out here: what the
+## ware does, whether tapping wears or swaps, and -- for a price you cannot meet
+## -- how much more is needed. A dimmed card says "not yet"; this is where the
+## player learns what it is saving toward.
+func _ware_tooltip(item: Dictionary, card: CozyCard, sparkles: int, slots_full: bool) -> String:
+    var what := String(item.get("description", ""))
+    if card.free_item:
+    # Nobody owns a verse, so this one must not describe a pocket or a
+    # purchase -- the swap is the whole truth.
+    var swap_note := " Tap to swap it in; one of your two verses will step back." if String(item.get("kind", "verse")) == "verse" else " Tap to hum this one instead."
+    return "%s — free to hum any time.%s" % [what, swap_note]
+    if card.selected:
+    return "%s — wearing it now. Tap to rest it." % what
+    if card.owned:
+    # With every slot taken the tap swaps rather than adds, and "tap to wear"
+    # would be a small lie.
+    var swap_note := " Tap to swap it in for a charm you are wearing." if slots_full else " Tap to wear it."
+    return "%s — already yours.%s" % [what, swap_note]
+    if slots_full:
+    return "%s — all %d charm slots are full, so this waits in your pocket until you swap one." % [
+    what, BeautyContent.MAX_CHARMS]
+    if card.price > 0 and not card.affordable:
+    var short := card.price - sparkles
+    return "You need %d sparkles — soothe %d more wisp%s. It will keep. ♥" % [
+    card.price, short, "" if short == 1 else "s"]
+    return what
 
 func show_shop(state: Dictionary) -> void:
     _dismiss_beat_ring()
@@ -160,69 +160,79 @@ func show_shop(state: Dictionary) -> void:
     _shop_card.visible = true
     _fit_layout()
     _clear_panel()
+    var sparkles := int(state.get("sparkles", 0))
     var heading := HBoxContainer.new()
+    heading.add_theme_constant_override("separation", 10)
     _shop_frame.add_child(heading)
-    var title := _label("Peddle’s cozy cart ♥", 28, Color("#ffe49b"))
+    heading.add_child(_icon(GardenGlyphs.CART, 26, Color("#ffe49b")))
+    var title := _label("Peddle’s cozy cart ♥", 26, Color("#ffe49b"))
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     heading.add_child(title)
-    heading.add_child(_label("✦ %d to spend" % int(state.get("sparkles", 0)), 22, Color("#ffe987")))
-    _shop_frame.add_child(_label("Everything helps all by itself. Warm tea heals you now. Pick up to %d charms + %d lantern songs." % [BeautyContent.MAX_CHARMS, BeautyContent.MAX_STANZAS], 14, Color("#dce9c4")))
+    # The purse is a sparkle and a number, not "12 to spend" -- the icon beside
+    # the digits already says what they are.
+    heading.add_child(_icon(GardenGlyphs.SPARKLE, 22, Color("#ffe987")))
+    heading.add_child(_label(str(sparkles), 22, Color("#ffe987")))
     _shop_frame.add_child(_separator())
-    var list := _panel_list(7)
+    var list := _panel_list(12)
 
-    list.add_child(_section_label("1 · WARM TEA — DRINK NOW ♥"))
-    # Spending sparkles on tea while already warm used to be a silent no-op
-    # purchase: the button was live, the price was charged, and nothing
-    # happened. Offer it only when it can actually do something, and say why.
+    # Warm tea: one ware, so it gets a shelf of its own only because it is
+    # bought constantly and heals. Spending sparkles on tea while already warm
+    # used to be a silent no-op -- the button was live, the price was charged
+    # and nothing happened -- so it is dimmed at full warmth and the hover says
+    # why.
     var warmth_full := float(state.get("hp", 0.0)) >= float(state.get("hp_max", 1.0))
+    var tea_shelf := _shelf(list, "WARM TEA", "tea", "")
     for charm: Dictionary in BeautyContent.CHARMS:
         if String(charm["key"]) != "tea":
             continue
-        var tea_button := _shop_item(charm, int(state.get("sparkles", 0)), false, not warmth_full, false)
+        var tea_button := _ware_card(tea_shelf, charm, sparkles, false, false, false, false, func(): buy_requested.emit("tea"))
+        tea_button.disabled = warmth_full or not tea_button.disabled
         if warmth_full:
             tea_button.tooltip_text = "You are warm as a toast already — keep these sparkles for a charm ♥"
-        tea_button.pressed.connect(func(): buy_requested.emit("tea"))
-        list.add_child(tea_button)
 
-    list.add_child(_section_label("2 · COZY CHARMS — PICK UP TO %d ♥" % BeautyContent.MAX_CHARMS))
     var owned: Dictionary = state.get("owned", {})
     var equipped: Dictionary = state.get("charms", {})
     var slots_full := equipped.size() >= BeautyContent.MAX_CHARMS
+    # The heading carries the count, so it never has to be read off a sentence:
+    # a gold rim on a card is "wearing", and this is how many there are.
+    var charm_shelf := _shelf(list, "COZY CHARMS", "scarf", "%d/%d" % [
+        equipped.size(), BeautyContent.MAX_CHARMS])
     for charm: Dictionary in BeautyContent.CHARMS:
         var key := String(charm["key"])
         if key == "tea":
             continue
-        if bool(owned.get(key, false)):
-            var toggle := _shop_item(charm, int(state.get("sparkles", 0)), bool(equipped.get(key, false)), true, true, slots_full)
-            toggle.pressed.connect(func(): charm_equip_requested.emit(key))
-            list.add_child(toggle)
-        else:
-            var buy := _shop_item(charm, int(state.get("sparkles", 0)), false, true, false, slots_full)
-            if slots_full:
-                buy.tooltip_text = "%s — all %d charm slots are full, so this waits in your pocket until you swap one." % [
-                    String(charm.get("description", "")), BeautyContent.MAX_CHARMS]
-            buy.pressed.connect(func(): buy_requested.emit(key))
-            list.add_child(buy)
+        var is_owned := bool(owned.get(key, false))
+        var worn := bool(equipped.get(key, false))
+        # An owned charm toggles wear; an unowned one buys. Which of the two it
+        # is has to be visible before the press, so the card's tooltip leads
+        # with it and the rim only ever answers "am I wearing it".
+        _ware_card(charm_shelf, charm, sparkles, worn, is_owned, false, slots_full,
+            func():
+                if is_owned:
+                    charm_equip_requested.emit(key)
+                else:
+                    buy_requested.emit(key))
 
-    list.add_child(_section_label("3 · LANTERN SONGS — PICK UP TO %d ♥" % BeautyContent.MAX_STANZAS))
     var stanzas: Dictionary = state.get("stanzas", {})
+    var stanza_shelf := _shelf(list, "LANTERN SONGS", GardenGlyphs.STANZA_PREFIX + "petals", "%d/%d" % [
+        stanzas.size(), BeautyContent.MAX_STANZAS])
     for stanza: Dictionary in BeautyContent.STANZAS:
         var key := String(stanza["key"])
-        var toggle := _shop_item(stanza, 0, bool(stanzas.get(key, false)), true, true, false, true)
-        toggle.pressed.connect(func(): stanza_equip_requested.emit(key))
-        list.add_child(toggle)
+        var toggle := _ware_card(stanza_shelf, stanza.duplicate(), sparkles,
+            bool(stanzas.get(key, false)), false, true, false, func(): stanza_equip_requested.emit(key))
+        toggle.name = key
 
-    list.add_child(_section_label("4 · MOTE’S HUM — PICK ONE ♥"))
     var verse: Dictionary = state.get("mote_verse", {})
+    var verse_shelf := _shelf(list, "MOTE’S HUM", GardenGlyphs.VERSE_PREFIX + "lodestar", "")
     for option: Dictionary in BeautyContent.MOTE_VERSES:
         var key := String(option["key"])
         var selected := String(verse.get("key", "")) == key
         # Exclusive and free, like the verses: nobody owns a counter-melody.
         var mote_option: Dictionary = option.duplicate()
         mote_option["kind"] = "mote"
-        var toggle := _shop_item(mote_option, 0, selected, true, true, false, true)
-        toggle.pressed.connect(func(): mote_verse_requested.emit(key))
-        list.add_child(toggle)
+        var toggle := _ware_card(verse_shelf, mote_option, sparkles, selected, false, true, false,
+            func(): mote_verse_requested.emit(key))
+        toggle.name = key if not key.is_empty() else "mote_silence"
 
     _shop_frame.add_child(_centered_button("♥  Done — back to the walk", true, func(): close_shop()))
     _fit_layout()
@@ -401,98 +411,3 @@ func close_panels() -> void:
     _beat_ring.visible = false
     _cancel_story()
     _reset_touch_joystick()
-
-## The little picture at the left of a shop row.
-##
-## The three wares live in three different tables that share a key namespace --
-## `moss` is both a charm and a stanza -- so each row asks for its glyph by
-## kind. A row for a key with no glyph yet gets a neutral Mote mark rather than
-## a hole, so the gap is visible and worth a bug report.
-
-## The little picture at the left of a shop row.
-##
-## The three wares live in three different tables that share a key namespace --
-## `moss` is both a charm and a stanza -- so each row asks for its glyph by
-## kind. A row for a key with no glyph yet gets a neutral Mote mark rather than
-## a hole, so the gap is visible and worth a bug report.
-func _wore_icon(item: Dictionary, selected: bool) -> TextureRect:
-    var kind := String(item.get("kind", "charm"))
-    var key := String(item.get("key", ""))
-    var glyph_key := key
-    if kind == "verse":
-        glyph_key = GardenGlyphs.STANZA_PREFIX + key
-    elif kind == "mote":
-        glyph_key = GardenGlyphs.VERSE_PREFIX + key
-    if not GardenGlyphs.has_glyph(glyph_key):
-        glyph_key = GardenGlyphs.MOTE
-    var icon := TextureRect.new()
-    icon.texture = GardenGlyphs.get_glyph(glyph_key)
-    icon.custom_minimum_size = Vector2(34, 34)
-    icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-    icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    # Worn things get a lit rim so the eye finds the equipped row instantly.
-    icon.modulate = Color(1.0, 1.0, 1.0) if not selected else Color(1.12, 1.08, 0.95)
-    return icon
-
-func _shop_item(item: Dictionary, sparkles: int, selected: bool, enabled: bool, is_owned: bool, slots_full: bool = false, free_item: bool = false) -> Button:
-    var key := String(item.get("key", ""))
-    var price := int(item.get("price", 0))
-    # A verse is nobody's to own -- the shop listed every unworn one as "in
-    # pocket -- tap to wear" and "already yours", which describes a purchase
-    # that never happened. Verses now say what they are: a swap.
-    var status := "♥ WEARING" if selected else (("hum this instead" if String(item.get("kind", "verse")) == "mote" else "swap it in for a verse you're humming") if free_item else ("in pocket — tap to wear" if is_owned else ("take for ✦ %d" % price if price > 0 else "try it on")))
-    var price_text := "✦ %d" % price if price > 0 else "free gift"
-    # A row is a PICTURE of the thing, its name, and what it costs. The full
-    # description and the tap-consequence live in the tooltip, which the player
-    # asks for by hovering -- so browsing the cart is scanning icons, not
-    # reading 41 paragraphs.
-    var button := Button.new()
-    button.custom_minimum_size = Vector2(0, 52)
-    var row := HBoxContainer.new()
-    row.add_theme_constant_override("separation", 10)
-    row.set_anchors_preset(Control.PRESET_FULL_RECT)
-    row.offset_left = 12
-    row.offset_right = -12
-    row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    row.add_child(_wore_icon(item, selected))
-    var words := VBoxContainer.new()
-    words.add_theme_constant_override("separation", 0)
-    words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    words.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-    words.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    var title := _label(String(item.get("name", key)), 17, Color("#fff0c8"))
-    title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    words.add_child(title)
-    var sub := _label(status, 12, Color("#bcd2a8"))
-    sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    words.add_child(sub)
-    row.add_child(words)
-    var tag := _label(price_text, 15, Color("#ffd257"))
-    tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-    tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    row.add_child(tag)
-    button.add_child(row)
-    if free_item and not selected:
-        # Nothing here was ever bought, so "already yours" is the wrong story.
-        # The swap is the whole truth, and the log now names what steps aside.
-        var swap_note := " Tap to swap it in; one of your two verses will step back." if String(item.get("kind", "verse")) == "verse" else " Tap to hum this one instead."
-        button.tooltip_text = "%s — free to hum any time.%s" % [String(item.get("description", "")), swap_note]
-    elif is_owned and not selected:
-        # Say what tapping will actually do. With all three slots taken the tap
-        # swaps rather than adds, and "tap to wear" would be a small lie.
-        var swap_note := " Tap to swap it in for a charm you are wearing." if slots_full else " Tap to wear it."
-        button.tooltip_text = "%s — already yours.%s" % [String(item.get("description", "")), swap_note]
-    elif selected:
-        button.tooltip_text = "%s — wearing it now. Tap to rest it." % String(item.get("description", ""))
-    elif price > 0 and sparkles < price:
-        button.tooltip_text = "You need %d sparkles — soothe %d more wisp%s. It will keep. ♥" % [price, price - sparkles, "" if price - sparkles == 1 else "s"]
-    else:
-        button.tooltip_text = String(item.get("description", ""))
-    button.disabled = not enabled or (not is_owned and price > 0 and sparkles < price)
-    button.add_theme_stylebox_override("normal", _button_style(Color(0.14, 0.28, 0.18, 0.92), Color("#8abf75") if selected else Color("#d8c27c"), 12))
-    button.add_theme_stylebox_override("hover", _button_style(Color(0.22, 0.39, 0.23, 0.98), Color("#ffe69b"), 12))
-    button.add_theme_stylebox_override("pressed", _button_style(Color(0.10, 0.21, 0.13, 1.0), Color("#fff0b0"), 12))
-    button.add_theme_stylebox_override("disabled", _button_style(Color(0.12, 0.18, 0.13, 0.55), Color("#75836d"), 12))
-    return button
