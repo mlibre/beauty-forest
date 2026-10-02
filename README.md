@@ -73,3 +73,20 @@ Labels: a caption the minimap used to carry would otherwise be invisible to the
 count.
 
 Save data is stored in Godot's per-user `user://` directory, separate from the gentler-forest settings. Suites redirect that to a throwaway profile via `TestProfile`, so they never touch a real save.
+
+### The two suites that need a display
+
+Every other suite runs headless. These two render real frames and measure them,
+so they must be run windowed — a headless build has no rasterizer, so
+`RenderingServer.frame_post_draw` never fires and the run hangs to the timeout
+and exits 124:
+
+```bash
+godot --path . --resolution 640x360 --script tests/regression_luminance.gd  # menu is as bright as the walk
+godot --path . --resolution 1280x720 --script tests/regression_scrims.gd     # cards do not dim the forest into murk
+```
+
+`regression_luminance.gd` catches a screen that renders too dark to be cheerful.
+`regression_scrims.gd` catches the opposite failure — a card that dims the world
+too far — and also checks that High Contrast still darkens *more* than the
+normal case, so the accessibility setting cannot quietly become a no-op.
