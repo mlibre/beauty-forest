@@ -65,10 +65,11 @@ godot --headless --path . --script res://tests/capture_text_census.gd    # visib
 
 `capture_glyphs_check.gd` rejects any glyph that is too dark, too desaturated,
 too solid or too thin to read against sunlit grass. `capture_text_census.gd`
-counts the text a player can actually see on each screen; the walking screen is
-expected to report **0 labels / 0 chars**. It starts a real run first and fails
-if the HUD is not on screen, so that zero is measured rather than vacuous, and
-it reads hand-painted `draw_string` captions as well as Labels — a caption
-the minimap used to carry would otherwise be invisible to the count.
+counts the text a player can actually see on each screen and **exits non-zero if
+the walking screen paints any** — it is a gate, not a report. It starts a real
+run first and fails if the HUD is not on screen, so that zero is measured rather
+than vacuous, and it reads hand-painted `draw_string` captions as well as
+Labels: a caption the minimap used to carry would otherwise be invisible to the
+count.
 
 Save data is stored in Godot's per-user `user://` directory, separate from the gentler-forest settings. Suites redirect that to a throwaway profile via `TestProfile`, so they never touch a real save.

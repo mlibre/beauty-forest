@@ -23,7 +23,7 @@ func _run() -> void:
 	ui.set_text_chrome_visible(false)
 	await _frames(4)
 	_walking_screen_is_live(ui)
-	_report("PLAYING", ui._root)
+	var walked := _report("PLAYING", ui._root)
 
 	ui.show_menu({"has_save": true, "run": {}, "settings": _settings()})
 	await _frames(4)
@@ -43,6 +43,14 @@ func _run() -> void:
 
 	root.remove_child(game)
 	game.free()
+	# The walk screen is the one screen with a hard budget: AGENTS.md says it
+	# paints no sentences, and this tool exists to hold that line. Reporting the
+	# count and exiting 0 anyway leaves the rule to whoever reads the output, so
+	# the walk screen is a gate.
+	if walked.labels > 0 or walked.chars > 0:
+		printerr("CENSUS_FAIL: the walk screen painted %d labels / %d chars; it must paint none" % [walked.labels, walked.chars])
+		quit(1)
+		return
 	quit(0)
 
 ## Fails loudly if the walk screen is not actually drawn: a census over a hidden
@@ -60,7 +68,7 @@ func _walking_screen_is_live(ui: GameUI) -> void:
 func _settings() -> Dictionary:
 	return {"high_contrast": false, "reduced_motion": false, "compact_hud": false, "text_scale": 1.0}
 
-func _report(screen: String, node: Node) -> void:
+func _report(screen: String, node: Node) -> Dictionary:
 	var chars := 0
 	var labels := 0
 	for label in node.find_children("*", "Label", true, false):
@@ -84,6 +92,7 @@ func _report(screen: String, node: Node) -> void:
 			chars += literal.length()
 			print("        [%s] (draw_string in %s) %s" % [screen, item.get_class(), literal.left(70)])
 	print("%-8s %2d labels / %4d chars" % [screen, labels, chars])
+	return {"labels": labels, "chars": chars}
 
 ## Every visible Control under `node` that runs its own _draw, which is where
 ## a hand-painted caption would live.
