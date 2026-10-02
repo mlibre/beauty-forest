@@ -112,6 +112,12 @@ Use this order and group shared causes into one iteration.
 - Missing required lights, shadows, glow, particles, shaders, or post effects
 - Square halos, black/unlit surfaces, half-culled billboards, wrong-color-space washes, broken color, or a black void
 
+**Held or attached items** (staff, tool, prop) reading as "not in the hand" — floating, detached, orphaned; disconnected limb; misalignment. Three causes, most common first:
+
+- **Wrong pivot** — origin is not at the grip, so it slides or spins out as the arm animates. Set the origin at the grip, not the sprite center.
+- **Bad anchoring** — transform is not driven from the hand bone/node each frame, so it lags or drifts. Drive it from the hand's global transform, or parent it to the hand node.
+- **Misaligned depth** — draw order puts the prop behind the arm or in front of the fingers, so nothing occludes it into a grip. Fix `z_index`/y-sort between body, prop, and hand.
+
 “Renders without errors” is not proof of correct rendering. Fix nonsense graphics rather than deleting beauty.
 
 ### 8. UI, HUD, input focus, and layout
