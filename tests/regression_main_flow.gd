@@ -613,9 +613,61 @@ func _check_settings_open_from_every_modal(game: Node) -> bool:
         if not _check(game.player.control_enabled,
                 "the hero was left unable to move after closing settings from the %s" % origin):
             return false
+    if not await _check_settings_open_from_the_menu(game):
+        return false
     game._start_run(1)
     await _frames(4)
     return true
+
+func _check_settings_open_from_the_menu(game: Node) -> bool:
+    ## The menu's own key line advertises "Cozy options: C", but nothing on that
+    ## screen emitted settings_open_requested and _unhandled_input returned
+    ## before the bf_settings branch in every non-playing mode -- so the only way
+    ## in was to start a run, pause it, and find COZY from there. A player who
+    ## wants the gentler forest had to be inside a run to ask for it.
+    if not await _open_settings_from_the_menu(game, "the button"):
+        return false
+    # The same promise, made by the key line, has to hold for the key itself.
+    if not await _open_settings_from_the_menu(game, "the C key"):
+        return false
+    game._show_menu()
+    await _frames(3)
+    return true
+
+func _open_settings_from_the_menu(game: Node, way: String) -> bool:
+    game._show_menu()
+    await _frames(3)
+    if not _check(game.mode == game.Mode.MENU, "the menu did not open for %s (mode %d)" % [way, game.mode]):
+        return false
+    if way == "the button":
+        var cozy: Button = null
+        for candidate in game.ui._overlay_content.find_children("*", "Button", true, false):
+            if (candidate as Button).text.contains("gentler"):
+                cozy = candidate as Button
+        if not _check(cozy != null, "the menu offered no way into the gentler-forest panel"):
+            return false
+        cozy.pressed.emit()
+    else:
+        var key := InputEventKey.new()
+        key.pressed = true
+        key.physical_keycode = KEY_C
+        game._unhandled_input(key)
+    await _frames(3)
+    if not _check(game.mode == game.Mode.SETTINGS,
+            "%s did nothing from the menu (mode stayed %d)" % [way, game.mode]):
+        return false
+    if not _check(_has_text(game.ui._shop_frame, "Make it yours"),
+            "closing the menu for %s left the menu content on screen instead of the settings panel" % way):
+        return false
+    game.ui.settings_closed.emit()
+    await _frames(3)
+    # Closing has to hand the MENU back, not close every panel and leave the
+    # player staring at an empty screen.
+    if not _check(game.mode == game.Mode.MENU,
+            "closing settings did not return to the menu after %s (mode %d)" % [way, game.mode]):
+        return false
+    return _check(game.ui._overlay_card.visible,
+            "the menu card was left hidden after closing settings opened by %s" % way)
 
 func _check_buying_past_the_charm_cap_says_so(game: Node) -> bool:
     ## Filling all three charm slots and then buying a fourth charged the

@@ -35,10 +35,8 @@ func _ready() -> void:
     _apply_settings(settings, false)
 
     _load_floor(1, true)
-    mode = Mode.MENU
-    player.set_control_enabled(false)
     ui.set_selected_style(selected_style)
-    ui.show_menu(meta)
+    _show_menu()
 
 func _connect_ui() -> void:
     ui.start_requested.connect(_on_start_requested)
@@ -110,6 +108,13 @@ func _unhandled_input(event: InputEvent) -> void:
         return
     if mode == Mode.MENU and event.is_action_pressed("ui_accept"):
         _start_run(1)
+        get_viewport().set_input_as_handled()
+        return
+    # The menu's key line promises C opens the gentler-forest options, so it has
+    # to work before a run starts -- otherwise the only way in is to begin, pause,
+    # and find COZY from there.
+    if mode == Mode.MENU and event.is_action_pressed("bf_settings"):
+        _open_settings()
         get_viewport().set_input_as_handled()
         return
     if mode == Mode.DEAD and event.is_action_pressed("ui_accept"):
@@ -350,6 +355,11 @@ func _on_settings_closed() -> void:
     if previous_mode == Mode.PAUSED:
         mode = Mode.PAUSED
         ui.show_pause(meta)
+    elif previous_mode == Mode.MENU:
+        # Came here straight from the menu's "Make it gentler": hand the menu
+        # back rather than closing every panel, which would leave the player
+        # staring at an empty screen instead of the one they opened from.
+        _show_menu()
     else:
         mode = previous_mode
         _set_world_processing(mode in [Mode.MENU, Mode.PLAYING])
@@ -368,6 +378,18 @@ func _close_modal() -> void:
             ui.close_settings()
         _:
             ui.close_panels()
+
+## Put the title menu back up, from wherever the game is.
+##
+## Boot and the settings panel's way home both need this, so it lives here
+## rather than at each call site: the world keeps breathing behind the menu,
+## the hero loses the controls, and the menu is rebuilt from current `meta` so
+## the record line reads true even after a run.
+func _show_menu() -> void:
+    mode = Mode.MENU
+    _set_world_processing(true)
+    player.set_control_enabled(false)
+    ui.show_menu(meta)
 
 func _show_ending() -> void:
     mode = Mode.ENDING

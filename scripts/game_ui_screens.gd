@@ -91,6 +91,18 @@ func show_menu(meta: Dictionary) -> void:
     var leave_center := CenterContainer.new()
     leave_center.add_child(leave)
     _overlay_content.add_child(leave_center)
+    # The menu's own key line advertises "Cozy options: C", but nothing here
+    # emitted settings_open_requested, so C (and any player who reads the line)
+    # had no way to reach the gentler-forest panel before starting: zero entry
+    # points on this screen. Offer it here, next to the leave button it pairs
+    # with, and let the director hand the menu back on close.
+    var cozy := _button("Make it gentler", false)
+    cozy.custom_minimum_size = Vector2(300, 44)
+    cozy.tooltip_text = "Reduce hits, calm the wobble, and turn up the contrast before you begin."
+    cozy.pressed.connect(func(): settings_open_requested.emit())
+    var cozy_center := CenterContainer.new()
+    cozy_center.add_child(cozy)
+    _overlay_content.add_child(cozy_center)
     _fit_layout()
 	# Refit AFTER building: the panels are authored at comfortable desktop
 	# widths, and _refit_content can only clamp children that already exist.
