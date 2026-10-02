@@ -26,7 +26,7 @@ func _run() -> void:
 
     if not await _check_the_next_step_names_the_real_target(game):
         return
-    if not await _check_the_pause_cards_show_the_real_run(game):
+    if not await _check_the_pause_summary_shows_the_real_run(game):
         return
     if not await _check_curious_wisp_facts_can_win_the_sticker(game):
         return
@@ -62,15 +62,16 @@ func _check_the_next_step_names_the_real_target(game: Node) -> bool:
         await frames(3)
     return true
 
-func _check_the_pause_cards_show_the_real_run(game: Node) -> bool:
-    ## The pause screen showed two sets of numbers. Its summary block was built
-    ## from the state update_hud parks, but the corner status card kept the
-    ## strings it was born with -- nothing in the whole project ever wrote
-    ## _floor_label, _health_label, _level_label, _stats_label, _sparkle_label or
-    ## _charm_label. Pausing at level 9, 42 warmth and 777 sparkles on floor 5
-    ## therefore painted "Floor 1", "Level 1", "Warmth 100/100", "Song power
-    ## 10", "0 sparkles" and "Charms 0/3: none yet" right beside the correct
-    ## figures, and the two eased bars had nothing setting their targets.
+func _check_the_pause_summary_shows_the_real_run(game: Node) -> bool:
+    ## The pause screen used to open into a summary block AND into two legacy
+    ## corner cards, and the cards kept the strings they were born with --
+    ## nothing in the whole project ever wrote _floor_label, _health_label,
+    ## _level_label, _stats_label, _sparkle_label or _charm_label. Pausing at
+    ## level 9, 42 warmth and 777 sparkles on floor 5 therefore painted
+    ## "Floor 1", "Level 1", "Warmth 100/100", "Song power 10", "0 sparkles"
+    ## and "Charms 0/3: none yet" right beside the correct figures. The two
+    ## cards are gone now, so the summary is the only place these numbers are
+    ## said -- and it says them as icon-plus-number rows.
     game._start_run(3)
     await frames(6)
     game.charms_owned["boots"] = true
@@ -82,22 +83,28 @@ func _check_the_pause_cards_show_the_real_run(game: Node) -> bool:
     game._pause_game()
     await frames(4)
 
-    var expected := {
-        "_floor_label": "Floor %d — %s" % [game.floor_number, String(game.region.get("name", "Sunlit Roots"))],
-        "_health_label": "♥ Warmth  %d / %d" % [roundi(game.hp), roundi(game.hp_max)],
-        "_sparkle_label": "✦ %d sparkles to spend" % game.sparkles,
-        "_level_label": "Level %d  ·  %d / %d soul to next gift" % [game.level, game.xp, game.xp_next],
-        "_charm_label": "Charms %d/%d: %s" % [game.charms_equipped.size(), BeautyContent.MAX_CHARMS, "Swift Boots"],
+    var said := block_text(game.ui._overlay_content)
+    var want := {
+        "warmth": "%d / %d" % [roundi(game.hp), roundi(game.hp_max)],
+        "soul": "%d" % game.level,
+        "sparkles": "%d" % game.sparkles,
     }
-    for field: String in expected:
-        var label: Label = game.ui.get(field)
-        if not ok(label != null and label.text == expected[field],
-                "the pause card's %s reads '%s', expected '%s'" % [field, label.text if label != null else "nothing", expected[field]]):
+    for what: String in want:
+        if not ok(said.contains(String(want[what])),
+                "the pause summary lost the %s figure '%s' (it said '%s')" % [what, String(want[what]), said]):
             return false
-    # The eased bars were inert for the same reason -- _health_shown and
-    # _xp_shown were never assigned, so they had nothing to glide toward.
-    if not ok(game.ui._health_bar.value > 0.0 and game.ui._health_bar.value <= 1.0,
-            "the warmth bar never tracked warmth (value %f)" % game.ui._health_bar.value):
+    if not ok(said.contains("%d" % game.floor_number),
+            "the pause summary lost the depth figure (%d): '%s'" % [game.floor_number, said]):
+        return false
+    # The loadout is pictures now, so the worn charm is confirmed by its icon.
+    if not ok(glyph_keys_in(game.ui._overlay_content).has("boots"),
+            "the pause summary did not draw the worn charm's icon"):
+        return false
+    # The old card claimed "Charms 0/3: none yet" whatever the player wore; a
+    # summary that showed nothing at all would be the same lie in the other
+    # direction, so the charm name has to still be reachable on hover.
+    if not ok("Swift Boots" in game.ui._walker_charms,
+            "the worn charm's name is parked nowhere the pause card can name it"):
         return false
     game._resume_game()
     await frames(2)

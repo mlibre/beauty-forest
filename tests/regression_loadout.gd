@@ -77,14 +77,12 @@ func _check_buying_past_the_charm_cap_says_so(game: Node) -> bool:
     # The shop itself must not promise a swap it cannot describe honestly either.
     game._open_shop()
     await frames(3)
-    var ember_tip := ""
-    for button in buttons_in(game.ui._shop_frame):
-        # A shop row is a composite of icon + name + price, so its wares name
-        # lives in a child Label rather than on Button.text.
-        if not has_text(button, "Ember"):
-            continue
-        ember_tip = (button as Button).tooltip_text
-        break
+    # The card paints no status words, so "am I wearing it" is the lit rim and
+    # the promise is the hover text -- which is where the player reads it.
+    var ember_card := find_ware(game.ui._shop_frame, "ember")
+    var ember_tip := "" if ember_card == null else ware_button(ember_card).tooltip_text
+    if not ok(ember_card != null, "the owned charm was not on the shelf"):
+        return false
     if not ok(not ember_tip.is_empty(), "the owned charm had no tooltip in the shop"):
         return false
     if not ok(ember_tip.contains("swap"),
@@ -226,38 +224,37 @@ func _check_a_full_slot_verse_swap_says_what_steps_back(game: Node) -> bool:
         return false
     return true
 ## Verses and Mote's counter-melodies are free gifts that nobody owns, and the
-## shop listed every unworn one as "in pocket -- tap to wear" and "already
-## yours". That describes a purchase which never happened. Nothing here may
-## claim a pocket or an ownership.
+## shop used to list every unworn one as "in pocket -- tap to wear" and "already
+## yours". That describes a purchase which never happened.
+##
+## The card paints no status words at all any more -- a lit rim means "wearing"
+## and nothing else -- so the ownership claim has to be checked where it now
+## lives: the tooltip the player reads by hovering. A free item that said "you
+## own this" would still be lying, in the one place the player goes looking.
 func _check_free_items_do_not_claim_to_be_owned(game: Node) -> bool:
     game.ui.show_shop(game._shop_state())
     for _i in range(4):
         await frames(2)
-    # The rows live inside a ScrollContainer, so search the whole frame subtree.
+    # The shelves live inside a ScrollContainer, so search the whole frame.
     var free_rows := 0
     var free_items := BeautyContent.STANZAS.size() + BeautyContent.MOTE_VERSES.size()
-    for button in buttons_in(game.ui._shop_frame):
-        var b := button as Button
-        if b == null:
-            continue
-        var label: String = row_text(b)
-        if not (label.contains("free gift")):
-            continue
+    for card in free_item_cards(game.ui._shop_frame):
         free_rows += 1
-        # A worn item says "wearing it now", which is true. An UNWORN one must
-        # not describe a pocket or a purchase.
-        if label.contains("♥ WEARING"):
+        var button := card.get_parent() as Button
+        # A worn verse is wearing, which is true. An UNWORN one must not
+        # describe a pocket or a purchase.
+        if card.selected:
             continue
-        if not ok(not label.contains("in pocket"),
-                "a free item claimed a pocket: %s" % label):
+        if not ok(not card.owned,
+                "a free item claimed ownership: %s" % card.item_name()):
             return false
-        if not ok(not b.tooltip_text.contains("already yours"),
-                "a free item claimed ownership: %s" % b.tooltip_text):
+        if not ok(not button.tooltip_text.contains("already yours"),
+                "a free item claimed ownership in its tooltip: %s" % button.tooltip_text):
             return false
-    print("FREE_ITEMS rows=%d of %d expected, none claim ownership or a pocket" % [
+    print("FREE_ITEMS cards=%d of %d expected, none claim ownership or a pocket" % [
         free_rows, free_items])
     if not ok(free_rows == free_items,
-            "expected %d free rows (every verse and counter-melody), found %d" % [
+            "expected %d free cards (every verse and counter-melody), found %d" % [
                 free_items, free_rows]):
         return false
     game.ui.close_panels()

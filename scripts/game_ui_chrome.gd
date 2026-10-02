@@ -29,61 +29,6 @@ func _build_interface() -> void:
     _hud.add_child(_vitals)
     _vitals.tooltip_text = "Your lantern's warmth, sparkles, depth and worn charms. Warmth is the ring; it empties as bumps land."
 
-    var left_card := _card(Color(0.08, 0.17, 0.12, 0.83), Color("#f4d583"), 18)
-    _left_card = left_card
-    left_card.set_anchors_preset(Control.PRESET_TOP_LEFT)
-    left_card.position = Vector2(18, 16)
-    left_card.custom_minimum_size = Vector2(315, 0)
-    _hud.add_child(left_card)
-    var left_margin := _margin(16, 14, 16, 14)
-    left_card.add_child(left_margin)
-    var left := VBoxContainer.new()
-    left.add_theme_constant_override("separation", 5)
-    left_margin.add_child(left)
-    left.add_child(_label("YOU & YOUR LANTERN", 12, Color("#ffe39a")))
-    _floor_label = _label("Floor 1 — Sunlit Roots", 20, Color("#ffe8a0"))
-    left.add_child(_floor_label)
-    left.add_child(_spacer(5))
-    _health_label = _label("♥ Warmth  100 / 100", 15, Color("#fff2d0"))
-    _health_label.tooltip_text = "Warmth is your health. Bumps make it lower. Hearts and rest make it higher."
-    left.add_child(_health_label)
-    _health_bar = _bar(Color("#f19a8f"), 15)
-    left.add_child(_health_bar)
-    _level_label = _label("Level 1  ·  0 / 14 soul to next gift", 14, Color("#f7e7b6"))
-    _level_label.tooltip_text = "Soul is experience. Soothe wisps and the lantern grows kinder."
-    left.add_child(_level_label)
-    _xp_bar = _bar(Color("#ffe06f"), 8)
-    left.add_child(_xp_bar)
-    left.add_child(_spacer(3))
-    _stats_label = _label("Song power 10  ·  Dash ready", 14, Color("#dbe8c4"))
-    _stats_label.tooltip_text = "Song power is your automatic lullaby strength. No button needed — the lantern sings alone."
-    left.add_child(_stats_label)
-    _sparkle_label = _label("✦ 0 sparkles to spend", 16, Color("#ffe58c"))
-    _sparkle_label.tooltip_text = "Sparkles are gifts from soothed wisps. Spend them at Peddle's cart."
-    left.add_child(_sparkle_label)
-    _charm_label = _label("Charms 0/3: none yet", 12, Color("#d3e4ba"))
-    _charm_label.tooltip_text = "Charms help automatically. Buy them from Peddle, wear up to three."
-    _charm_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    left.add_child(_charm_label)
-
-    var right_card := _card(Color(0.08, 0.17, 0.12, 0.80), Color("#cfe2a2"), 18)
-    _right_card = right_card
-    right_card.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-    right_card.position = Vector2(-368, 18)
-    right_card.custom_minimum_size = Vector2(350, 0)
-    _hud.add_child(right_card)
-    var right_margin := _margin(15, 12, 15, 12)
-    right_card.add_child(right_margin)
-    var right := VBoxContainer.new()
-    right.add_theme_constant_override("separation", 5)
-    right_margin.add_child(right)
-    right.add_child(_label("MOTE SAYS ♥", 13, Color("#ffe59a")))
-    _mote_label = _label("“Rest whenever you like. The forest keeps your spot warm.”", 15, Color("#fff1c8"))
-    _mote_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    _mote_label.custom_minimum_size = Vector2(320, 48)
-    right.add_child(_mote_label)
-    right.add_child(_separator())
-
     _minimap = CozyMinimap.new()
     _minimap.position = Vector2(-190, -202)
     _minimap.size = Vector2(172, 184)
@@ -91,12 +36,19 @@ func _build_interface() -> void:
     _minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _hud.add_child(_minimap)
 
-    _hint_label = _label("WASD wander  ·  Shift dash  ·  J journal  ·  C cozy options", 14, Color("#fff0bd"))
-    _hint_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-    _hint_label.position = Vector2(-280, -48)
-    _hint_label.custom_minimum_size = Vector2(560, 30)
-    _hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    _hud.add_child(_hint_label)
+    # The walk-screen control hint used to stand here, and the pause card painted
+    # a longer version of the same sentence inside its own card (see
+    # _keys_reference). Both were visible at once: "WASD wander · Shift dash · J
+    # journal · C cozy options" along the bottom of the world, and "Wander: WASD /
+    # arrows / stick · Dash: Shift · Hug, sing & descend: E · Cart: F · Memories:
+    # J · Cozy options: C · Pause: Esc" on the card you opened to pause. Fifty-five
+    # characters of the smaller one are a strict subset of the larger, so a
+    # player who opened the card -- the one who asked for the reference -- read
+    # the same controls twice. It lives in _keys_reference now, once.
+    #
+    # The HUD keeps no prose of its own, which is the rule AGENTS.md states for
+    # the walk screen: pictures and digits, and the words live in the pause card
+    # the player opens on purpose.
 
     # Mote's running chatter hangs directly on the scene as bare text, so pale
     # cream lines sat on pale moss and were close to unreadable exactly when

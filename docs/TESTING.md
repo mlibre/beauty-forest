@@ -73,11 +73,76 @@ godot --headless --path . --script res://tests/capture_text_census.gd
 - `capture_glyphs_check.gd` rejects any glyph too dark, desaturated, solid or
   thin to read against sunlit grass. Currently 57 glyphs, 0 needing attention.
 - `capture_text_census.gd` counts the text a player can actually see per screen
-  and **exits non-zero if the walking screen paints any** — it is a gate, not a
+  and **exits non-zero if any screen goes over its budget** — it is a gate, not a
   report, per the project's icon-not-instructions rule. It starts a real run
   first and fails if the HUD is off screen, so that zero is measured rather than
   vacuous, and it reads hand-painted `draw_string` captions as well as Labels:
   a caption the minimap used to carry would otherwise be invisible to the count.
+  It also counts what a `CozyCard` paints with `draw_string(item_name())`, which
+  is not a source literal at all — the minimap's "GROVE MAP" was the precedent
+  for looking past Labels, and a ware name is the same class of blind spot.
+
+  Current budgets, set just above the measured count so an ordinary short row
+  passes and a paragraph does not:
+
+  | Screen | Budget | Now | What it counts |
+  | --- | --- | --- | --- |
+  | `PLAYING` | 0 | 0 | nothing at all, by rule |
+  | `MENU` | 360 | 298 | title, subtitle, 3 promise captions, 6 buttons, record |
+  | `PAUSE` | 820 | 673–705 | glyph-and-number rows, 4 buttons, keys, the floor's mood line |
+  | `SHOP` | 700 | 601 | 34 ware names, 4 shelf headings, sparkle count |
+  | `NAP` | 250 | 200 | the cozy-nap card: two floor rows, one warm line |
+  | `ENDING` | 240 | 176 | the dragons-are-snuggled card: dragon, heart, chime |
+  | `JOURNAL` | 380 | 294 | two facts, two stickers; grows with the collection |
+  | `SETTINGS` | 320 | 250 | checkboxes and slider rows |
+  | `WALK-CUE` | 32 | 31 | the longest thing the toast can say mid-walk |
+
+  `PLAYING` is 0 because the HUD genuinely paints no text, but that zero used to
+  hide the one voice that *does* speak during a walk: the toast. A cue such as
+  "Almost! Wait for the GOLD halo" or "−7 warmth" is transient, and transient is
+  not free — a run where Mote narrates every swing is exactly the future this
+  project does not want. So the longest cue the source can produce is measured
+  separately, and it has a smaller budget than any screen's, because a cue has to
+  be read at a glance while moving. It is found by reading every `add_cue` call
+  site rather than by triggering the fights, so a cue cannot escape the check by
+  being rare; `%d` is measured as `999`, since a cue that is readable at seven
+  digits is not readable at three.
+
+  Four of these numbers were wrong before this pass, and the errors were not
+  rounding:
+
+  - **Buttons were invisible.** The census swept `Label` only, so every `Button`
+    and `CheckButton` in the game went uncounted — the cozy panel claimed 102
+    chars while its four checkboxes held more than that between them. It now
+    sweeps `BaseButton` and `LineEdit` too. This is the same class of blind spot
+    as the `draw_string` fix above: the tool was measuring the absence of its own
+    gaps.
+  - **The on-screen touch buttons were counted on the walk screen.** A headless
+    run reports `is_touchscreen_available()` as `true` (there is no display for it
+    to be truthful about), so `PLAYING` picked up six phantom buttons and failed
+    its own zero budget. They are now excluded by name.
+  - **Four screens were never measured.** The nap card, the ending, the memory
+    book and the cozy panel had no budget at all — a gate covering only the
+    screens somebody remembered to point it at is half a gate.
+  - **`MENU` and `PAUSE` each said the same thing twice.** The menu welded the
+    whole control scheme onto its record line while the pause card painted a
+    longer version of it; the walk screen carried a third, shorter copy. Both
+    duplicates are gone — the controls live in the pause card's
+    `_keys_reference()`, once.
+
+  The shop started this work at **1500 chars / 103 labels** — the single biggest
+  wall of text in the game. It is a shelf of picture cards now.
+
+  `PAUSE` is the one budget that is not a fixed measurement: the pause card shows
+  the floor's mood, and `random_modifier` draws a different `FLOOR_MODIFIERS`
+  line each run, so its count moves by up to 60 characters (673–705 observed).
+  The budget sits above the longest line on purpose — a budget gate that fails on
+  a coin flip is not a gate.
+
+  `JOURNAL` has the most room on purpose. Its length is a player's collection
+  rather than an author's paragraph: every fact found and every sticker earned is
+  one more line, so a rising count there means the player got more, not that
+  someone wrote more.
 
 ## Saves
 

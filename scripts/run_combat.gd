@@ -175,8 +175,13 @@ func _do_pulse(target: Wisp, radius: float) -> void:
         if not DungeonGenerator.has_line_of_sight(dungeon, origin, wisp.global_position):
             continue
         if wisp.shielded or (wisp.is_big and not wisp.is_boss_vulnerable()):
+            # The pulse is the automatic close-range half of the song, so this is
+            # a second, more frequent way to lose a beat you had right. It was a
+            # 15%-chance line in the hidden log; a cue is what the player needs,
+            # and the warden's shield and the wisp's halo are both already drawn
+            # in the world for the words to point at.
             if randf() < 0.15:
-                ui.add_log("Mote: “%s Wait for the GOLD halo before that note.”" % ("A Warden friend is holding the shield." if wisp.shielded else "Not yet!"))
+                ui.add_cue("Wait for the GOLD halo")
             continue
         wisp.take_damage(pulse_damage)
         CozyVFX.trail_tick(world, wisp.global_position + Vector3.UP * 0.7, Color(region["accent"]))
@@ -227,10 +232,11 @@ func _on_song_connected(wisp: Wisp, _note: SongNote) -> void:
     if not is_instance_valid(wisp) or not wisp.alive or wisp.soothed:
         return
     if wisp.shielded:
-        ui.add_log("Mote: “The song bounced off a friendly shield. That Warden is doing its very best.”")
+        ui.add_cue("A Warden is holding that shield")
         return
     if wisp.is_big and not wisp.is_boss_vulnerable():
-        ui.add_log("Mote: “Almost! Wait for the GOLD halo.”")
+        # The one cue that has to be seen. Short, because it lands mid-fight.
+        ui.add_cue("Almost! Wait for the GOLD halo")
         return
     wisp.take_damage(_note.damage)
     CozyVFX.trail_tick(world, wisp.global_position + Vector3.UP * 0.8, Color("#bfe8ff"))
@@ -343,6 +349,12 @@ func _damage_player(amount: int, source: String) -> void:
     hit_this_floor = true
     audio.play_soft_hit()
     ui.flash_warmth()
+    # The lantern dims and reddens on its own, so being hurt is something you
+    # SEE without any words -- that is the rule the whole HUD is built on. But
+    # "how much did that cost me" is a number no lantern can say, and it went to
+    # the hidden log like every other line. The cue carries the figure; it does
+    # not carry the sentence that used to dress it up.
+    ui.add_cue("−%d warmth" % taken)
     ui.add_log("%s nicks you for %d. The lantern hums protectively." % [source, taken])
     _refresh_ui()
     if hp <= 0.0:

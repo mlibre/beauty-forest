@@ -26,13 +26,42 @@ is, with two bare numbers beside their icons. Four things are on it:
 
 Where the walk wants you to go is a **glowing marker in the world**, not a
 sentence. Your lantern's own light dims and reddens as warmth falls, so being
-hurt is something you *see*. Everything else — level, song power, the charm
-list, the forecast, what each key does — waits inside the pause menu, which you
-opened on purpose.
+hurt is something you *see* — the toast adds only the figure you can't see, like
+`−7 warmth`. Everything else — level, song power, the charm list, the forecast,
+what each key does — waits inside the pause menu, which you opened on purpose.
 
-Peddle's cart is a wall of **pictures**: each row is the charm's own icon, its
-name and its price. Hover a row to learn what it does. Nothing to read in order
-to browse.
+Mote still talks to you, in two different ways. Most of it is **personality**:
+a Big Feeling is "just one feeling wearing a very big coat." That lives in a
+transcript you can read while paused. The rest is **cues** — the lines that
+explain a miss, like "Wait for the GOLD halo" — and those appear on screen
+during the fight, in a few words, because they are the only kind of sentence
+worth interrupting a walk for. Each one points at a picture that is already
+there: the gold halo, the Warden's shield, your lantern's own dimming.
+
+Peddle's cart is a shelf of **pictures**: each ware is its own icon, a gold rim if
+you are wearing it, dimmed if you cannot afford it, and its price in sparkles — a
+heart instead of digits when it is a gift. Hover a ware to learn what it does.
+Nothing to read in order to browse.
+
+The pause menu is pictures too. Every row leads with a glyph — a lantern for
+warmth, a star for soul, a chime for song power, a sparkle for what you can
+spend, a stair for depth — so a row reads as *this picture, this many*. The worn
+charms show as the same icons your hero wears in the world, not as a list of
+names. It was once two corner word-cards plus this summary, which meant every
+figure was on screen twice; the corner cards are gone, and the summary is the one
+place these numbers are said.
+
+The menu above shows its promise as three pictures — a lantern, boots, a heart —
+instead of a paragraph explaining that your lantern sings by itself. What you
+learn by walking is not written down for you in advance.
+
+When a run ends it ends the same way: a picture, then the figures. The cozy-nap
+card shows a stair and how deep you got; the dragons-are-snuggled card shows a
+dragon, a heart and a chime, and how many of each. The numbers that a picture
+cannot disambiguate — reached or deepest — carry a three-letter label rather
+than a sentence explaining the difference. The warm part is still words, because
+no glyph says *nobody is cross*: that reassurance is the reason the screen
+exists, and it is one sentence.
 
 ## Controls
 

@@ -63,14 +63,12 @@ func _shelf(list: VBoxContainer, title: String, glyph_key: String, count: String
     var heading := HBoxContainer.new()
     heading.add_theme_constant_override("separation", 8)
     list.add_child(heading)
-    heading.add_child(_icon(GardenGlyphs.MOTE if glyph_key.is_empty() else glyph_key, 20, Color("#ffe497")))
-    var label := _label(title, 15, Color("#ffe497"))
-    heading.add_child(label)
+    heading.add_child(_icon(glyph_key, 20, Color("#ffe497")))
+    heading.add_child(_label(title, 15, Color("#ffe497")))
     if not count.is_empty():
-    var count_label := _label(count, 15, Color("#fff0c8"))
-    heading.add_child(count_label)
+        heading.add_child(_label(count, 15, Color("#fff0c8")))
     if not worn_of.is_empty():
-    heading.add_child(_label("· %s" % worn_of, 13, Color("#bcd2a8")))
+        heading.add_child(_label("· %s" % worn_of, 13, Color("#bcd2a8")))
     var grid := GridContainer.new()
     grid.columns = 6
     grid.add_theme_constant_override("hseparation", 10)
@@ -87,12 +85,21 @@ func _shelf(list: VBoxContainer, title: String, glyph_key: String, count: String
 ## ("in pocket -- tap to wear", "swap it in for a verse you're humming", "take
 ## for sparkles 5", "free gift") are gone from the painted screen. What the
 ## ink cannot say lives on in the tooltip the player asks for by hovering.
-func _ware_card(grid: GridContainer, item: Dictionary, sparkles: int, worn: bool, is_owned: bool, free_item: bool, slots_full: bool, pressed: Callable) -> Button:
+func _ware_card(grid: GridContainer, item: Dictionary, sparkles: int, worn: bool, is_owned: bool, free_item: bool, slots_full: bool, pressed: Callable, can_use: bool = true) -> CozyCard:
     var price := int(item.get("price", 0))
-    var affordable := is_owned or free_item or price <= sparkles
+    # "Affordable" means the press can actually DO something right now: a price
+    # the purse can meet, and -- for tea at full warmth -- a heal that is still
+    # needed. A ware that fails either is dimmed rather than hidden, so the
+    # player can still see what they are saving toward.
+    var affordable := can_use and (is_owned or free_item or price <= sparkles)
+    var key := String(item.get("key", ""))
     var button := Button.new()
+    # The ware's key, on both the button and its card. A row used to be found by
+    # scraping the words it painted; now the words are ink, so the node has to
+    # carry the identity itself -- and so do the suites that assert on it.
+    button.name = key if not key.is_empty() else "mote_silence"
     var card := CozyCard.new()
-    card.name = String(item.get("key", "ware"))
+    card.name = button.name
     card.item = item
     card.price = price
     card.selected = worn
@@ -121,7 +128,7 @@ func _ware_card(grid: GridContainer, item: Dictionary, sparkles: int, worn: bool
     button.add_theme_stylebox_override("pressed", _button_style(Color(1.0, 0.90, 0.55, 0.22), Color("#fff0b0"), 14))
     button.add_theme_stylebox_override("disabled", _button_style(Color(0, 0, 0, 0), Color(1, 1, 1, 0.16), 14))
     grid.add_child(button)
-    return button
+    return card
 
 ## What the card cannot say in ink, asked for by hovering.
 ##
@@ -132,24 +139,24 @@ func _ware_card(grid: GridContainer, item: Dictionary, sparkles: int, worn: bool
 func _ware_tooltip(item: Dictionary, card: CozyCard, sparkles: int, slots_full: bool) -> String:
     var what := String(item.get("description", ""))
     if card.free_item:
-    # Nobody owns a verse, so this one must not describe a pocket or a
-    # purchase -- the swap is the whole truth.
-    var swap_note := " Tap to swap it in; one of your two verses will step back." if String(item.get("kind", "verse")) == "verse" else " Tap to hum this one instead."
-    return "%s — free to hum any time.%s" % [what, swap_note]
+        # Nobody owns a verse, so this one must not describe a pocket or a
+        # purchase -- the swap is the whole truth.
+        var swap_note := " Tap to swap it in; one of your two verses will step back." if String(item.get("kind", "verse")) == "verse" else " Tap to hum this one instead."
+        return "%s — free to hum any time.%s" % [what, swap_note]
     if card.selected:
-    return "%s — wearing it now. Tap to rest it." % what
+        return "%s — wearing it now. Tap to rest it." % what
     if card.owned:
-    # With every slot taken the tap swaps rather than adds, and "tap to wear"
-    # would be a small lie.
-    var swap_note := " Tap to swap it in for a charm you are wearing." if slots_full else " Tap to wear it."
-    return "%s — already yours.%s" % [what, swap_note]
+        # With every slot taken the tap swaps rather than adds, and "tap to
+        # wear" would be a small lie.
+        var swap_note := " Tap to swap it in for a charm you are wearing." if slots_full else " Tap to wear it."
+        return "%s — already yours.%s" % [what, swap_note]
     if slots_full:
-    return "%s — all %d charm slots are full, so this waits in your pocket until you swap one." % [
-    what, BeautyContent.MAX_CHARMS]
+        return "%s — all %d charm slots are full, so this waits in your pocket until you swap one." % [
+            what, BeautyContent.MAX_CHARMS]
     if card.price > 0 and not card.affordable:
-    var short := card.price - sparkles
-    return "You need %d sparkles — soothe %d more wisp%s. It will keep. ♥" % [
-    card.price, short, "" if short == 1 else "s"]
+        var short := card.price - sparkles
+        return "You need %d sparkles — soothe %d more wisp%s. It will keep. ♥" % [
+            card.price, short, "" if short == 1 else "s"]
     return what
 
 func show_shop(state: Dictionary) -> void:
@@ -178,17 +185,17 @@ func show_shop(state: Dictionary) -> void:
     # Warm tea: one ware, so it gets a shelf of its own only because it is
     # bought constantly and heals. Spending sparkles on tea while already warm
     # used to be a silent no-op -- the button was live, the price was charged
-    # and nothing happened -- so it is dimmed at full warmth and the hover says
-    # why.
+    # and nothing happened -- so the card dims at full warmth and the hover
+    # says why.
     var warmth_full := float(state.get("hp", 0.0)) >= float(state.get("hp_max", 1.0))
     var tea_shelf := _shelf(list, "WARM TEA", "tea", "")
     for charm: Dictionary in BeautyContent.CHARMS:
         if String(charm["key"]) != "tea":
             continue
-        var tea_button := _ware_card(tea_shelf, charm, sparkles, false, false, false, false, func(): buy_requested.emit("tea"))
-        tea_button.disabled = warmth_full or not tea_button.disabled
+        var tea := _ware_card(tea_shelf, charm, sparkles, false, false, false, false,
+            func(): buy_requested.emit("tea"), not warmth_full)
         if warmth_full:
-            tea_button.tooltip_text = "You are warm as a toast already — keep these sparkles for a charm ♥"
+            (tea.get_parent() as Button).tooltip_text = "You are warm as a toast already — keep these sparkles for a charm ♥"
 
     var owned: Dictionary = state.get("owned", {})
     var equipped: Dictionary = state.get("charms", {})
@@ -218,9 +225,8 @@ func show_shop(state: Dictionary) -> void:
         stanzas.size(), BeautyContent.MAX_STANZAS])
     for stanza: Dictionary in BeautyContent.STANZAS:
         var key := String(stanza["key"])
-        var toggle := _ware_card(stanza_shelf, stanza.duplicate(), sparkles,
+        _ware_card(stanza_shelf, stanza.duplicate(), sparkles,
             bool(stanzas.get(key, false)), false, true, false, func(): stanza_equip_requested.emit(key))
-        toggle.name = key
 
     var verse: Dictionary = state.get("mote_verse", {})
     var verse_shelf := _shelf(list, "MOTE’S HUM", GardenGlyphs.VERSE_PREFIX + "lodestar", "")
@@ -230,9 +236,8 @@ func show_shop(state: Dictionary) -> void:
         # Exclusive and free, like the verses: nobody owns a counter-melody.
         var mote_option: Dictionary = option.duplicate()
         mote_option["kind"] = "mote"
-        var toggle := _ware_card(verse_shelf, mote_option, sparkles, selected, false, true, false,
+        _ware_card(verse_shelf, mote_option, sparkles, selected, false, true, false,
             func(): mote_verse_requested.emit(key))
-        toggle.name = key if not key.is_empty() else "mote_silence"
 
     _shop_frame.add_child(_centered_button("♥  Done — back to the walk", true, func(): close_shop()))
     _fit_layout()

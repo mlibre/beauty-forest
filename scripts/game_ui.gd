@@ -41,43 +41,31 @@ func update_hud(state: Dictionary) -> void:
     _walker_region = String(state.get("region_name", "Sunlit Roots"))
     _walker_forecast = String(state.get("forecast", ""))
     var names: Array = state.get("charm_names", [])
+    # The pause card shows the loadout as the same icons the play screen wears,
+    # so the KEYS are what it needs. Names are still parked, because the pause
+    # card's hover copy names a charm in words.
     _walker_charms = ", ".join(names)
-    # charm_keys carries stanzas too -- they share one key namespace so the
-    # vitals sockets can draw both -- so the worn-charm count comes from the
-    # names, which are built from charms alone.
-    _walker_charm_count = names.size()
+    # charm_keys carries the worn stanzas too -- they share one key namespace so
+    # the vitals sockets can draw both -- so the charm row has to pick its keys
+    # against the charm table rather than trust the list.
+    _walker_charm_keys = _charm_keys_only(state.get("charm_keys", []))
+    _walker_charm_count = _walker_charm_keys.size()
     _walker_sparkles = int(state.get("sparkles", 0))
-    _sync_text_chrome()
 
-## Repaint the stat cards from the parked run state.
+## The subset of `keys` that names a CHARM.
 ##
-## The cards are the pause menu's own chrome, so they have to agree with the
-## summary block sitting in the middle of that same screen. They used to keep
-## their authored defaults forever -- update_hud fed the icon ring and parked
-## these numbers for _walker_summary, but nothing ever wrote the labels -- so
-## pausing at level 9 on floor 5 showed "Floor 1", "Level 1", "Warmth 100/100"
-## and "Charms 0/3: none yet" right beside the correct figures. The eased bars
-## were inert for the same reason: _health_shown and _xp_shown were never set.
-func _sync_text_chrome() -> void:
-    if _left_card == null or not is_instance_valid(_left_card):
-        return
-    _floor_label.text = "Floor %d — %s" % [_walker_floor, _walker_region]
-    _health_label.text = "♥ Warmth  %d / %d" % [_walker_hp, _walker_hp_max]
-    _health_shown = float(_walker_hp) / maxf(1.0, float(_walker_hp_max))
-    _health_bar.max_value = 1.0
-    _health_bar.value = _health_shown
-    _level_label.text = "Level %d  ·  %d / %d soul to next gift" % [_walker_level, _walker_xp, _walker_xp_next]
-    _xp_shown = float(_walker_xp) / maxf(1.0, float(_walker_xp_next))
-    _xp_bar.max_value = 1.0
-    _xp_bar.value = _xp_shown
-    _stats_label.text = "Song power %d  ·  Dash ready" % _walker_song
-    _sparkle_label.text = "✦ %d sparkles to spend" % _walker_sparkles
-    _charm_label.text = "Charms %d/%d: %s" % [
-        _walker_charm_count,
-        BeautyContent.MAX_CHARMS,
-        _walker_charms if not _walker_charms.is_empty() else "none yet",
-    ]
-    _charm_label.tooltip_text = "Charms help automatically. Buy them from Peddle, wear up to %d." % BeautyContent.MAX_CHARMS
+## Charms, verses and counter-melodies share one key namespace -- `moss` and
+## `lullaby` each appear in two tables -- so the loadout row resolves every key
+## against the charm table and drops the songs. Without this, a worn verse would
+## be painted in the charm row and the player would read it as a charm.
+func _charm_keys_only(keys: Array) -> Array[String]:
+    var out: Array[String] = []
+    for key: String in keys:
+        for charm: Dictionary in BeautyContent.CHARMS:
+            if String(charm["key"]) == key:
+                out.append(key)
+                break
+    return out
 
 func set_map(dungeon: Dictionary, player_position: Vector3) -> void:
     # Deliberately does not force `_minimap.visible`: every floor load calls
@@ -125,6 +113,25 @@ func add_log(message: String) -> void:
     while lines.size() > 4:
         lines.pop_front()
     _log_label.text = "\n".join(lines)
+
+## Mote saying something the player has to ACT on, during a walk.
+##
+## `add_log` is Mote's running chatter, and the walk screen deliberately shows
+## no sentences, so the log is hidden for the whole of a run. That is right for
+## "A Big Feeling. Not a monster -- just one feeling wearing a very big coat",
+## which is personality and costs nothing to miss. It was not right for the lines
+## that explain a miss: "Almost! Wait for the GOLD halo." fired the instant a
+## song-note struck a wisp whose halo had not gone gold yet, into a label nobody
+## sees until they pause. So the game's single most useful piece of timing
+## advice was invisible during the entire fight it was advising, and a player
+## missing the beat had nothing on screen telling them why.
+##
+## This is the one voice that speaks during a walk, so a cue goes here instead.
+## Cues are kept to a few words -- they have to be readable at a glance while
+## moving, which is the whole point -- and the picture carries the rest: the gold
+## halo Mote is pointing at is already drawn on the wisp itself.
+func add_cue(message: String, duration: float = 2.2) -> void:
+    show_toast(message, duration)
 
 func show_story(title: String, body: String, duration: float = 3.8) -> void:
     _cancel_story()

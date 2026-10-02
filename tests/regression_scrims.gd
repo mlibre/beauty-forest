@@ -172,18 +172,17 @@ func _worst_tile(tiles: Array) -> Array:
 
 ## Every rect that is UI rather than forest, as a list.
 ##
-## Only excluding the centre card was not enough: the pause screen's top-left
-## corner holds _left_card and its top-right _right_card, and sampling those
-## as murk measures the UI, not the forest -- which is how the first run of
-## this suite reported a corner 100% below L48 at every resolution.
+## Only excluding the centre card was not enough: the play screen's top-left
+## corner holds the vitals ring and its top-right the grove map, and sampling
+## those as murk measures the UI, not the forest -- which is how the first run
+## of this suite reported a corner 100% below L48 at every resolution.
 ##
 ## A LIST, not a merged Rect2: Rect2.merge returns the union hull, which spans
-## the gap between the left and right cards and so covers the forest between
-## them. Each rect is tested on its own.
+## the gap between two HUD elements and so covers the forest between them. Each
+## rect is tested on its own.
 func _ui_rects(game: Node) -> Array[Rect2]:
 	var rects: Array[Rect2] = []
-	for field: String in ["_overlay_card", "_left_card", "_right_card", "_minimap",
-			"_hint_label", "_mote_label", "_log_label", "_toast_label"]:
+	for field: String in ["_overlay_card", "_vitals", "_minimap", "_log_label", "_toast_label"]:
 		var node: Control = game.ui.get(field)
 		if node != null and is_instance_valid(node) and node.visible:
 			rects.append(node.get_global_rect().grow(6.0))

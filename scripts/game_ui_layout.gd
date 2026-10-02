@@ -13,114 +13,20 @@ const MODAL_SCROLLBAR_ALLOWANCE := 14.0
 ## measure the real parent rect instead of trusting pre-tree anchor offsets.
 
 func _fit_layout() -> void:
-    # Responsive pass: shrink/move the two HUD cards, minimap, log, and both
-    # modal cards so small/portrait windows show controls, not clipped panels.
+    # Responsive pass: place the vitals ring, minimap, log and both modal cards
+    # so small/portrait windows show controls, not clipped panels.
     if _root == null or _overlay_card == null:
         return
     var viewport_size := _parent_size()
-    var narrow := viewport_size.x < 900.0
     var small_height := viewport_size.y < 600.0
-    var was_compact := _compact_hud
-    var compact_lines := 1 if viewport_size.y < 280.0 else 2
+    # The two corner word-cards are gone, so a short window no longer has to
+    # choose between them: the compact decision is now only "is there room for
+    # the map and the chatter?" — both pictures and words yield at the same size.
     _compact_hud = viewport_size.y < 320.0 or (_text_scale > 1.25 and viewport_size.y < 600.0)
-    if _compact_hud and is_instance_valid(_floor_label):
-        _floor_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        _floor_label.custom_minimum_size.x = 190.0
-        if is_instance_valid(_right_card):
-            for candidate in _right_card.find_children("*", "Label", true, false):
-                var label := candidate as Label
-                if label != null:
-                    label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-                    label.custom_minimum_size.x = 125.0
-    elif was_compact:
-        if is_instance_valid(_floor_label):
-            _floor_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-            _floor_label.custom_minimum_size.x = 0.0
-        if is_instance_valid(_left_card):
-            _restore_card_labels(_left_card)
-        if is_instance_valid(_right_card):
-            _restore_card_labels(_right_card)
-        if is_instance_valid(_charm_label):
-            _charm_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        if is_instance_valid(_mote_label):
-            _mote_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-            _mote_label.custom_minimum_size.y = 48.0
-    if _compact_hud:
-        # A landscape phone-sized window cannot show the full desktop cards
-        # side by side. Keep the essential warmth/floor/objective readouts,
-        # tuck the optional chatter away, and let the two remaining cards
-        # share the top row instead of painting over one another.
-        for optional: Control in [_level_label, _stats_label, _sparkle_label, _charm_label, _mote_label, _log_label, _hint_label]:
-            if is_instance_valid(optional):
-                optional.visible = false
-    else:
-        for restored: Control in [_level_label, _stats_label, _sparkle_label, _charm_label, _mote_label, _log_label, _hint_label]:
-            if is_instance_valid(restored):
-                restored.visible = true
-        if is_instance_valid(_left_card):
-            _left_card.clip_contents = false
-        if is_instance_valid(_right_card):
-            _right_card.clip_contents = false
-    # HUD status cards. NOTE ON POSITIONING: Control.position is ABSOLUTE in
-    # parent coordinates once a control is in the tree (the old "negative
-    # offset from the anchor" trick only worked while the node was still
-    # detached, because Godot then measures a zero-size parent). Every rect
-    # below is therefore computed in real parent coordinates, which is what
-    # keeps the HUD on screen when the window is resized.
-    if is_instance_valid(_left_card):
-        var left_width := minf(315.0, maxf(150.0, viewport_size.x * (0.42 if narrow else 0.25)))
-        if _compact_hud:
-            left_width = minf(265.0, maxf(180.0, viewport_size.x * 0.55))
-            _left_card.clip_contents = true
-            _set_compact_card_labels(_left_card, maxf(40.0, left_width - 64.0), compact_lines)
-        _left_card.custom_minimum_size = Vector2(left_width, 0)
-        # An autowrapped Label with no width floor reports a minimum size of
-        # "longest word" wide and one word per line tall (a single short line
-        # measured 33x569), which is what made these HUD cards taller than the
-        # window at every resolution. Keep a floor under the card's inner width.
-        if is_instance_valid(_charm_label):
-            _charm_label.custom_minimum_size.x = maxf(60.0, left_width - 32.0)
-        _left_card.reset_size()
-        _left_card.position = Vector2(8.0, 8.0) if _compact_hud else Vector2(18.0, 16.0)
-    var hide_minimap := false
-    if is_instance_valid(_right_card):
-        var right_width := minf(350.0, maxf(150.0, viewport_size.x * (0.42 if narrow else 0.28)))
-        if _compact_hud:
-            right_width = minf(185.0, maxf(150.0, viewport_size.x * 0.38))
-            _right_card.clip_contents = true
-        _right_card.custom_minimum_size = Vector2(right_width, 0)
-        # Same width-floor rule for the right card's wrapped chatter/objective.
-        var right_inner := maxf(60.0, right_width - 30.0)
-        if _compact_hud:
-            _set_compact_card_labels(_right_card, maxf(40.0, right_width - 60.0), compact_lines)
-        else:
-            if is_instance_valid(_mote_label):
-                # On narrow windows let the chatter wrap a little more eagerly so
-                # the card can actually fit beside (or above) the status card.
-                _mote_label.custom_minimum_size.x = right_inner * (0.78 if narrow else 1.0)
-                _mote_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        _right_card.reset_size()
-        # Container sizes do not settle inside this same call, so place the
-        # card from the minimums it is guaranteed to occupy.
-        var right_rect := _effective_rect(_right_card)
-        var left_rect := _effective_rect(_left_card)
-        var right_x := viewport_size.x - right_rect.size.x - (8.0 if _compact_hud else 18.0)
-        var right_y := 8.0 if _compact_hud else 18.0
-        if not _compact_hud and right_x < left_rect.position.x + left_rect.size.x + 12.0:
-            # Not enough width to sit beside the status card: tuck it below.
-            right_x = viewport_size.x - right_rect.size.x - 18.0
-            right_y = left_rect.position.y + left_rect.size.y + 12.0
-            if right_y + right_rect.size.y > viewport_size.y - 8.0:
-                # Too short to stack either (a tiny window). The chatter card
-                # takes the bottom-right corner and the minimap yields, rather
-                # than the two cards painting over each other.
-                right_y = maxf(left_rect.position.y, viewport_size.y - right_rect.size.y - 8.0)
-                hide_minimap = true
-        right_x = maxf(8.0, minf(right_x, viewport_size.x - right_rect.size.x - 8.0))
-        right_y = minf(right_y, maxf(8.0, viewport_size.y - right_rect.size.y - 8.0))
-        _right_card.position = Vector2(right_x, right_y)
+    if is_instance_valid(_vitals):
+        _vitals.position = Vector2(8.0, 8.0) if _compact_hud else Vector2(18.0, 16.0)
     if is_instance_valid(_minimap):
-        _minimap.visible = not _compact_hud and not hide_minimap
+        _minimap.visible = not _compact_hud
         var map_side := clampf(minf(viewport_size.x, viewport_size.y) * 0.19, 96.0, 172.0 if not small_height else 132.0)
         _minimap.custom_minimum_size = Vector2(map_side, map_side)
         _minimap.reset_size()
@@ -139,7 +45,7 @@ func _fit_layout() -> void:
         var cluster := _touch_cluster_rect()
         var map_spot := corner
         if cluster.size.x > 1.0:
-            var map_blockers: Array[Rect2] = [cluster, _card_rect(_right_card)]
+            var map_blockers: Array[Rect2] = [cluster]
             var found := _place_clear(map_rect.size, [
                 corner,
                 Vector2(corner.x, cluster.position.y - map_rect.size.y - 10.0),
@@ -176,17 +82,12 @@ func _fit_layout() -> void:
                 Vector2(log_spot.x, joystick.position.y - log_rect.size.y - 10.0),
                 Vector2(joystick.end.x + 10.0, log_spot.y),
             ], log_blockers)
-            # The compact-HUD pass already decides whether the log is wanted at
-            # all, so only let the touch layout take that decision away.
+            # The compact-HUD pass already decides whether the chatter is wanted
+            # at all, so only let the touch layout take that decision away.
             _log_label.visible = not _compact_hud and found.is_finite()
             if found.is_finite():
                 log_spot = found
         _log_label.position = log_spot
-    if is_instance_valid(_hint_label):
-        var hint_width := clampf(viewport_size.x * 0.80, 260.0, 620.0)
-        _hint_label.custom_minimum_size = Vector2(hint_width, 30.0)
-        _hint_label.reset_size()
-        _hint_label.position = Vector2(maxf(8.0, (viewport_size.x - _hint_label.size.x) * 0.5), viewport_size.y - _hint_label.size.y - (34.0 if small_height else 44.0))
     if is_instance_valid(_toast_label):
         var toast_width := clampf(viewport_size.x * 0.70, 260.0, 580.0)
         _toast_label.custom_minimum_size = Vector2(toast_width, 54.0)
@@ -200,27 +101,13 @@ func _fit_layout() -> void:
         var story_top := 150.0
         if is_instance_valid(_toast_label):
             story_top = _toast_label.position.y + _toast_label.size.y + 4.0
-        # It also has to live in the GAP between the two HUD cards. Centring it
-        # on the viewport alone let a 560px card run 36px under "MOTE SAYS" and
-        # 12px under the status card, and its lower edge landed on the hero's
-        # head right where the camera keeps them.
+        # With the two corner word-cards gone the story card no longer has to
+        # squeeze into a gap between them, so it is just a centred band that
+        # starts below the toast and never hangs off an edge.
         var story_width := clampf(viewport_size.x * 0.72, 280.0, 560.0)
         var gap_left := 8.0
         var gap_right := viewport_size.x - 8.0
-        if not _compact_hud:
-            if is_instance_valid(_left_card):
-                gap_left = _effective_rect(_left_card).end.x + 10.0
-            if is_instance_valid(_right_card):
-                gap_right = _effective_rect(_right_card).position.x - 10.0
         var gap := gap_right - gap_left
-        if gap < 240.0:
-            # On a narrow window the two HUD cards meet or overlap, so there is
-            # no gap to sit in. Centring on a minimum-width gap that does not
-            # exist pushed the card 120px off the right edge at 480px wide.
-            # Fall back to a plain centred band and let it overlap the cards.
-            gap_left = 8.0
-            gap_right = viewport_size.x - 8.0
-            gap = gap_right - gap_left
         story_width = minf(story_width, gap)
         _story_card.custom_minimum_size = Vector2(story_width, 0)
         _story_card.reset_size()
@@ -309,53 +196,14 @@ func _scroll_ancestor(node: Node) -> ScrollContainer:
         current = current.get_parent()
     return null
 
-func _set_compact_card_labels(card: Control, width_floor: float, max_lines: int) -> void:
-    if not is_instance_valid(card):
-        return
-    for candidate in card.find_children("*", "Label", true, false):
-        var label := candidate as Label
-        if label == null or not is_instance_valid(label):
-            continue
-        label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        var font_height := float(label.get_theme_font_size("font_size"))
-        label.custom_minimum_size = Vector2(maxf(40.0, width_floor), maxf(label.custom_minimum_size.y, font_height * float(max_lines) + 4.0))
-        label.max_lines_visible = max_lines
-        label.clip_text = true
-        label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-
-func _restore_card_labels(card: Control) -> void:
-    if not is_instance_valid(card):
-        return
-    for candidate in card.find_children("*", "Label", true, false):
-        var label := candidate as Label
-        if label == null or not is_instance_valid(label):
-            continue
-        label.autowrap_mode = TextServer.AUTOWRAP_OFF
-        label.custom_minimum_size = Vector2.ZERO
-        label.max_lines_visible = -1
-        label.clip_text = false
-        label.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-
 func _effective_rect(control: Control) -> Rect2:
     ## A control's `size` can lag behind a minimum-size change within the same
     ## frame, so place neighbours from the size the control is guaranteed to
-    ## occupy. This is what keeps the HUD cards from overlapping on a narrow
-    ## window (and the minimap from hanging off the edge).
+    ## occupy. This is what keeps the minimap from hanging off the edge.
     if not is_instance_valid(control):
         return Rect2()
     var guaranteed := control.get_combined_minimum_size()
     return Rect2(control.position, Vector2(maxf(control.size.x, guaranteed.x), maxf(control.size.y, guaranteed.y)))
-
-func _card_rect(panel: Control) -> Rect2:
-    ## The measured rect of a HUD card, or an empty rect when it is not on
-    ## screen (so a hidden card never blocks a placement). Reads the card's own
-    ## `visible` rather than `is_visible_in_tree()`: the menu and ending screens
-    # hide the whole HUD, and a fit that runs underneath them must reserve the
-    # same space a fit that runs during play does, or the map jumps the moment
-    # the HUD comes back.
-    if not is_instance_valid(panel) or not panel.visible:
-        return Rect2()
-    return _effective_rect(panel)
 
 func _touch_cluster_rect() -> Rect2:
     ## The block of on-screen touch buttons in the bottom-right corner, in real

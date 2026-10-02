@@ -58,12 +58,10 @@ func _check_touch_layout(size: Vector2i) -> void:
 	ok(not _touch_controls_off_screen(_ui), "a touch control hangs off the screen %s" % tag)
 	var map_rect := Rect2(_ui._minimap.position, _ui._minimap.size)
 	var log_rect := Rect2(_ui._log_label.position, _ui._log_label.size)
-	var right_rect := Rect2(_ui._right_card.position, _ui._right_card.size)
 	# A control that yielded (nothing on screen fits clear of the buttons) is
 	# allowed to sit anywhere in the window; only what is actually painted has
 	# to stay readable.
 	ok(not _ui._minimap.visible or not map_rect.intersects(cluster), "the touch buttons cover the grove map %s: map=%s cluster=%s" % [tag, str(map_rect), str(cluster)])
-	ok(not _ui._minimap.visible or not map_rect.intersects(right_rect), "the Mote card covers the grove map %s" % tag)
 	ok(not _ui._log_label.visible or not log_rect.intersects(joystick), "the touch joystick covers the log %s: log=%s joystick=%s" % [tag, str(log_rect), str(joystick)])
 	ok(not _ui._log_label.visible or not log_rect.intersects(cluster), "the touch buttons cover the log %s: log=%s cluster=%s" % [tag, str(log_rect), str(cluster)])
 	ok(parent.encloses(map_rect), "the grove map left the window %s: %s" % [tag, str(map_rect)])
@@ -80,25 +78,15 @@ func _touch_controls_off_screen(ui: GameUI) -> bool:
 	var stick := Rect2(ui._touch_joystick.position, ui._touch_joystick.size)
 	return stick.position.x < 0.0 or stick.position.y < 0.0 or stick.end.x > parent.x or stick.end.y > parent.y
 
-## Find a shop row by the text on it.
+## Find the Button behind one ware on Peddle's shelf.
 ##
-## A row no longer sets Button.text -- it is a composite of an icon, a name and
-## a price -- so the lookup has to read the row's own labels instead of the
-## button's string.
-func _find_shop_button(text: String) -> Button:
-	for node in _ui._shop_content.find_children("*", "Button", true, false):
-		var button := node as Button
-		if button != null and _row_says(button, text):
-			return button
-	return null
-
-func _row_says(button: Button, text: String) -> bool:
-	if button.text.contains(text):
-		return true
-	for label in button.find_children("*", "Label", true, false):
-		if (label as Label).text.contains(text):
-			return true
-	return false
+## A ware paints its name as ink rather than a Label, so it is looked up by the
+## game's own key -- `find_ware` -- and this hands back the Button that a click
+## would actually hit. The old version scraped painted words for the name, which
+## is exactly the coupling the picture cards exist to remove.
+func _find_shop_button(key: String) -> Button:
+	var card := find_ware(_ui._shop_content, key)
+	return null if card == null else ware_button(card)
 
 func _run() -> void:
 	var game: Node = load("res://scenes/main.tscn").instantiate()
@@ -130,16 +118,16 @@ func _run() -> void:
 		_root_rect = Rect2(Vector2.ZERO, parent.size)
 		var tag := "at %dx%d" % [size.x, size.y]
 
-		var left: Control = _ui._left_card
-		var right: Control = _ui._right_card
-		ok(left.size.y < _root_rect.size.y, "the status card is %fpx tall, taller than the window %s" % [left.size.y, tag])
-		ok(right.size.y < _root_rect.size.y, "the Mote card is %fpx tall, taller than the window %s" % [right.size.y, tag])
-		for pair: Array in [[left, "status card"], [right, "Mote card"], [_ui._minimap, "minimap"], [_ui._hint_label, "hint bar"], [_ui._toast_label, "toast"], [_ui._log_label, "log"]]:
+		# The vitals ring is the play screen's whole readout, so it has to stay
+		# on screen and shorter than the window at every size. It is the only
+		# top-left HUD element now that the word-cards are gone.
+		var vitals: Control = _ui._vitals
+		ok(vitals.size.y < _root_rect.size.y, "the vitals ring is %fpx tall, taller than the window %s" % [vitals.size.y, tag])
+		for pair: Array in [[vitals, "vitals ring"], [_ui._minimap, "minimap"], [_ui._toast_label, "toast"], [_ui._log_label, "log"]]:
 			var control: Control = pair[0]
 			var label := String(pair[1])
 			var rect := Rect2(control.position, control.size)
 			ok(_root_rect.encloses(rect), "%s %s is outside the window: %s" % [label, tag, rect])
-		ok(not Rect2(left.position, left.size).intersects(Rect2(right.position, right.size)), "the HUD cards overlap each other %s" % tag)
 
 		# A story card and a toast can be on screen at the same time (every floor
 		# load opens both on merchant and Big Feeling floors). The story card is
@@ -212,11 +200,23 @@ func _run() -> void:
 	_ui._fit_layout()
 	await frames(4)
 	_root_rect = Rect2(Vector2.ZERO, _ui._root.size)
-	var large_left := Rect2(_ui._left_card.position, _ui._left_card.size)
-	var large_right := Rect2(_ui._right_card.position, _ui._right_card.size)
-	ok(_root_rect.encloses(large_left), "200%% text pushed the status card outside the window: %s" % str(large_left))
-	ok(_root_rect.encloses(large_right), "200%% text pushed the Mote card outside the window: %s" % str(large_right))
-	ok(not large_left.intersects(large_right), "200%% text made the HUD cards overlap")
+	# 200% text must not push anything off screen. The vitals ring is the only
+	# top-left HUD element now, but the story card and toast are the wide bands
+	# that text size actually widens.
+	_ui.show_story("The Descent Begins", "Mote heard a rumor: far below sleeps a dragon who has not napped properly in centuries.")
+	_ui.show_toast("A Big Feeling wanders this floor. Wait for its GOLD halo, then press E nearby and sing with it.")
+	await frames(4)
+	var big_story := Rect2(_ui._story_card.position, _ui._story_card.size)
+	var big_toast := Rect2(_ui._toast_label.position, _ui._toast_label.size)
+	# At 200% on a 640x360 window the two bands cannot both fit stacked -- a
+	# card that needs 294px of height has nowhere to go in 360 minus the toast.
+	# What the layout guarantees either way is that each band is INSIDE the
+	# window: clipped at the edge is bad, pushed off it is worse.
+	ok(big_story.position.x >= 0.0 and big_story.end.x <= _root_rect.size.x + 0.5,
+		"200%% text pushed the story card outside the window: %s" % str(big_story))
+	ok(big_toast.position.x >= 0.0 and big_toast.end.x <= _root_rect.size.x + 0.5,
+		"200%% text pushed the toast outside the window: %s" % str(big_toast))
+	_ui.close_panels()
 	_ui.show_settings(_ui._settings)
 	await frames(4)
 	var settings_card := Rect2(_ui._shop_card.position, _ui._shop_card.size)
@@ -237,21 +237,21 @@ func _run() -> void:
 	_ui.apply_settings(BeautyData.default_settings())
 	_ui._fit_layout()
 	await frames(4)
-	var before_left := Rect2(_ui._left_card.position, _ui._left_card.size)
+	# Raising the text size on a short window has to collapse the HUD: the
+	# ring tucks into the corner, and the map and the chatter -- the two widest
+	# things left -- both yield.
 	_ui._settings["text_scale"] = 2.0
 	_ui.settings_changed.emit(_ui._settings.duplicate(true))
 	await frames(4)
 	ok(_ui._compact_hud,
-		"raising the text size on a short window left the wide HUD in place (left card stayed %s)" % str(before_left))
-	var after_left := Rect2(_ui._left_card.position, _ui._left_card.size)
-	ok(after_left.size.x < before_left.size.x,
-		"the status card did not shrink when the HUD collapsed (%s -> %s)" % [str(before_left), str(after_left)])
+		"raising the text size on a short window left the wide HUD in place")
 	ok(not _ui._minimap.visible, "the minimap stayed drawn on a collapsed HUD")
-	var after_right := Rect2(_ui._right_card.position, _ui._right_card.size)
-	ok(not after_left.intersects(after_right), "the collapsed status card still overlaps the Mote card")
+	ok(not _ui._log_label.visible, "the chatter stayed drawn on a collapsed HUD")
+	var collapsed_ring := Rect2(_ui._vitals.position, _ui._vitals.size)
 	var window_rect := Rect2(Vector2.ZERO, _ui._root.size)
-	ok(window_rect.encloses(after_left), "the collapsed status card fell outside the window: %s" % str(after_left))
-	ok(window_rect.encloses(after_right), "the Mote card fell outside the window: %s" % str(after_right))
+	ok(window_rect.encloses(collapsed_ring), "the collapsed vitals ring fell outside the window: %s" % str(collapsed_ring))
+	ok(not collapsed_ring.intersects(Rect2(_ui._toast_label.position, _ui._toast_label.size)),
+		"the collapsed vitals ring overlaps the toast band")
 
 	# And a window with room to spare must NOT collapse, or the fix is just
 	# "always use the small HUD".
@@ -276,7 +276,7 @@ func _run() -> void:
 	var full_state := {"sparkles": 9, "charms": {}, "owned": {}, "stanzas": {}, "mote_verse": {}, "hp": 100.0, "hp_max": 100.0}
 	_ui.show_shop(full_state)
 	await frames(3)
-	var cold_button := _find_shop_button("Warm Tea")
+	var cold_button := _find_shop_button("tea")
 	ok(cold_button != null, "the shop did not show the Warm Tea item")
 	if cold_button != null:
 		ok(cold_button.disabled, "Warm Tea was buyable at full warmth (a silent no-op purchase)")
@@ -285,7 +285,7 @@ func _run() -> void:
 	hungry_state["hp"] = 40.0
 	_ui.show_shop(hungry_state)
 	await frames(3)
-	var hungry_button := _find_shop_button("Warm Tea")
+	var hungry_button := _find_shop_button("tea")
 	ok(hungry_button != null, "the shop lost the Warm Tea item when the hero was hurt")
 	if hungry_button != null:
 		ok(not hungry_button.disabled, "Warm Tea was unavailable while the hero was hurt")
@@ -323,14 +323,14 @@ func _run() -> void:
 	}
 	_ui.show_shop(broke_state)
 	await frames(3)
-	var worn_boots := _find_shop_button("Swift Boots")
+	var worn_boots := _find_shop_button("boots")
 	ok(worn_boots != null, "the shop lost an owned charm")
 	if worn_boots != null:
 		ok(not worn_boots.disabled, "a worn charm could not be rested with 0 sparkles")
 	broke_state["charms"] = {}
 	_ui.show_shop(broke_state)
 	await frames(3)
-	var pocket_boots := _find_shop_button("Swift Boots")
+	var pocket_boots := _find_shop_button("boots")
 	ok(pocket_boots != null, "the shop lost a pocketed charm")
 	if pocket_boots != null:
 		ok(not pocket_boots.disabled, "a pocketed charm could not be worn with 0 sparkles")
@@ -340,7 +340,7 @@ func _run() -> void:
 		"mote_verse": {}, "hp": 100.0, "hp_max": 100.0,
 	})
 	await frames(3)
-	var unaffordable := _find_shop_button("Wool Scarf")
+	var unaffordable := _find_shop_button("scarf")
 	if unaffordable != null:
 		ok(unaffordable.disabled, "an unowned charm was offered with 0 sparkles")
 

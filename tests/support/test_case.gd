@@ -136,6 +136,11 @@ func frames(count: int) -> void:
 ##
 ## Shop rows and cards build their wording out of child Labels rather than on a
 ## single property, so searching Button.text alone misses most of the screen.
+## Every visible Label string in `node`, joined by newlines.
+##
+## This is how a test reads a screen that still speaks in words. Rows that paint
+## themselves as pictures (a ware card, the pause summary) are read by identity
+## and by their glyph children instead -- see `find_ware`.
 func texts_in(node: Node) -> Array[String]:
 	var out: Array[String] = []
 	for child in node.get_children():
@@ -154,6 +159,28 @@ func has_text(node: Node, needle: String) -> bool:
 	return false
 
 
+## The joined words of the visible Labels under `node`, as ONE string.
+##
+## The pause summary is now icon-plus-number rows, so its figures are found by
+## looking for the number in the whole block rather than in a named label that
+## no longer exists.
+func block_text(node: Node) -> String:
+	return "\n".join(texts_in(node))
+
+
+## The glyph keys a control draws as icons, read from its TextureRect children.
+##
+## Icon rows carry their meaning in these, so "does this row show a lantern?"
+## is a question about pictures, not about a name spelled out beside them.
+func glyph_keys_in(node: Node) -> Array[String]:
+	var out: Array[String] = []
+	for child in node.get_children():
+		if child is TextureRect and (child as TextureRect).visible:
+			out.append(String((child as TextureRect).name))
+		out.append_array(glyph_keys_in(child))
+	return out
+
+
 func buttons_in(node: Node) -> Array[Node]:
 	var out: Array[Node] = []
 	for child in node.get_children():
@@ -165,8 +192,8 @@ func buttons_in(node: Node) -> Array[Node]:
 
 ## Everything a shop row says, joined.
 ##
-## A row is a composite of an icon, a name, a status and a price, so its wording
-## lives in child Labels rather than on Button.text.
+## Kept for the rows that still speak -- settings rows, journal lines -- but a
+## ware card paints its words as ink, so `find_ware` is how you look one up.
 func row_text(button: Button) -> String:
 	var parts: Array[String] = []
 	if not button.text.strip_edges().is_empty():
@@ -174,6 +201,47 @@ func row_text(button: Button) -> String:
 	for label in button.find_children("*", "Label", true, false):
 		parts.append((label as Label).text.strip_edges())
 	return "\n".join(parts)
+
+
+## Every ware card in a subtree, in shelf order.
+##
+## Peddle's cart paints its wares rather than labelling them, so a card cannot
+## be found by scraping text -- it is found by being a CozyCard. Anything
+## asserting on a ware's state reads the card's own flags.
+func ware_cards(node: Node) -> Array[CozyCard]:
+	var found: Array[CozyCard] = []
+	for child in node.find_children("*", "CozyCard", true, false):
+		found.append(child as CozyCard)
+	return found
+
+
+## The card for one ware, by its data key, or null.
+##
+## `key` is the game's own key (charm["key"], stanza["key"], verse["key"]), so
+## a suite asks for "boots" rather than for a name it would have to scrape.
+## Mote's silence is filed under the empty key, so `find_ware(node, "")` finds it.
+func find_ware(node: Node, key: String) -> CozyCard:
+	for card in ware_cards(node):
+		if card.item_key() == key:
+			return card
+	return null
+
+
+## The free wares -- every verse and every counter-melody.
+##
+## Nobody buys these, so their cards carry `free_item` instead of a price, and a
+## suite checking how free things are described needs exactly this set.
+func free_item_cards(node: Node) -> Array[CozyCard]:
+	var found: Array[CozyCard] = []
+	for card in ware_cards(node):
+		if card.free_item:
+			found.append(card)
+	return found
+
+
+## The Button wrapping one ware card, which is what a press actually hits.
+func ware_button(card: CozyCard) -> Button:
+	return card.get_parent() as Button
 
 
 ## The first Button in a subtree whose painted text contains `needle`.

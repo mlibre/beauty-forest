@@ -28,16 +28,6 @@ signal settings_changed(settings: Dictionary)
 
 var _root: Control
 var _hud: Control
-var _health_bar: ProgressBar
-var _xp_bar: ProgressBar
-var _floor_label: Label
-var _health_label: Label
-var _level_label: Label
-var _stats_label: Label
-var _sparkle_label: Label
-var _charm_label: Label
-var _hint_label: Label
-var _mote_label: Label
 var _log_label: Label
 var _toast_label: Label
 var _minimap: CozyMinimap
@@ -49,11 +39,6 @@ var _touch_joystick: TouchJoystick
 ## The on-screen touch buttons, kept in build order so the responsive layout
 ## can measure the block they actually occupy in the bottom-right corner.
 var _touch_buttons: Array[Button] = []
-## The two text cards the icon HUD replaced. They still exist so the responsive
-## layout and its regression suite have something to measure, but they are hidden
-## during play -- see set_text_chrome_visible().
-var _left_card: PanelContainer
-var _right_card: PanelContainer
 var _overlay_scrim: ColorRect
 ## The title menu's own scrim. Lighter than the pause card's, because the
 ## menu is the first thing a player sees and the brief is a BRIGHT golden
@@ -119,6 +104,9 @@ var _walker_song := 10
 var _walker_floor := 1
 var _walker_region := "Sunlit Roots"
 var _walker_charms := ""
+## The worn charms' data keys, kept separate from the joined names so the pause
+## card can draw the loadout as icons and still speak a charm's name in a hover.
+var _walker_charm_keys: Array[String] = []
 var _walker_charm_count := 0
 var _walker_sparkles := 0
 var _walker_forecast := ""
@@ -128,10 +116,21 @@ var _walker_forecast := ""
 ## so the one screen a player pauses on pointed them at nothing.
 var _walker_objective := ""
 var _time := 0.0
-## Eased HUD bar values. Labels snap instantly so numbers stay exact; the bars
-## glide toward them instead of jumping, which softens every bump and heal.
-var _health_shown := -1.0
-var _xp_shown := -1.0
+
+## The glyphs of the charms being worn, for the pause card's loadout row.
+##
+## Charms are their own key space, so an unprefixed key is correct here -- but a
+## verse shares several charm keys, and drawing a verse's note in the charm row
+## would put a song where a charm belongs. So the keys are checked against the
+## charm table, and Mote's mark stands in for anything unresolved.
+##
+## Lives on the base class because GameUIScreens paints the loadout and GameUI
+## only parks the keys -- a base class cannot call a method its subclass defines.
+func _walker_charm_glyphs() -> Array[String]:
+    var glyphs: Array[String] = []
+    for key: String in _walker_charm_keys:
+        glyphs.append(key if GardenGlyphs.has_glyph(key) else GardenGlyphs.MOTE)
+    return glyphs
 
 func _process(delta: float) -> void:
     if _root == null or _overlay_card == null:
@@ -155,37 +154,21 @@ func _process(delta: float) -> void:
             var shop_breath := 1.0 + sin(_time * 1.6 + 0.6) * 0.006
             _shop_card.scale = Vector2(shop_breath, shop_breath)
             _shop_card.pivot_offset = _shop_card.size * 0.5
-    _ease_bar(_health_bar, _health_shown, delta)
-    _ease_bar(_xp_bar, _xp_shown, delta)
     if _minimap.is_visible_in_tree():
         _minimap.queue_redraw()
 
+## Show or hide the parts of the HUD that SPEAK.
+##
+## The walk screen carries pictures only -- the lantern ring, the sparkles, the
+## depth, the grove map. Mote's running chatter and the control hints are words,
+## so they appear only on a screen the player opened on purpose (the menu, the
+## pause card) and stay out of the way otherwise.
+##
+## This lives on the base class, not on GameUI, because GameUIScreens calls it to
+## restore the chrome when a menu opens.
 func set_text_chrome_visible(visible_now: bool) -> void:
-    # `visible_now` means "SHOW the informational text chrome" (the stat cards,
-    # Mote's chatter, the control hints) -- i.e. the player is on a screen they
-    # opened deliberately. During the walk this is false and only the vitals
-    # ring, the grove map and the beat ring are drawn.
-    #
-    # This lives on the base class, not on GameUI, because GameUIScreens calls
-    # it to restore the cards when a menu opens.
     _vitals.visible = not visible_now
-    _left_card.visible = visible_now
-    _right_card.visible = visible_now
-    _hint_label.visible = visible_now
     _log_label.visible = visible_now
-    for optional: Control in [_level_label, _stats_label, _sparkle_label, _charm_label, _mote_label]:
-        if is_instance_valid(optional):
-            optional.visible = visible_now
-
-func _ease_bar(bar: ProgressBar, target: float, delta: float) -> void:
-    if bar == null or not is_instance_valid(bar) or target < 0.0:
-        return
-    if _reduced_motion or is_equal_approx(bar.value, target):
-        bar.value = target
-        return
-    bar.value = lerpf(bar.value, target, 1.0 - exp(-delta * 10.0))
-    if absf(bar.value - target) < 0.05:
-        bar.value = target
 
 func set_hud_visible(value: bool) -> void:
     if _hud:
@@ -278,6 +261,11 @@ func _label(text: String, size: int, color: Color) -> Label:
 func _icon(glyph_key: String, side: float, tint: Color = Color.WHITE) -> TextureRect:
     var resolved := glyph_key if GardenGlyphs.has_glyph(glyph_key) else GardenGlyphs.MOTE
     var icon := TextureRect.new()
+    # Name the node after the picture it shows. The picture is the whole point
+    # of an icon row, so a test asking "does this row show a lantern?" needs to
+    # be able to tell one icon from another -- and an unnamed TextureRect is
+    # indistinguishable from any other in a tree walk.
+    icon.name = resolved
     icon.texture = GardenGlyphs.get_glyph(resolved)
     icon.custom_minimum_size = Vector2(side, side)
     icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -355,22 +343,6 @@ func _margin(left: int, top: int, right: int, bottom: int) -> MarginContainer:
     margin.add_theme_constant_override("margin_right", right)
     margin.add_theme_constant_override("margin_bottom", bottom)
     return margin
-
-func _bar(color: Color, height: int) -> ProgressBar:
-    var bar := ProgressBar.new()
-    bar.show_percentage = false
-    bar.custom_minimum_size = Vector2(0, height)
-    bar.max_value = 100
-    bar.value = 100
-    var background := StyleBoxFlat.new()
-    background.bg_color = Color(0.03, 0.08, 0.05, 0.85)
-    background.set_corner_radius_all(height / 2)
-    var fill := StyleBoxFlat.new()
-    fill.bg_color = color
-    fill.set_corner_radius_all(height / 2)
-    bar.add_theme_stylebox_override("background", background)
-    bar.add_theme_stylebox_override("fill", fill)
-    return bar
 
 func _section_label(text: String) -> Label:
     var label := _label(text, 14, Color("#ffe497"))

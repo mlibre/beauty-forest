@@ -17,17 +17,37 @@ func show_menu(meta: Dictionary) -> void:
     subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _overlay_content.add_child(subtitle)
     _overlay_content.add_child(_spacer(4))
-    var intro := _label("Your lantern sings all by itself. You just wander, cuddle lost wisps home, and pick kind gifts. There is no attack button. Leaving anytime is always okay.", 17, Color("#fff0c8"))
-    intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    intro.custom_minimum_size = Vector2(820, 0)
-    _overlay_content.add_child(intro)
-    var how := _label("How it feels:  ① wander  ② lantern sings  ③ choose a cozy gift  ♥", 14, Color("#d8e9bd"))
-    how.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    how.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    how.custom_minimum_size = Vector2(820, 0)
-    _overlay_content.add_child(how)
-    _overlay_content.add_child(_label("STEP 1 — PICK HOW GENTLE ♥", 14, Color("#ffe39a")))
+    # The three things a new player has to know are SHOWN, not described: the
+    # title says the forest is cozy, the style shelf says how gentle, and the
+    # first floor's lantern sings by itself with no attack button to find. The
+    # paragraph that used to sit here ("Your lantern sings all by itself. You
+    # just wander, cuddle lost wisps home, and pick kind gifts. There is no
+    # attack button. Leaving anytime is always okay.") and the numbered "How it
+    # feels: 1 wander 2 lantern sings 3 choose a cozy gift" line explained all
+    # of that in 37 words -- a wall of prose on the first screen, for mechanics
+    # the player discovers in the first ten seconds anyway. The one thing prose
+    # carried that pictures do not -- that leaving is always okay -- is a hover.
+    #
+    # Instead: a picture of how it plays. Three glyphs in a row, each saying one
+    # thing, so the menu shows its own promise rather than describing it.
+    var promises := HBoxContainer.new()
+    promises.alignment = BoxContainer.ALIGNMENT_CENTER
+    promises.add_theme_constant_override("separation", 26)
+    for promise: Array in [
+        ["lantern", "it sings itself"],
+        ["boots", "you just wander"],
+        ["heart", "gifts, never fights"],
+    ]:
+        var picture := VBoxContainer.new()
+        picture.add_theme_constant_override("separation", 4)
+        var mark := _icon(String(promise[0]), 42, Color("#ffe497"))
+        mark.tooltip_text = String(promise[1])
+        var word := _centered_label(String(promise[1]), 13, Color("#d8e9bd"))
+        picture.add_child(mark)
+        picture.add_child(word)
+        promises.add_child(picture)
+    _overlay_content.add_child(promises)
+    _overlay_content.add_child(_spacer(6))
     # Flow (not HBox): on narrow windows the three style buttons wrap onto a
     # second row instead of overflowing the card.
     #
@@ -42,31 +62,46 @@ func show_menu(meta: Dictionary) -> void:
     styles.add_theme_constant_override("hseparation", 10)
     styles.add_theme_constant_override("vseparation", 10)
     _overlay_content.add_child(styles)
-    # Short second lines only. The longer copy ("Extra cozy · bumps hurt
+    # Short second lines only, and they are captions under a picture rather
+    # than a sentence beside it: the longer copy ("Extra cozy · bumps hurt
     # less") pushed each button past 280px wide, so the flow container wrapped
     # the three style choices onto three separate rows and the menu needed 798px
-    # of height inside a 564px panel — which put the "Wander into the forest"
+    # of height inside a 564px panel -- which put the "Wander into the forest"
     # button, the single most important thing on the screen, below the fold on a
     # default 1280x720 window. The full description is one hover away.
+    #
+    # Each choice leads with a glyph so the shelf reads as three pictures you
+    # pick between, not three sentences you read. The heart marks the picked
+    # one, which is what the old "♥ " prefix was doing with a character.
     var menu_style_descriptions := {
         "gentle": "bumps hurt less",
         "standard": "just right",
         "bold": "more soul-light",
+    }
+    var menu_style_marks := {
+        "gentle": GardenGlyphs.SOUL,
+        "standard": GardenGlyphs.LANTERN,
+        "bold": GardenGlyphs.CHIME,
     }
     for key in ["gentle", "standard", "bold"]:
         var style: Dictionary = BeautyContent.STYLE_DATA[key]
         var picked: bool = key == _selected_style
         var button := _button("%s%s\n%s" % [("♥ " if picked else ""), style["name"], String(menu_style_descriptions[key])], picked)
         button.custom_minimum_size = Vector2(212, 66)
+        button.icon = GardenGlyphs.get_glyph(String(menu_style_marks[key]))
+        button.expand_icon = true
+        # A picked choice is not just tinted: the heart rides on the picture so
+        # "which one is mine" is answerable without reading three names.
+        if picked:
+            var seal := _icon(GardenGlyphs.HEART, 16, Color("#ffd9e0"))
+            seal.position = Vector2(button.custom_minimum_size.x - 20.0, 2.0)
+            button.add_child(seal)
         button.tooltip_text = "%s — %s. Then press Wander below." % [String(style["name"]), String(style["description"])]
         button.pressed.connect(func():
             _selected_style = key
             show_menu(meta)
         )
         styles.add_child(button)
-    var step2 := _label("STEP 2 — BEGIN ♥", 14, Color("#ffe39a"))
-    step2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    _overlay_content.add_child(step2)
     var start_button := _button("♥  Wander into the forest", true)
     # 300, not 340: a Button's minimum is max(custom_minimum_size, its text),
     # and the floor can never be shrunk by the reflow pass. At 340 the start
@@ -78,7 +113,17 @@ func show_menu(meta: Dictionary) -> void:
     var start_center := CenterContainer.new()
     start_center.add_child(start_button)
     _overlay_content.add_child(start_center)
-    var record := "Visits %d  ·  Deepest floor %d  ·  Wisps guided home %d\nWalk: WASD / stick · Dash: Shift · Hug & sing: E · Shop: F · Memories: J · Cozy options: C · Rest: Esc" % [int(meta.get("runs", 0)), int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0))]
+    # The record line was "Visits N · Deepest floor N · Wisps guided home N" with
+    # the whole control scheme welded onto its second line -- 148 characters,
+    # the single largest block of text on the menu, and a sentence the pause card
+    # was already painting in _keys_reference(). The same controls, said twice in
+    # one game, in the one place a player most likely to read only half of it.
+    #
+    # It lives on the pause card now, which is also where it belongs: those are
+    # walk-screen controls, the player opens that card deliberately, and AGENTS.md
+    # keeps full run state there rather than on the title screen.
+    var record := "Visits %d  ·  Deepest floor %d  ·  Wisps guided home %d" % [
+        int(meta.get("runs", 0)), int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0))]
     var record_label := _label(record, 13, Color("#cbdcb7"))
     record_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     record_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -105,8 +150,8 @@ func show_menu(meta: Dictionary) -> void:
     cozy_center.add_child(cozy)
     _overlay_content.add_child(cozy_center)
     _fit_layout()
-	# Refit AFTER building: the panels are authored at comfortable desktop
-	# widths, and _refit_content can only clamp children that already exist.
+    # Refit AFTER building: the panels are authored at comfortable desktop
+    # widths, and _refit_content can only clamp children that already exist.
     _focus_control(start_button)
 
 func show_pause(meta: Dictionary) -> void:
@@ -132,46 +177,62 @@ func show_pause(meta: Dictionary) -> void:
     _fit_layout()
     _focus_first_enabled(_overlay_content)
 
-## The stats the icon HUD no longer paints, as one compact two-column block.
-## Kept short on purpose: a pause screen is a breather, not a spreadsheet.
+## The stats the icon HUD dropped, as one block of pictures and numbers.
 ##
-## The Depth row also carries the floor's forecast. It used to have a label of
-## its own in the corner status card -- "A warm path through the roots", a
-## sentence nothing ever updated -- so the card showed one stale line and the
-## summary showed another, and as the longest wrapped line in that card the
-## duplicate also pushed the card off a 360px window at 200% text.
+## The pause screen used to open into this summary AND into the two legacy word
+## cards in the corners, so every figure was on screen twice: the card said
+## "♥ Warmth 100 / 100" and the summary said "Warmth  100 / 100", side by side.
+## The rows here now lead with the game's own glyph -- a lantern for warmth, a
+## star for soul, a chime for song power, a stair for depth -- so a row is
+## read as "this picture, this many" and the name is not repeated. What remains
+## in words is the one thing no icon can say: the sentence naming what the
+## glowing waypoint is pointing at.
 ##
 ## No fixed width: the block used to ask for 560px, which is wider than a 480px
 ## window, so the pause card grew to 533px and hung 26px off the left edge. The
 ## rows autowrap and the responsive pass clamps them to the card instead.
 func _walker_summary() -> Control:
-    var depth := "Floor %d — %s" % [_walker_floor, _walker_region]
-    if not _walker_forecast.is_empty():
-        depth += " · %s" % _walker_forecast
     var rows: Array = [
-        ["Warmth", "%d / %d" % [_walker_hp, _walker_hp_max]],
-        ["Level", "%d  ·  %d / %d soul to next gift" % [_walker_level, _walker_xp, _walker_xp_next]],
-        ["Song power", "%d" % _walker_song],
-        ["Charms", "%s" % ("none worn — Peddle's cart has charms ♥" if _walker_charms.is_empty() else _walker_charms)],
-        ["Depth", depth],
-    ]
+    		[GardenGlyphs.LANTERN, "%d / %d" % [_walker_hp, _walker_hp_max]],
+    		[GardenGlyphs.SOUL, "%d  ·  %d / %d" % [_walker_level, _walker_xp, _walker_xp_next]],
+    		[GardenGlyphs.CHIME, "%d" % _walker_song],
+    		# Sparkles live here now because this is their only home. They used to
+    		# be spoken only by the corner card this block replaced, and deleting
+    		# that card without adding the row took the player's spending money off
+    		# every screen that could show it.
+    		[GardenGlyphs.SPARKLE, "%d" % _walker_sparkles],
+    	]
+    # Depth: a stair glyph and the floor, because the floor's name is the only
+    # part no picture carries. The forecast that used to sit in the corner card
+    # as a sentence nothing ever updated lives here instead, once.
+    if not _walker_region.is_empty():
+        rows.append([GardenGlyphs.STAIRS, "%d  ·  %s" % [_walker_floor, _walker_region]])
+        if not _walker_forecast.is_empty():
+            rows.append([GardenGlyphs.MOTE, _walker_forecast])
     if not _walker_objective.is_empty():
-        rows.append(["Next", _walker_objective])
+        rows.append([GardenGlyphs.SHIELD, _walker_objective])
     var box := VBoxContainer.new()
-    box.add_theme_constant_override("separation", 4)
+    box.add_theme_constant_override("separation", 6)
     box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     for row: Array in rows:
         var line := HBoxContainer.new()
         line.add_theme_constant_override("separation", 10)
-        var name_label := _label(String(row[0]), 15, Color("#dce9bd"))
-        name_label.custom_minimum_size = Vector2(110, 0)
-        name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        line.add_child(name_label)
+        line.add_child(_icon(String(row[0]), 24, Color("#ffe497")))
         var value_label := _label(String(row[1]), 15, Color("#fff0c8"))
         value_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         value_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        value_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
         line.add_child(value_label)
         box.add_child(line)
+    # The worn charms are pictures already: the same icons the play screen shows
+    # in its sockets, so the pause card confirms a loadout at a glance instead of
+    # listing it as a sentence.
+    if not _walker_charms.is_empty():
+        var charm_row := HBoxContainer.new()
+        charm_row.add_theme_constant_override("separation", 6)
+        for glyph_key: String in _walker_charm_glyphs():
+            charm_row.add_child(_icon(glyph_key, 26))
+        box.add_child(charm_row)
     return box
 
 ## The control keys, which the play screen no longer shows.
@@ -183,19 +244,70 @@ func _keys_reference() -> Control:
     box.add_child(keys)
     return box
 
+## A run's tally as glyphs and digits, the same shape as the pause card's
+## summary. Shared by the nap card and the ending so neither invents its own.
+##
+## A row is `[glyph, value]` or `[label, glyph, value]`. The three-part form
+## exists for figures where the glyph is honest but ambiguous: both floor rows
+## carry a stair, because a stair means depth, but "4" beside a stair does not
+## say whether it is the floor you reached or the deepest you ever found. Naming
+## the figure in three characters is cheaper than making a player remember which
+## row they are on.
+##
+## The ending used to say "Dragons tucked in: N · Wisps hugged home: N · Fun
+## facts: N" and the nap "You reached floor N. Every wisp you hugged home is
+## still warm." -- the same three figures, in sentences, on the two screens a
+## player looks at most carefully in a whole run. They are now rows: a glyph,
+## then the number. What the pictures cannot carry stays in words, and stays
+## short.
+func _tally_rows(rows: Array) -> Control:
+    var box := VBoxContainer.new()
+    box.add_theme_constant_override("separation", 6)
+    box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    for row: Array in rows:
+        var line := HBoxContainer.new()
+        line.add_theme_constant_override("separation", 10)
+        line.alignment = BoxContainer.ALIGNMENT_CENTER
+        var offset := 0
+        if row.size() == 3:
+            var caption := _label(String(row[0]), 15, Color("#cbdcb7"))
+            caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+            line.add_child(caption)
+            offset = 1
+        line.add_child(_icon(String(row[offset]), 26, Color("#ffe497")))
+        var value_label := _label(String(row[offset + 1]), 17, Color("#fff0c8"))
+        value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+        line.add_child(value_label)
+        box.add_child(line)
+    return box
+
 func show_death(floor_number: int, meta: Dictionary) -> void:
     _clear(_overlay_content)
     _hud.visible = false
     _beat_ring.visible = false
     _show_overlay()
     _overlay_content.add_child(_centered_label("You took a cozy nap ♥", 42, Color("#ffe6a0")))
-    _overlay_content.add_child(_centered_label("Mote tucked your lantern into a mossy pocket. No one is cross. The forest will be here when you wake.", 18, Color("#e9f0d4")))
+    # "Mote tucked your lantern into a mossy pocket. No one is cross. The forest
+    # will be here when you wake." was 95 characters of reassurance. It is also
+    # the only thing on this screen saying the run is not a failure -- so it
+    # stays, but it says it in one sentence instead of three.
+    _overlay_content.add_child(_centered_label("Mote tucked your lantern away. Nobody is cross, and the forest waits.", 18, Color("#e9f0d4")))
     _overlay_content.add_child(_spacer(12))
-    _overlay_content.add_child(_centered_label("You reached floor %d. Every wisp you hugged home is still warm." % floor_number, 16, Color("#fff0c8")))
+    # Both rows are floors, so they carry the same glyph rather than a stair beside
+    # a lantern -- a lantern is warmth, and printing one next to a depth number
+    # would say the wrong thing in a picture. The words "Reached" and "Deepest"
+    # are the one part no glyph pair carries, so they stay, as labels rather than
+    # a sentence: which figure is which.
+    _overlay_content.add_child(_tally_rows([
+        ["Reached", GardenGlyphs.STAIRS, "%d" % floor_number],
+        ["Deepest", GardenGlyphs.STAIRS, "%d" % int(meta.get("best_floor", 0))],
+    ]))
+    _overlay_content.add_child(_spacer(4))
+    _overlay_content.add_child(_centered_label("Every wisp you hugged home is still warm.", 16, Color("#fff0c8")))
     _overlay_content.add_child(_spacer(18))
     _overlay_content.add_child(_centered_button("♥  Wake up & wander again", true, func(): restart_requested.emit(false)))
     _overlay_content.add_child(_centered_button("Rest a little longer", false, func(): quit_requested.emit()))
-    _overlay_content.add_child(_centered_label("Visits %d  ·  Deepest floor %d" % [int(meta.get("runs", 0)), int(meta.get("best_floor", 0))], 14, Color("#bdcea9")))
+    _overlay_content.add_child(_centered_label("Visits %d" % int(meta.get("runs", 0)), 14, Color("#bdcea9")))
     _fit_layout()
     _focus_first_enabled(_overlay_content)
 
@@ -205,12 +317,21 @@ func show_ending(dragons: int, meta: Dictionary) -> void:
     _beat_ring.visible = false
     _show_overlay()
     _overlay_content.add_child(_centered_label("The dragons are snuggled ♥", 42, Color("#ffe6a0")))
-    _overlay_content.add_child(_centered_label("Snoozle’s family sleeps in a warm heap of happy dreams. Somewhere far below, one enormous cousin yawns: ‘More lullabies when you’re ready.’", 18, Color("#e9f0d4")))
-    _overlay_content.add_child(_spacer(10))
-    _overlay_content.add_child(_centered_label("The forest grew one floor deeper, just for you. Come back for another gentle walk whenever you like.", 16, Color("#fff0c8")))
-    _overlay_content.add_child(_centered_label("Dragons tucked in: %d  ·  Wisps hugged home: %d  ·  Fun facts: %d" % [dragons, int(meta.get("wisps_soothed", 0)), int(meta.get("facts", 0))], 15, Color("#cbdcaf")))
-    _overlay_content.add_child(_spacer(16))
-    _overlay_content.add_child(_centered_button("♥  Wander deeper", true, func(): restart_requested.emit(true)))
+    # Snoozle's cousin yawning "more lullabies when you're ready" is the moment,
+    # and it is one sentence rather than a paragraph. The follow-up line about
+    # the forest growing a floor deeper was a second promise on top of it; it is
+    # now the hover on the button that makes it.
+    _overlay_content.add_child(_centered_label("Snoozle’s family sleeps in a warm heap. Far below, one enormous cousin yawns: ‘More lullabies when you’re ready.’", 18, Color("#e9f0d4")))
+    _overlay_content.add_child(_spacer(12))
+    _overlay_content.add_child(_tally_rows([
+        [GardenGlyphs.DRAGON, "%d" % dragons],
+        [GardenGlyphs.HEART, "%d" % int(meta.get("wisps_soothed", 0))],
+        [GardenGlyphs.CHIME, "%d" % int(meta.get("facts", 0))],
+    ]))
+    _overlay_content.add_child(_spacer(18))
+    var deeper := _centered_button("♥  Wander deeper", true, func(): restart_requested.emit(true))
+    deeper.tooltip_text = "The forest grew one floor deeper, just for you."
+    _overlay_content.add_child(deeper)
     _overlay_content.add_child(_centered_button("Until next time ♥", false, func(): quit_requested.emit()))
     _fit_layout()
     _focus_first_enabled(_overlay_content)
