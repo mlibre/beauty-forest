@@ -23,6 +23,7 @@ signal touch_interact_requested
 signal touch_shop_requested
 signal touch_journal_requested
 signal touch_settings_requested
+signal touch_pause_requested
 signal settings_changed(settings: Dictionary)
 
 var _root: Control

@@ -60,6 +60,7 @@ func _connect_ui() -> void:
     ui.touch_shop_requested.connect(_touch_shop)
     ui.touch_journal_requested.connect(_open_journal)
     ui.touch_settings_requested.connect(_open_settings)
+    ui.touch_pause_requested.connect(_touch_pause)
     ui.settings_changed.connect(func(value): _apply_settings(value, true))
 
 func _ensure_input_actions() -> void:
@@ -246,6 +247,18 @@ func _touch_dash() -> void:
     if direction.length_squared() < 0.01:
         direction = Vector3(-0.70710678, 0.0, -0.70710678)
     player.trigger_dash(direction)
+
+func _touch_pause() -> void:
+    # The same state machine the Escape key runs, so the touch button and the
+    # key can never disagree about what PAUSE means: pause from the walk, close
+    # any modal, resume from the card. Calling _pause_game()/_close_modal()
+    # directly rather than re-implementing it is the point.
+    if mode == Mode.PLAYING:
+        _pause_game()
+    elif mode in [Mode.SHOP, Mode.JOURNAL, Mode.SETTINGS]:
+        _close_modal()
+    elif mode == Mode.PAUSED:
+        _resume_game()
 
 func _touch_shop() -> void:
     if mode == Mode.PLAYING and _near_merchant():

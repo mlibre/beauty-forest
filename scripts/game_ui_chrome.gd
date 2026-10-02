@@ -306,6 +306,15 @@ func _build_touch_controls() -> void:
     options_button.pressed.connect(func(): touch_settings_requested.emit())
     touch_root.add_child(options_button)
 
+    # A touchscreen has no Escape key and this project maps no back gesture,
+    # so without this the five buttons above are the whole control set: the
+    # player could sing, dash, shop, read and soften the forest but never
+    # reach the pause card, the journal summary or the way home.
+    var pause_button := _touch_button("PAUSE", Color("#cfd8e8"), Vector2(-170, -56))
+    pause_button.tooltip_text = "Rest a moment. Same as Esc."
+    pause_button.pressed.connect(func(): touch_pause_requested.emit())
+    touch_root.add_child(pause_button)
+
 func _touch_button(text: String, color: Color, offset: Vector2) -> Button:
     var button := _button(text, true)
     button.custom_minimum_size = Vector2(98, 54)
