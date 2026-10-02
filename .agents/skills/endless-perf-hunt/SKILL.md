@@ -21,7 +21,7 @@ Before changing code:
 4. Use `docs/TESTING.md` for project checks 
 5. Build a candidate queue across tiers P1–P8 below and rank it by measured or strongly evidenced impact.
 
-Godot has no general `--build` benchmark flag, and this project has no export preset. Do not invent one. Profile in the engine/editor or with a deterministic project-owned probe. Report headless, renderer, device, window/viewport, scene/floor, warm-up, and sample-count conditions.
+Godot has no general `--build` benchmark flag, and this project has no export preset. Do not invent one.
 
 ## Measurement standard
 
@@ -97,7 +97,7 @@ If the first optimization does not beat noise, revert it and re-profile. If corr
 - Physics tunneling on slow frames
 - Camera jitter, shake, recoil, or drift regressions
 
-Never “fix” smoothness with camera shake. Beauty Forest requires a stable fixed isometric camera.
+Never “fix” smoothness with camera shake.
 
 ### P6. Memory and resource lifetime
 
@@ -136,19 +136,10 @@ These are not performance wins:
 
 A quality cut requires explicit user approval. If approved, preserve the closest look that meets the agreed target and document the visual/perf tradeoff.
 
-## Beauty Forest constraints
-
-Never trade away these rules for performance:
-
-- Fixed smooth isometric third-person camera; **no shake, recoil, mouse drift, or first-person/distant-angle changes**
-- Bright, cozy golden-dusk forest; no darkening or black-void fallbacks
-- Fully automatic lantern/song-note combat; no manual attack input
-- Visible animated hero with the existing blend tree and cosmetic staff swing
-- Joyful, breathing menus; do not freeze them for CPU savings
-- Gentle, non-punishing accessibility and learning design
-- Region identity, warm light, glow, particles, and polish remain intact unless the user approves a change
-
-Nonsensical rendering is a correctness defect even at zero measured cost. Fix it under a `fix(render):` commit, never disguise it as performance work.
+`AGENTS.md` holds the design rules and `project.godot` the engine and renderer.
+Performance never outranks the rules — treat a violation as a correctness defect
+even at zero measured cost: fix it under a `fix(render):` commit rather than
+disguising it as performance work.
 
 ## Hunting discipline
 

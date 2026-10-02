@@ -8,6 +8,12 @@ extends GameUILayout
 ## into the reusable shop card rather than the overlay card, they all close the
 ## same way, and their rows need the same two helpers. Keeping them together is
 ## what lets GameUIScreens stay a file about the story screens.
+##
+## Peddle's cart is a SHELF of picture cards, not a list of sentences: every
+## ware gets a CozyCard that says what it is in ink (icon, lit rim, sparkle
+## price) and keeps only its own name and price digits as words. That is the
+## single biggest text win in the game -- the cart used to paint ~100 labels
+## and now paints one name per ware.
 
 func _clear_panel() -> void:
     ## Empty the shared modal panel (cart, memory book, gentler-forest options).
@@ -19,30 +25,132 @@ func _clear_panel() -> void:
     _clear(_shop_frame)
     _shop_content = null
 
+## The scrolling row list, appended to the panel and handed back. Always a
+## VBox: the shelves inside are GridContainers, so this holds one thing per
+## section rather than the cards themselves.
+##
+## Header rows and the closing button go into _shop_frame, which fills the
+## card; only the rows themselves go into the returned list inside this
+## scroll. The scroll has to sit directly under the frame, because a
+## ScrollContainer reports a ZERO minimum height on its scrolling axis, so it
+## can only be given room by SIZE_EXPAND_FILL inside a parent that has spare
+## height to give. _shop_scroll is rebound because the previous one was freed
+## along with the frame.
 func _panel_list(separation: int = 8) -> VBoxContainer:
-    ## Append the scrolling row list to the panel and hand it back.
-    ##
-    ## Header rows and the closing button go into _shop_frame, which fills the
-    ## card; only the rows themselves go into the returned list inside this
-    ## scroll. The scroll has to sit directly under the frame, because a
-    ## ScrollContainer reports a ZERO minimum height on its scrolling axis, so
-    ## it can only be given room by SIZE_EXPAND_FILL inside a parent that has
-    ## spare height to give. _shop_scroll is rebound because the previous one
-    ## was freed along with the frame.
-    var scroll := ScrollContainer.new()
-    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-    scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    _style_scrollbars(scroll)
-    _shop_frame.add_child(scroll)
-    _shop_scroll = scroll
-    var list := VBoxContainer.new()
-    list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    list.add_theme_constant_override("separation", separation)
-    scroll.add_child(list)
-    _shop_content = list
-    return list
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_style_scrollbars(scroll)
+	_shop_frame.add_child(scroll)
+	_shop_scroll = scroll
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", separation)
+	scroll.add_child(list)
+	_shop_content = list
+	return list
+
+## A titled shelf of wares, wrapped into as many columns as the card is wide.
+##
+## The section heading is an icon plus a bare count ("3") rather than a line of
+## prose: the wares below it are the explanation, and a heading that spelled out
+## the same rule in words was a third of the cart's text for no new information.
+## `worn_of` is the count the heading shows, so "2 charms" can be read off the
+## heading without a line per slot.
+func _shelf(list: VBoxContainer, title: String, glyph_key: String, count: String, worn_of: String = "") -> GridContainer:
+	var heading := HBoxContainer.new()
+	heading.add_theme_constant_override("separation", 8)
+	list.add_child(heading)
+	heading.add_child(_icon(GardenGlyphs.MOTE if glyph_key.is_empty() else glyph_key, 20, Color("#ffe497")))
+	var label := _label(title, 15, Color("#ffe497"))
+	heading.add_child(label)
+	if not count.is_empty():
+		var count_label := _label(count, 15, Color("#fff0c8"))
+		heading.add_child(count_label)
+	if not worn_of.is_empty():
+		heading.add_child(_label("· %s" % worn_of, 13, Color("#bcd2a8")))
+	var grid := GridContainer.new()
+	grid.columns = 6
+	grid.add_theme_constant_override("hseparation", 10)
+	grid.add_theme_constant_override("vseparation", 10)
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_child(grid)
+	return grid
+
+## One ware on a shelf, as a picture with a name and a price.
+##
+## `sub` and `price_text` are deliberately absent: the card paints its own
+## status in ink (lit rim = wearing, dim = unaffordable, heart = a gift) and the
+## header line explains the section, so the words that used to sit under every
+## ware -- "in pocket -- tap to wear", "swap it in for a verse you're humming",
+## "take for sparkles 5", "free gift" -- are gone from the painted screen and
+## live on in the tooltip the player asks for.
+func _ware_card(grid: GridContainer, item: Dictionary, state: Dictionary, enabled: bool, is_owned: bool, slots_full: bool = false, free_item: bool = false, pressed: Callable = Callable()) -> Button:
+	var sparkles := int(state.get("sparkles", 0))
+	var price := int(item.get("price", 0))
+	var button := Button.new()
+	var card := CozyCard.new()
+	card.name = String(item.get("key", "ware"))
+	card.item = item
+	card.price = price
+	card.selected = bool(state.get("selected_%s" % String(item.get("key", "")), false))
+	card.owned = is_owned
+	card.free_item = free_item
+	card.affordable = enabled and (is_owned or free_item or price <= sparkles)
+	card.high_contrast = _high_contrast
+	button.add_child(card)
+	# A Button sizes to its own text minimum, and this row paints no text at
+	# all, so it would collapse to the bare glyph minimum and the shelf would
+	# pile up in one column. The card sets the floor instead.
+	button.custom_minimum_size = CozyCard.new().custom_minimum_size
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.disabled = not card.affordable
+	button.tooltip_text = _ware_tooltip(item, card, slots_full)
+	button.icon = null
+	# The card is a plain child, so it must fill the button's rect and take no
+	# mouse input of its own -- otherwise it swallows the press before the
+	# button sees it.
+	card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if pressed.is_valid():
+		button.pressed.connect(pressed)
+	var border := Color("#ffe08a") if card.selected else Color("#8abf75")
+	button.add_theme_stylebox_override("normal", _button_style(Color(0, 0, 0, 0), border, 14))
+	button.add_theme_stylebox_override("hover", _button_style(Color(1.0, 0.94, 0.72, 0.14), Color("#ffe69b"), 14))
+	button.add_theme_stylebox_override("pressed", _button_style(Color(1.0, 0.90, 0.55, 0.22), Color("#fff0b0"), 14))
+	button.add_theme_stylebox_override("disabled", _button_style(Color(0, 0, 0, 0), Color(1, 1, 1, 0.16), 14))
+	grid.add_child(button)
+	return button
+
+## What the card cannot say in ink, asked for by hovering.
+##
+## Every state the card paints ambiguously is spelled out here: what the ware
+## does, whether tapping wears or swaps, and -- for a price you cannot meet --
+## how much is still needed. A card may look unaffordable; this is where the
+## player learns it is worth saving for.
+func _ware_tooltip(item: Dictionary, card: CozyCard, slots_full: bool) -> String:
+	var what := String(item.get("description", ""))
+	var key := String(item.get("key", ""))
+	if card.free_item:
+		var swap_note := " Tap to swap it in; one of your two verses will step back." if String(item.get("kind", "verse")) == "verse" else " Tap to hum this one instead."
+		return "%s — free to hum any time.%s" % [what, swap_note]
+	if card.selected:
+		return "%s — wearing it now. Tap to rest it." % what
+	if card.owned:
+		var swap_note := " Tap to swap it in for a charm you are wearing." if slots_full else " Tap to wear it."
+		return "%s — already yours.%s" % [what, swap_note]
+	if slots_full:
+		return "%s — all %d charm slots are full, so this waits in your pocket until you swap one." % [
+			what, BeautyContent.MAX_CHARMS]
+	if card.price > 0 and not card.affordable:
+		return "You need %d sparkles — soothe %d more wisp%s. It will keep. ♥" % [
+			card.price, card.price - int(card.get_meta("sparkles", 0)),
+			"" if card.price - int(card.get_meta("sparkles", 0)) == 1 else "s"]
+	return what
 
 func show_shop(state: Dictionary) -> void:
     _dismiss_beat_ring()

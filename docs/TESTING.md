@@ -95,6 +95,3 @@ through an early failure path.
 godot --headless --path . --import                                   # import/check
 godot --headless --path . --check-only --script res://path/to/file.gd # parse one script
 ```
-
-The project has no export preset and Godot has no general `--build` benchmark
-flag. Do not invent one; profile in the engine with a project-owned probe.
