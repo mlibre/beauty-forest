@@ -361,14 +361,23 @@ func _celebrate(duration: float) -> void:
             hero.set_happy(false)
     )
 
-func _learn_fact(reason: String) -> void:
+## One fact, from either source, into the Atlas.
+##
+## `counts_toward_finder` marks the curious-wisp route specifically. The Atlas
+## counter is shared with level-up facts, so a single counter would hand
+## Curious Mind to the first ten level-ups and the wisp route could never win it
+## -- while the journal still told players a curious wisp was a way to earn it.
+## `facts_from_wisps` is its own tally so the sticker means what it says.
+func _learn_fact(reason: String, counts_toward_finder: bool = false) -> void:
     var fact := String(BeautyContent.FACTS[int(meta.get("facts", 0)) % BeautyContent.FACTS.size()])
     var learned: Array = meta.get("facts_learned", [])
     learned.append(fact)
     meta["facts_learned"] = learned
     meta["facts"] = int(meta.get("facts", 0)) + 1
-    if int(meta["facts"]) >= 10:
-        _award_sticker("fact_finder")
+    if counts_toward_finder:
+        meta["facts_from_wisps"] = int(meta.get("facts_from_wisps", 0)) + 1
+        if int(meta["facts_from_wisps"]) >= 10:
+            _award_sticker("fact_finder")
     ui.add_log("Mote: “%s”" % fact)
     if not reason.is_empty() and reason.contains("curious"):
         ui.add_log(reason)

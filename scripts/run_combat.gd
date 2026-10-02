@@ -279,7 +279,7 @@ func _soothe_wisp(wisp: Wisp, distant: bool) -> void:
     if distant:
         _award_sticker("long_lullaby")
     if wisp.curious:
-        _learn_fact("A curious wisp tucked a fact into its glow: “Psst — soothe me and it is yours!”")
+        _learn_fact("A curious wisp tucked a fact into its glow: “Psst — soothe me and it is yours!”", true)
         _award_sticker("curious")
     var style: Dictionary = BeautyContent.STYLE_DATA[selected_style]
     var soul_multiplier := float(floor_modifier.get("soul", 1.0)) * float(style.get("soul", 1.0)) * float(charm_effects.get("soul", 1.0)) * float(stanza_effects.get("soul", 1.0))

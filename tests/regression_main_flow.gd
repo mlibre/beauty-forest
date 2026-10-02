@@ -477,6 +477,8 @@ func _run() -> void:
         return
     if not await _check_free_items_do_not_claim_to_be_owned(game):
         return
+    if not await _check_curious_wisp_facts_can_win_the_sticker(game):
+        return
 
     print("BEAUTY_FOREST_MAIN_FLOW_OK")
     TestProfile.end()
@@ -973,6 +975,50 @@ func _check_a_full_slot_verse_swap_says_what_steps_back(game: Node) -> bool:
     if not _check(game.stanzas_equipped.has(stepped_aside),
             "the displaced verse could not be swapped straight back"):
         return false
+    return true
+
+func _check_curious_wisp_facts_can_win_the_sticker(game: Node) -> bool:
+    ## The journal tells a player with no facts to "soothe a curious wisp" to
+    ## earn one, and Curious Mind is earned for ten facts from Mote. Both facts
+    ## arrived through the same shared counter, so the first ten LEVEL-UPS took
+    ## the sticker and no amount of curious wisps ever could -- the journal
+    ## pointed at a reward the game could not deliver. Level-ups still fill the
+    ## Atlas; only the wisp route counts toward the sticker.
+    game.meta["stickers"] = []
+    game.meta["facts"] = 0
+    game.meta["facts_from_wisps"] = 0
+
+    # Ten level-up facts: the Atlas fills, and the sticker must not be awarded on
+    # this route.
+    for _i in 10:
+        game._learn_fact("A level-up lantern fact")
+    if not _check(int(game.meta.get("facts", 0)) == 10,
+            "ten level-up facts put %d in the Atlas, expected 10" % int(game.meta.get("facts", 0))):
+        return false
+    if not _check(not (game.meta["stickers"] as Array).has("fact_finder"),
+            "ten level-up facts awarded Curious Mind, which the journal offers for soothing curious wisps"):
+        return false
+
+    # Ten wisp facts: this is the route the journal names, so it must win it.
+    for _i in 10:
+        game._learn_fact("A curious wisp tucked a fact into its glow", true)
+    if not _check((game.meta["stickers"] as Array).has("fact_finder"),
+            "ten curious-wisp facts did not award Curious Mind"):
+        return false
+    if not _check(int(game.meta.get("facts_from_wisps", 0)) == 10,
+            "the wisp tally read %d, expected 10" % int(game.meta.get("facts_from_wisps", 0))):
+        return false
+
+    # The tally has to survive a save: _clean_meta rebuilds the satchel from a
+    # whitelist, so a counter missing from that list is silently dropped on
+    # every write and the sticker resets on the next launch.
+    var survived := BeautyData._clean_meta(game.meta)
+    if not _check(int(survived.get("facts_from_wisps", 0)) == 10,
+            "saving dropped the wisp tally to %d, so the sticker resets on every launch" % int(survived.get("facts_from_wisps", 0))):
+        return false
+    game.meta["stickers"] = []
+    game.meta["facts"] = 0
+    game.meta["facts_from_wisps"] = 0
     return true
 
 ## Verses and Mote's counter-melodies are free gifts that nobody owns, and the
