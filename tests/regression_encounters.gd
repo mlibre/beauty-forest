@@ -30,6 +30,8 @@ func _run() -> void:
         return
     if not await _check_dragon_clear_hands_the_way_to_the_stair(game):
         return
+    if not await _check_the_lullaby_pauses_contact_damage(game):
+        return
 
     finish(game, "BEAUTY_FOREST_ENCOUNTERS")
 
@@ -92,6 +94,35 @@ func _check_dragon_clear_hands_the_way_to_the_stair(game: Node) -> bool:
     if not ok(saw_stair,
             "after the lullaby the objective still read: %s" % game.ui._walker_objective):
         return false
+    game._start_run(1)
+    await frames(4)
+    return true
+
+func _check_the_lullaby_pauses_contact_damage(game: Node) -> bool:
+    ## The sit-with ceremony is the calmest path to soothe a Big Feeling; it
+    ## must not meet its own sob — during the song the feeling's contact rule
+    ## has to hold its breath.
+    game._start_run(8)
+    await frames(6)
+    var patient: Wisp = null
+    for wisp: Wisp in game.wisps:
+        if wisp.is_feeling and wisp.alive:
+            patient = wisp
+    if not ok(patient != null, "the feeling floor spawned no Big Feeling"):
+        return false
+    patient.global_position = game.player.global_position + Vector3(1.0, 0.0, 0.0)
+    patient.set_meta("attack_cooldown", 0.0)
+    game.hp = game.hp_max
+    game.invulnerable_time = 0.0
+    game.player.invulnerable_time = 0.0
+    game._begin_feeling_lullaby(patient)
+    var warmth_before: float = game.hp
+    for _step in range(30):
+        await physics_frame
+    if not ok(is_equal_approx(game.hp, warmth_before),
+            "the Big Feeling's sob met the player mid-lullaby (%.0f -> %.0f)" % [warmth_before, game.hp]):
+        return false
+    game._reset_lullaby()
     game._start_run(1)
     await frames(4)
     return true

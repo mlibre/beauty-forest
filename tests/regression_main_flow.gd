@@ -132,31 +132,6 @@ func _run() -> void:
     if not ok(feeling.soothed or not is_instance_valid(feeling), "the Big Feeling could not be soothed by sitting with it"):
         return
 
-    # The sit-with ceremony is the calm way to soothe a Big Feeling; it must
-    # not meet its own 's sob — contact damage has to pause while the song
-    # plays.
-    var patient: Wisp = null
-    game._spawn_feeling(8)
-    for wisp: Wisp in game.wisps:
-        if wisp.is_feeling and wisp.alive:
-            patient = wisp
-    if patient == null:
-        ok(false, "no living Big Feeling for the sit-with check")
-        return
-    patient.global_position = game.player.global_position + Vector3(1.0, 0.0, 0.0)
-    patient.set_meta("attack_cooldown", 0.0)
-    game.hp = game.hp_max
-    game.invulnerable_time = 0.0
-    game.player.invulnerable_time = 0.0
-    game._begin_feeling_lullaby(patient)
-    var warmth_before: float = game.hp
-    for _step in range(30):
-        await physics_frame
-    if not ok(is_equal_approx(game.hp, warmth_before),
-            "the Big Feeling's sob met the player mid-lullaby (%.0f -> %.0f)" % [warmth_before, game.hp]):
-        return
-    game._reset_lullaby()
-
     # A heal that cannot happen must never be charged for. Pause the live
     # floor while checking the accounting so automatic combat cannot add
     # sparkles between the direct purchase and its assertion.
