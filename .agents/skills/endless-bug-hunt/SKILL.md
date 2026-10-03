@@ -161,6 +161,17 @@ Run the performance skill when measured impact—not suspicion—is the primary 
 - **Run any new check under deliberate load before trusting it.** A single green run
   of a timing-sensitive or contention-sensitive check proves nothing; one pass each
   way, then re-run the suite twice.
+- **Sweep for unawaited async checks after adding one — and distrust a green that
+  follows a new `await`.** An async test called without `await` never runs its body,
+  so the suite passes while proving nothing. This has now bitten three separate times
+  in this repo, so treat any new `await` in a test as suspect until a mutation
+  confirms the check fails. The cheap detector: list `func` bodies that contain
+  `await`, then check every call site in the runner for a matching `await`.
+- **A loose substring over screen text passes on the wrong label.** Searching every
+  `Label` for "save" matched the menu subtitle ("no hurry, no losing ♥"); searching
+  for run-ish words matched "Visits 0 · Deepest floor 0". Match the specific string
+  the fix introduces, and print the offending labels on failure so a false pass is
+  visible.
 
 ## Queue discipline
 
