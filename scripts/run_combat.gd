@@ -99,6 +99,12 @@ func _separate_wisps() -> void:
 func _update_wisp_contact(wisp: Wisp, delta: float) -> void:
     if wisp.soothed or not wisp.alive:
         return
+    # Sitting with a Big Feeling is the gentle path by design. While the song
+    # plays the feeling must stand and listen, not sob the player back awake:
+    # a hit mid-lullaby knocked the hero away from the very circle they were
+    # meant to hold. Contact resumes the moment the song ends or fails.
+    if _lullaby_active:
+        return
     var cooldown := float(wisp.get_meta("attack_cooldown", 0.0)) - delta
     var distance := wisp.global_position.distance_to(player.global_position)
     if not bool(wisp.get_meta("said_grumble", false)) and distance < 5.0:
