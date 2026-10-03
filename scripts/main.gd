@@ -294,6 +294,12 @@ func _resume_game() -> void:
     if mode != Mode.PAUSED:
         return
     ui.close_panels()
+    # show_pause() turned the text chrome on for the summary, which hides the
+    # vitals strip because the two are mutually exclusive. Nothing turned it back
+    # off, so one pause left the walk with no lantern ring, no sparkle count and no
+    # depth -- its whole readout -- and with Mote's prose painted on top. The walk
+    # screen is pictures only; give them back here, where the walk resumes.
+    ui.set_text_chrome_visible(false)
     mode = Mode.PLAYING
     _set_world_processing(true)
     player.set_control_enabled(_gameplay_controls_enabled())

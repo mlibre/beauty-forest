@@ -31,8 +31,58 @@ func _run() -> void:
 		return
 	if not await _check_a_relayout_does_not_resurrect_the_hidden_log(game):
 		return
+	if not await _check_resuming_restores_the_walk_screens_pictures(game):
+		return
 
 	finish(game, "BEAUTY_FOREST_TOUCH")
+
+func _check_resuming_restores_the_walk_screens_pictures(game: Node) -> bool:
+	## The walk screen is pictures only: the lantern ring, sparkles, depth and the
+	## charm sockets are its entire readout, and AGENTS.md forbids sentences there.
+	## show_pause() calls set_text_chrome_visible(true) to bring Mote's chatter and
+	## the key hints back for the summary -- which HIDES the vitals strip, because
+	## the two are mutually exclusive by construction. But _resume_game() only
+	## closed the panels; it never turned the pictures back on. So one pause left
+	## the player walking with no lantern ring, no sparkle count and no depth, and
+	## with prose painted on the screen they had already left.
+	##
+	## This is the one HUD invariant that has no test: the relayout check above
+	## guards the log coming BACK when it should stay hidden, and nothing guarded
+	## the vitals going away when they should return.
+	game._start_run(1)
+	await frames(4)
+	if not ok(game.ui._vitals.visible,
+			"the walk started with its pictures hidden"):
+		return false
+	if not ok(not game.ui._log_label.visible,
+			"the walk started with prose painted on it"):
+		return false
+
+	game._pause_game()
+	await frames(3)
+	if not ok(not game.ui._vitals.visible,
+			"the pause card should own the readout while it is open"):
+		return false
+
+	game._resume_game()
+	await frames(3)
+	if not ok(game.ui._vitals.visible,
+			"resuming left the walk screen with no lantern ring, sparkles or depth"):
+		return false
+	if not ok(not game.ui._log_label.visible,
+			"resuming left Mote's chatter painted on the walk screen"):
+		return false
+
+	# It must be a steady state, not a one-frame flicker: pause again and the
+	# pictures have to come back again.
+	game._pause_game()
+	await frames(3)
+	game._resume_game()
+	await frames(3)
+	if not ok(game.ui._vitals.visible and not game.ui._log_label.visible,
+			"a second pause/resume cycle did not restore the pictures either"):
+		return false
+	return true
 
 func _check_a_relayout_does_not_resurrect_the_hidden_log(game: Node) -> bool:
 	## Start of a walk hides the white chatter (set_text_chrome_visible(false)).
