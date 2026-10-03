@@ -32,8 +32,27 @@ func _run() -> void:
 	await _check_high_contrast_reaches_the_text()
 	await _check_bump_softness_drags_toward_softness()
 	await _check_accessibility_toggles_name_what_they_change()
+	await _check_vitals_follow_the_accessibility_settings()
 
 	finish(game, "BEAUTY_FOREST_OPTIONS")
+
+func _check_vitals_follow_the_accessibility_settings() -> void:
+	## The vitals ring, sparkle count and charm sockets drew with whatever flags
+	## they were born with: apply_settings refreshed the minimap, the scrims
+	## and the text, but never touched `_vitals`, so "High contrast" and "Still
+	## Forest" quietly did nothing to the picture every player wears.
+	_ui.apply_settings({"high_contrast": false, "reduced_motion": false})
+	await frames(2)
+	ok(not _ui._vitals.high_contrast, "vitals were born high-contrast")
+	ok(not _ui._vitals._reduced_motion, "vitals were born in Still Forest")
+	_ui.apply_settings({"high_contrast": true, "reduced_motion": true})
+	await frames(2)
+	ok(_ui._vitals.high_contrast, "High Contrast never reached the vitals ring")
+	ok(_ui._vitals._reduced_motion, "Still Forest never reached the vitals ring")
+	_ui.apply_settings({"high_contrast": false, "reduced_motion": false})
+	await frames(2)
+	ok(not _ui._vitals.high_contrast and not _ui._vitals._reduced_motion,
+		"clearing the toggles did not restore the vitals to gentle defaults")
 
 ## High Contrast only ever darkened the scrims and the minimap. The cards carry
 ## their own near-opaque fill, so every label sat at the same 13.6:1 in both

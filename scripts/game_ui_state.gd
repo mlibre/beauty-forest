@@ -394,6 +394,13 @@ func apply_settings(settings: Dictionary) -> void:
         label.add_theme_font_size_override("font_size", int(round(base_size * _text_scale)))
     _minimap.high_contrast = _high_contrast
     _minimap.queue_redraw()
+    if is_instance_valid(_vitals):
+        # The ring, sparkle count and charm sockets are the most-stared-at
+        # widget on the HUD: they still keep crackling and breathing unless
+        # both toggles reach them.
+        _vitals.high_contrast = _high_contrast
+        _vitals.set_reduced_motion(bool(_settings.get("reduced_motion", false)))
+        _vitals.queue_redraw()
     _overlay_scrim.color = Color(0.025, 0.05, 0.035, 0.72 if _high_contrast else PAUSE_SCRIM_ALPHA)
     if is_instance_valid(_menu_scrim):
         _menu_scrim.color = Color(0.025, 0.05, 0.035, 0.42 if _high_contrast else MENU_SCRIM_ALPHA)
