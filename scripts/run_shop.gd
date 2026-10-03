@@ -54,10 +54,6 @@ func _on_buy_requested(key: String) -> void:
         var equipped_count := charms_equipped.size()
         if equipped_count < BeautyContent.MAX_CHARMS:
             charms_equipped[key] = true
-        elif bool(charms_equipped.get(key, false)):
-            # Already wearing one of the three, so the purchase is a pure
-            # duplicate -- see the owned check above.
-            return
         if key == "scarf":
             # Max warmth is owned by _recalculate_loadout below, which rebuilds
             # it from the equipped loadout. Bumping it here did nothing (the
