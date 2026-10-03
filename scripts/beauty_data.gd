@@ -83,21 +83,68 @@ static func default_meta() -> Dictionary:
         "facts_learned": [],
     }
 
+## What happened to the satchel this session, if anything went wrong.
+##
+## A read failure must never be persistable as a new profile. load_meta() used
+## to answer "unreadable" and "brand new player" with the same empty dict, so a
+## crash-truncated file made 400 runs of history vanish on the next ordinary
+## save -- the blank dict was written straight over the only copy. Now an
+## unreadable satchel is MOVED ASIDE first, so the bytes are still on disk to
+## recover by hand, and the empty profile the game continues with is marked as a
+## read failure so save_meta() can tell them apart.
+static var _meta_read_failed := false
+## True only while an unreadable file still SITS AT the live save path, which
+## happens when moving it aside failed. Then the next save would destroy the only
+## remaining copy, so it is refused. Once the file is safely aside the live path is
+## free and saving works normally again; the quarantined bytes stay untouched
+## either way.
+static var _meta_write_blocked := false
+
+static func meta_read_failed() -> bool:
+    return _meta_read_failed
+
+## Move an unreadable file aside instead of overwriting it. Returns the backup
+## path, or "" when the move failed and the original is still in place.
+static func _quarantine(path: String, label: String) -> String:
+    var stamp := Time.get_datetime_string_from_system().replace(":", "-").replace("T", "_")
+    var backup := "%s.corrupt-%s" % [path, stamp]
+    var error := DirAccess.rename_absolute(path, backup)
+    if error != OK:
+        push_warning("Could not set the damaged %s aside (%s); leaving it in place." % [label, error_string(error)])
+        return ""
+    push_warning("The %s could not be read, so it was kept at %s rather than overwritten." % [label, backup])
+    return backup
+
 static func load_meta() -> Dictionary:
     var target := save_path()
+    _meta_read_failed = false
+    _meta_write_blocked = false
     if not FileAccess.file_exists(target):
         return default_meta()
     var file := FileAccess.open(target, FileAccess.READ)
     if file == null:
         push_warning("Could not open the Beauty Forest satchel; using a fresh one.")
+        _meta_read_failed = true
+        _meta_write_blocked = _quarantine(target, "satchel").is_empty()
         return default_meta()
     var parsed: Variant = JSON.parse_string(file.get_as_text())
     if not (parsed is Dictionary):
+        # The realistic shape: a crash or a full disk mid-write leaves a partial
+        # JSON file, which is exactly what the next save would overwrite.
         push_warning("The Beauty Forest satchel was unreadable; using a fresh one.")
+        _meta_read_failed = true
+        _meta_write_blocked = _quarantine(target, "satchel").is_empty()
         return default_meta()
     return _clean_meta(parsed as Dictionary)
 
 static func save_meta(meta: Dictionary) -> bool:
+    # Refuse only while an unreadable satchel is still sitting at the live save
+    # path -- i.e. when moving it aside failed. Writing now would destroy the only
+    # copy of a file we already failed to understand. Once it is safely aside,
+    # saving resumes and the preserved bytes are never touched again.
+    if _meta_write_blocked:
+        push_warning("Not writing over a satchel that could not be read this session; the damaged file is kept aside.")
+        return false
     var temp_path := save_path() + ".tmp"
     var target := save_path()
     var file := FileAccess.open(temp_path, FileAccess.WRITE)
@@ -174,10 +221,19 @@ static func default_settings() -> Dictionary:
         "muted": false,
     }
 
+## Settings have the same data-loss shape as the satchel, and it is milder but
+## still real: a truncated config made every accessibility choice silently revert
+## to stock, including the ones a player needs to play comfortably at all. Keep
+## the damaged file aside for the same reason, and do not overwrite it.
 static func load_settings() -> Dictionary:
     var result := default_settings()
     var config := ConfigFile.new()
     if config.load(settings_path()) != OK:
+        # A missing file is a first run; only a file that EXISTS and will not
+        # parse is damage worth preserving.
+        if FileAccess.file_exists(settings_path()):
+            push_warning("Beauty Forest settings could not be read, so the damaged file was kept aside.")
+            _quarantine(settings_path(), "settings")
         return result
     result["reduced_motion"] = _setting_bool(config.get_value("cozy", "reduced_motion", false))
     result["text_scale"] = _setting_float(config.get_value("cozy", "text_scale", result["text_scale"]), 0.75, 2.0, result["text_scale"])

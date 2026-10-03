@@ -28,6 +28,8 @@ func _run() -> void:
     _test_save_round_trips()
     _test_missing_collection_keys_keep_the_satchel()
     _test_save_failures_preserve_data()
+    await _test_unreadable_satchel_is_never_overwritten()
+    await _test_the_save_guard_refuses_a_damaged_satchel()
     _test_loadout_limits()
     _test_weighted_pick_boundaries()
     _test_profile_isolation()
@@ -200,6 +202,151 @@ func _test_missing_collection_keys_keep_the_satchel() -> void:
     check(int(reread.get("runs", -1)) == 42, "a keyless satchel must survive a full load/save cycle")
     check(int(reread.get("best_floor", -1)) == 9, "a keyless satchel must keep its best floor across a round trip")
     check(BeautyData.save_meta(rich), "restoring the populated satchel must succeed")
+
+func _test_unreadable_satchel_is_never_overwritten() -> void:
+    # A save failure that preserves the prior save was already covered. The
+    # mirror case was not: a READ failure. load_meta() answered "unreadable"
+    # and "brand new player" with the same empty dict, so a satchel truncated by
+    # a crash mid-write lost every run, sticker and fact -- and the very next
+    # ordinary save committed that blank dict straight over the only copy.
+    # Measured: 412 runs, 2337 wisps and 27 dragons reduced to a 196-byte
+    # fresh profile, unrecoverable.
+    var rich := BeautyData.default_meta()
+    rich["runs"] = 412
+    rich["wisps_soothed"] = 2337
+    rich["dragons_sung"] = 27
+    rich["best_floor"] = 17
+    rich["stickers"] = ["century", "dragon_friend"]
+    for index in 50:
+        rich["facts_learned"].append("fact %d" % index)
+    rich["facts"] = 50
+    check(BeautyData.save_meta(rich), "the pre-corruption satchel fixture must save")
+
+    # The realistic damage: a crash or a full disk leaves partial JSON.
+    var damaged := FileAccess.open(BeautyData.save_path(), FileAccess.WRITE)
+    check(damaged != null, "the truncation fixture must be creatable")
+    if damaged == null:
+        return
+    damaged.store_string('{"version": 2, "runs": 412, "wisps_so')
+    damaged.close()
+
+    var loaded: Dictionary = BeautyData.load_meta()
+    check(BeautyData.meta_read_failed(),
+            "load_meta must report that it could not read the satchel, so a blank profile is never mistaken for a new player")
+
+    # The damaged bytes must still be on disk somewhere, not merely spared.
+    var preserved := _find_quarantined(BeautyData.save_path())
+    check(not preserved.is_empty(),
+            "the unreadable satchel was moved aside instead of being overwritten in place")
+    if not preserved.is_empty():
+            var kept := FileAccess.open(preserved, FileAccess.READ)
+            check(kept != null and kept.get_as_text().contains("wisps_so"),
+                "the preserved satchel should still hold the player's bytes, got %s" % preserved)
+            if kept != null:
+                kept.close()
+
+    # Because it was moved aside, the live path is free and saving must work
+    # again immediately -- a player who reloads after a corrupt file should not
+    # be locked out of progress for the rest of the session.
+    check(BeautyData.save_meta(rich), "saving must work again once the damaged file is out of the way")
+    check(int(BeautyData.load_meta().get("runs", -1)) == 412,
+            "the player's history must be intact after the recovery")
+    check(_find_quarantined(BeautyData.save_path()) == preserved,
+            "the recovery save must not disturb the preserved copy")
+
+    # Settings have the same shape, and it is milder but still real: a damaged
+    # config reverts every accessibility choice, including the ones a player
+    # needs to play comfortably at all. Only the damage ConfigFile actually
+    # rejects can be caught, though -- measured, it returns OK for a file
+    # truncated mid-key, an empty file, binary junk and plain prose, silently
+    # yielding no settings. There is no signal to tell that apart from a genuine
+    # all-defaults config, so this covers the crash shape it does reject.
+    var comfy := BeautyData.default_settings()
+    comfy["reduced_motion"] = true
+    comfy["text_scale"] = 2.0
+    comfy["muted"] = true
+    check(BeautyData.save_settings(comfy), "the pre-corruption settings fixture must save")
+    var broken := FileAccess.open(BeautyData.settings_path(), FileAccess.WRITE)
+    check(broken != null, "the settings truncation fixture must be creatable")
+    if broken != null:
+        broken.store_string("[cozy]\nreduced_motion = tr")
+        broken.close()
+    var reloaded: Dictionary = BeautyData.load_settings()
+    check(_find_quarantined(BeautyData.settings_path()) != "",
+        "a settings file that would not parse was moved aside instead of being overwritten")
+    check(not bool(reloaded["reduced_motion"]) and float(reloaded["text_scale"]) == 1.0,
+        "damaged settings must fall back to readable defaults, not to half-parsed values")
+
+    # The guard that refuses to write over a still-unreadable satchel is only
+    # The guard that refuses to write over a still-unreadable satchel is only
+func _test_the_save_guard_refuses_a_damaged_satchel() -> void:
+    var rich := BeautyData.default_meta()
+    rich["runs"] = 412
+    rich["wisps_soothed"] = 2337
+    rich["dragons_sung"] = 27
+
+    # reachable when moving the damaged file aside FAILS -- the rare case. Drive
+    # it by planting a directory where the backup would go, so the rename fails.
+    # The backup name is stamped to the second by BeautyData, so wait for a
+    # fresh second; otherwise this collides with the quarantine above, the rename
+    # succeeds, and the guard is never exercised.
+    _clear_quarantined(BeautyData.save_path())
+    _clear_quarantined(BeautyData.settings_path())
+    await _wait_for_a_fresh_stamp()
+    var blocked_backup := "%s.corrupt-%s" % [BeautyData.save_path(), Time.get_datetime_string_from_system().replace(":", "-").replace("T", "_")]
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(blocked_backup))
+    var stuck := FileAccess.open(BeautyData.save_path(), FileAccess.WRITE)
+    check(stuck != null, "the second truncation fixture must be creatable")
+    if stuck != null:
+        stuck.store_string('{"version": 2, "runs": 412, "wisps_so')
+        stuck.close()
+    var stuck_loaded: Dictionary = BeautyData.load_meta()
+    check(FileAccess.file_exists(BeautyData.save_path()),
+        "when the damaged file cannot be moved aside it must stay untouched")
+    check(not BeautyData.save_meta(stuck_loaded),
+        "a save must be refused while the only copy of the satchel still sits at the live path")
+    # Existence is not enough -- an overwrite leaves a file standing. The bytes
+    # themselves must still be the ones we failed to read.
+    var survivor := FileAccess.open(BeautyData.save_path(), FileAccess.READ)
+    var preserved_bytes := survivor != null and survivor.get_as_text().contains("wisps_so")
+    if survivor != null:
+        survivor.close()
+    check(preserved_bytes,
+        "the refused save must not have overwritten the only copy of the damaged file")
+
+    # Once the obstruction is gone the same path recovers, so a player who hits
+    # this is not locked out of progress for the rest of the session.
+    DirAccess.remove_absolute(blocked_backup)
+    await _wait_for_a_fresh_stamp()
+    var retry := FileAccess.open(BeautyData.save_path(), FileAccess.WRITE)
+    if retry != null:
+        retry.store_string('{"version": 2, "runs": 412, "wisps_so')
+        retry.close()
+    BeautyData.load_meta()
+    check(BeautyData.save_meta(rich), "saving must resume once the damaged file can be moved aside")
+
+## BeautyData stamps quarantine names to the second, so a fixture that plants an
+## obstruction at that name must own the whole second it lands in.
+func _wait_for_a_fresh_stamp() -> void:
+    while Time.get_unix_time_from_system() - floor(Time.get_unix_time_from_system()) > 0.05:
+        await process_frame
+
+func _clear_quarantined(base_path: String) -> void:
+    var directory := base_path.get_base_dir()
+    var name := base_path.get_file()
+    for child: String in DirAccess.get_files_at(directory):
+        if child.begins_with(name + ".corrupt-"):
+            DirAccess.remove_absolute(directory.path_join(child))
+
+func _find_quarantined(base_path: String) -> String:
+    var directory := base_path.get_base_dir()
+    var name := base_path.get_file()
+    for child: String in DirAccess.get_files_at(directory):
+        if child.begins_with(name + ".corrupt-"):
+            return directory.path_join(child)
+    return ""
+
+
 
 func _test_save_failures_preserve_data() -> void:
     var stable_meta := BeautyData.default_meta()
