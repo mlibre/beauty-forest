@@ -20,7 +20,7 @@ func _run() -> void:
     _check_pool_water_animates(world)
     _check_ambient_life_centering(world, dungeon)
     _check_objective_layout(world)
-    _check_arrived_marker_goes_dark(world)
+    await _check_arrived_marker_goes_dark(world)
     _check_objective_props_do_not_stack(world, dungeon)
     _check_camera_facing_visuals(world)
 
@@ -138,17 +138,33 @@ func _check_arrived_marker_goes_dark(world: ForestWorld) -> void:
     ## set_arrived faded the core and halo but let the OmniLight keep pulsing,
     ## so the floor kept glowing under a marker the player had already
     ## answered -- an on-screen paragraph saying "someone is still here".
+    ##
+    ## This awaits, so the caller must await it too: `_run()` would otherwise
+    ## carry on and rebuild the floor underneath, whose teardown frees every
+    ## child of the world -- including this marker. The check then resumed into
+    ## a freed instance and died on `_light` with a SCRIPT ERROR that a suite
+    ## printing its OK line would swallow. A torn-down marker is exactly what
+    ## set_arrived() is here to prevent, so the check has to survive the walk.
     var marker := CozyWaypoint.new()
     world.add_child(marker)
     marker.set_reduced_motion(false)
     await create_timer(0.05).timeout
-    var lit := marker._light.light_energy
+    if not is_instance_valid(marker):
+        _check(false, "the floor teardown freed the waypoint under the arrival check")
+        return
+    _check(marker._light.light_energy > 0.0,
+            "the waypoint light never lit up in the first place: %.2f" % marker._light.light_energy)
     marker.set_arrived(true)
     await create_timer(0.05).timeout
+    if not is_instance_valid(marker):
+        _check(false, "the floor teardown freed the waypoint while it was checking arrival")
+        return
     _check(marker._light.light_energy == 0.0,
             "the waypoint light kept burning after arrival: %.2f" % marker._light.light_energy)
     marker.set_arrived(false)
     await create_timer(0.05).timeout
+    if not is_instance_valid(marker):
+        return
     _check(marker._light.light_energy > 0.0,
             "stepping away did not relight the waypoint")
     marker.queue_free()
