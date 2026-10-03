@@ -30,9 +30,11 @@ void vertex() {
 	// How squarely this patch of the cone surface points at the camera.
 	// Abs() so the inside of the far wall glows too: cull_disabled means we
 	// draw both sides, and a one-sided beam would look like a paper triangle.
-	// VIEW_MATRIX is world->view, so the camera forward vector is already in
-	// world space once the matrix is applied: no inverse needed.
-	vec3 to_view = normalize((VIEW_MATRIX * vec4(0.0, 0.0, 1.0, 0.0)).xyz);
+	// Camera forward is view-space (0,0,-1); to dot it against world-space
+	// normals you have to move it THROUGH INV_VIEW_MATRIX into world space.
+	// (The previous vec3 was VIEW_MATRIX * (0,0,+1): the world-Z axis re-cast
+	// into view coordinates, which is a direction but not the camera's eye.)
+	vec3 to_view = normalize((INV_VIEW_MATRIX * vec4(0.0, 0.0, -1.0, 0.0)).xyz);
 	v_facing = abs(dot(normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz), to_view));
 	v_up = t;
 	// A slow lean keeps the light alive without any visible geometry moving.

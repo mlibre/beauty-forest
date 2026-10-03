@@ -43,6 +43,10 @@ func _check_sunbeam_actually_emits() -> void:
         "the sunbeam still derives brightness from distance-from-axis, which is constant on an open cone")
     _check(code.contains("v_facing"),
         "the sunbeam needs a view-facing term to have any soft rim at all")
+    _check(not code.contains("VIEW_MATRIX * vec4(0.0, 0.0, 1.0, 0.0)"),
+        "the sunbeam probed the camera forward through raw VIEW_MATRIX, so two reference frames got dotted")
+    _check(code.contains("INV_VIEW_MATRIX"),
+        "the sunbeam needs the camera forward in world space: INV_VIEW_MATRIX * (0,0,-1,0).xyz")
 
     # Reproduce the builder's geometry and confirm the facing term has range.
     var base_radius := 0.84
