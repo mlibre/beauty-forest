@@ -23,6 +23,7 @@ var tint := Color("#bdf0bd")
 var urgency := 0.0
 var _time := 0.0
 var _reduced_motion := false
+var _arrived := false
 var _core: MeshInstance3D
 var _halo: MeshInstance3D
 var _light: OmniLight3D
@@ -104,11 +105,12 @@ func _process(delta: float) -> void:
 	if _light != null and is_instance_valid(_light):
 		var base := 0.55 + urgency * 0.75
 		var breathe := 1.0 if _reduced_motion else (0.92 + (sin(_time * speed) * 0.5 + 0.5) * 0.16)
-		_light.light_energy = base * breathe
+		_light.light_energy = (base * breathe) * (0.0 if _arrived else 1.0)
 
 ## Fade the whole marker out as the player arrives, so it stops asking once it
 ## has been answered.
 func set_arrived(arrived: bool) -> void:
+	_arrived = arrived
 	var target := 0.0 if arrived else 1.0
 	if _core == null or not is_instance_valid(_core):
 		return
@@ -119,3 +121,7 @@ func set_arrived(arrived: bool) -> void:
 		var halo_material := _halo.mesh.material as StandardMaterial3D
 		if halo_material != null:
 			halo_material.albedo_color.a = 0.55 * target
+	if _light != null and is_instance_valid(_light) and arrived:
+		# The body of the marker fades, so the bulb above it must go dark too --
+		# otherwise the answer glows on the floor forever after.
+		_light.light_energy = 0.0

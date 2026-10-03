@@ -20,6 +20,7 @@ func _run() -> void:
     _check_pool_water_animates(world)
     _check_ambient_life_centering(world, dungeon)
     _check_objective_layout(world)
+    _check_arrived_marker_goes_dark(world)
     _check_objective_props_do_not_stack(world, dungeon)
     _check_camera_facing_visuals(world)
 
@@ -132,6 +133,25 @@ func _check_camera_facing_visuals(world: ForestWorld) -> void:
                         camera_facing_eye_count += 1
         _check(eye_count == 2 and camera_facing_eye_count == eye_count,
             "Peddle's eyes should be visible from the fixed camera")
+
+func _check_arrived_marker_goes_dark(world: ForestWorld) -> void:
+    ## set_arrived faded the core and halo but let the OmniLight keep pulsing,
+    ## so the floor kept glowing under a marker the player had already
+    ## answered -- an on-screen paragraph saying "someone is still here".
+    var marker := CozyWaypoint.new()
+    world.add_child(marker)
+    marker.set_reduced_motion(false)
+    await create_timer(0.05).timeout
+    var lit := marker._light.light_energy
+    marker.set_arrived(true)
+    await create_timer(0.05).timeout
+    _check(marker._light.light_energy == 0.0,
+            "the waypoint light kept burning after arrival: %.2f" % marker._light.light_energy)
+    marker.set_arrived(false)
+    await create_timer(0.05).timeout
+    _check(marker._light.light_energy > 0.0,
+            "stepping away did not relight the waypoint")
+    marker.queue_free()
 
 func _check_rebuild_teardown(world: ForestWorld) -> void:
     var world_environments := 0
