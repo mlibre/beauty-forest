@@ -161,19 +161,48 @@ func _celebrate(duration: float) -> void:
 ## -- while the journal still told players a curious wisp was a way to earn it.
 ## `facts_from_wisps` is its own tally so the sticker means what it says.
 func _learn_fact(reason: String, counts_toward_finder: bool = false) -> void:
-    var fact := String(BeautyContent.FACTS[int(meta.get("facts", 0)) % BeautyContent.FACTS.size()])
+    # The Atlas holds BeautyContent.FACTS entries and this picks by index, so it
+    # cycles. It used to append unconditionally, which filled the journal with
+    # duplicate copies of the same facts: measured after 12 runs, 120 entries
+    # holding only 24 distinct ones, until the 120-entry cap dropped the
+    # player's oldest facts and the memory book renumbered the survivors. Mote's
+    # memory book is a collection, so it should hold each fact once.
     var learned: Array = meta.get("facts_learned", [])
+    var available: Array[String] = []
+    for entry: Variant in BeautyContent.FACTS:
+        var text := String(entry)
+        if not learned.has(text):
+            available.append(text)
+    if available.is_empty():
+        # Everything Mote knows is already in the book, so there is nothing new
+        # to write down -- but the curious-wisp route still counts toward its
+        # sticker, which measures discoveries rather than distinct texts and is
+        # named as a route in the journal.
+        if counts_toward_finder:
+            _count_wisp_fact()
+        BeautyData.save_meta(meta)
+        return
+    var fact: String = available[learned.size() % available.size()]
     learned.append(fact)
     meta["facts_learned"] = learned
-    meta["facts"] = int(meta.get("facts", 0)) + 1
+    # `facts` is the number of facts in the book, which is what every screen
+    # that shows it means: the pause card and the ending tally both print it
+    # beside "Fun facts", while the memory book lists facts_learned. They
+    # diverged before (480 counted against 120 listed, and the 120 were 96
+    # duplicate copies of 24 facts), so the counter is now derived from the
+    # journal rather than kept as a separate tally that can drift from it.
+    meta["facts"] = learned.size()
     if counts_toward_finder:
-        meta["facts_from_wisps"] = int(meta.get("facts_from_wisps", 0)) + 1
-        if int(meta["facts_from_wisps"]) >= 10:
-            _award_sticker("fact_finder")
+        _count_wisp_fact()
     ui.add_log("Mote: “%s”" % fact)
     if not reason.is_empty() and reason.contains("curious"):
         ui.add_log(reason)
     BeautyData.save_meta(meta)
+
+func _count_wisp_fact() -> void:
+    meta["facts_from_wisps"] = int(meta.get("facts_from_wisps", 0)) + 1
+    if int(meta["facts_from_wisps"]) >= 10:
+        _award_sticker("fact_finder")
 
 func _near_merchant() -> bool:
     return merchant_exists and world != null and player != null and player.global_position.distance_to(world.merchant_position) < 2.8

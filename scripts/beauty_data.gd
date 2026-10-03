@@ -196,7 +196,11 @@ static func _clean_meta(source: Dictionary) -> Dictionary:
                 learned.append(String(value))
         var retained_facts: Array = learned.slice(-120)
         clean["facts_learned"] = retained_facts
-        clean["facts"] = maxi(int(clean["facts"]), retained_facts.size())
+        # `facts` is how many facts are in the book, so it is derived from the
+        # book rather than carried forward. Keeping the larger of the two let a
+        # stale counter outlive the entries it counted, which is how the pause
+        # card and the memory book came to disagree.
+        clean["facts"] = retained_facts.size()
     return clean
 
 static func _stored_count(value: Variant) -> int:

@@ -254,4 +254,39 @@ func _check_curious_wisp_facts_can_win_the_sticker(game: Node) -> bool:
     game.meta["stickers"] = []
     game.meta["facts"] = 0
     game.meta["facts_from_wisps"] = 0
+
+    # The Atlas holds FACTS entries and _learn_fact picks by index, so it cycles.
+    # It appended every time regardless, which filled the journal with duplicate
+    # copies of the same facts until the 120-entry cap silently dropped the
+    # player's oldest entries and renumbered the rest. Measured after 12 runs:
+    # 120 entries kept of 480 learned, only 24 of them distinct -- 96
+    # duplicate copies -- while the pause card counted 480.
+    if not ok(BeautyContent.FACTS.size() < 120,
+            "the journal cap of 120 is now reachable against a table of %d facts" % BeautyContent.FACTS.size()):
+        return false
+    game.meta["facts_learned"] = []
+    game.meta["facts"] = 0
+    # Learn far more facts than the table holds, the way many runs do.
+    for _i in BeautyContent.FACTS.size() * 3:
+        game._learn_fact("A level-up lantern fact")
+    var journal: Array = game.meta.get("facts_learned", [])
+    var distinct := {}
+    for entry: String in journal:
+        distinct[entry] = true
+    if not ok(journal.size() == distinct.size(),
+            "learning %d facts from a table of %d produced %d entries holding %d distinct ones" % [
+                BeautyContent.FACTS.size() * 3, BeautyContent.FACTS.size(), journal.size(), distinct.size()]):
+        return false
+    if not ok(journal.size() <= BeautyContent.FACTS.size(),
+            "the journal grew to %d entries, past the %d facts that actually exist" % [
+                journal.size(), BeautyContent.FACTS.size()]):
+        return false
+    # The pause card and the memory book must not disagree: one reads the
+    # lifetime counter, the other the journal's length.
+    if not ok(int(game.meta.get("facts", 0)) == journal.size(),
+            "the Atlas counted %d facts while the memory book would list %d" % [
+                int(game.meta.get("facts", 0)), journal.size()]):
+        return false
+    game.meta["facts_learned"] = []
+    game.meta["facts"] = 0
     return true

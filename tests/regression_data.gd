@@ -76,7 +76,14 @@ func _test_meta_recovery() -> void:
     check(int(loaded.get("runs", -1)) == 0, "a boolean must not become a visit count")
     check(int(loaded.get("best_floor", -1)) == 0, "a malformed floor must fall back to zero")
     check(int(loaded.get("wisps_soothed", -1)) == 7, "valid meta counters must survive loading")
-    check(int(loaded.get("facts", -1)) == facts.size(), "a higher lifetime fact counter must survive bounded history")
+    # `facts` counts what is in the book, so it is derived from the journal and
+    # must NOT outlive the entries it counted. It previously took the larger of
+    # the stored counter and the retained history, which is how the pause card
+    # and the ending tally came to read 480 while the memory book listed 120 --
+    # and those 120 were 96 duplicate copies of 24 facts. Nothing reads `facts`
+    # as a threshold or gate, so deriving it is the honest meaning.
+    check(int(loaded.get("facts", -1)) == 120,
+        "the fact counter must match the journal it counts, not a stale larger total")
     var learned: Array = loaded.get("facts_learned", [])
     check(learned.size() == 120, "learned facts must honor the 120-fact journal bound")
     if learned.size() == 120:
