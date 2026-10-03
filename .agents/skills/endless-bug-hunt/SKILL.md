@@ -139,6 +139,29 @@ Test real viewport sizes, text expansion, keyboard, controller, and touch where 
 
 Run the performance skill when measured impact—not suspicion—is the primary goal.
 
+## Proving a check actually proves something
+
+- **Sample layout-dependent behaviour broadly.** Randomly-seeded generation (floor
+  layouts, prop spread) makes any narrow sample a lucky one. Sweep a contiguous
+  band wide enough to cover dozens of instances of the case under test.
+- **Confirm every new check with a mutation that must fail.** A check that no
+  plausible mutation can trip is not evidence, and the mutation's failure message
+  must name the defect -- not merely exit non-zero. Watch for a mutant that
+  breaks the parse instead of the logic; that proves nothing. Watch too for a
+  mutant that is semantically identical to the fix: if removing a guard changes
+  nothing, first ask whether that guard was load-bearing at all.
+- **Do not loosen an assertion to make a suite green.** When a new check exposes a
+  genuine second defect, fix that defect as its own iteration and say so.
+- **Assert on the deterministic cause, never on wall-clock time.** A timing budget
+  measures the machine, not the code: one here passed 12 consecutive runs and then
+  flaked at 91ms against an 80ms budget under deliberate CPU contention. Guard the
+  quantity that actually determines cost -- sample count, loop iterations, byte
+  size -- which is reproducible, and keep wall-clock figures in the commit message
+  as evidence rather than in the suite as an assertion.
+- **Run any new check under deliberate load before trusting it.** A single green run
+  of a timing-sensitive or contention-sensitive check proves nothing; one pass each
+  way, then re-run the suite twice.
+
 ## Queue discipline
 
 Do not count formatting, naming preferences, unrequested test/docs cleanup, “cleaner” refactors, or unmeasured optimizations as functional bug iterations. Record stale tests, broken fixtures, contradictory documentation, orphaned or misplaced files, and circular dependencies as separate `test:`, `docs:`, `refactor:`, or `chore:` findings.
