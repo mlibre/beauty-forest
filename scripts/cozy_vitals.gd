@@ -17,6 +17,9 @@ const RING_THICKNESS := 7.0
 const RING_START := -PI * 0.5
 const SLOT_SIZE := 30.0
 const SLOT_GAP := 5.0
+const SLOT_ORIGIN := Vector2(14.0, 76.0)
+const PLATE_PAD := 14.0
+const MIN_PLATE := Vector2(150.0, 78.0)
 
 var warmth := 1.0
 var sparkles := 0
@@ -34,7 +37,7 @@ var _reduced_motion := false
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	custom_minimum_size = Vector2(150.0, 78.0)
+	custom_minimum_size = MIN_PLATE
 
 func set_values(state: Dictionary) -> void:
 	var hp := float(state.get("hp", 100.0))
@@ -50,7 +53,30 @@ func set_values(state: Dictionary) -> void:
 	equipped.clear()
 	for key: String in names:
 		equipped.append(key)
+	# One socket per WORN ware, not per charm slot. The director hands this
+	# strip worn charms AND worn stanzas -- they share one key namespace so the
+	# icons can be drawn together -- so a full charm set is five keys, and
+	# sizing the row at MAX_CHARMS silently dropped the two songs the hero was
+	# still humming. Nothing on the play screen then said they were worn. The
+	# strip has to be able to show everything the loadout says it is wearing.
+	slot_capacity = maxi(1, equipped.size())
+	_resize_plate()
 	queue_redraw()
+
+## The plate is drawn as the backing of the whole strip, so it has to be as big
+## as the widest thing drawn on it. With every ware worn the socket row runs to
+## 184x106 and a fixed 150x78 plate clipped the last socket in half -- the wear a
+## player had just bought simply was not on screen. Measure the row, keep the old
+## plate as the floor so a bare strip still reads as a card.
+func _resize_plate() -> void:
+	var row := _slot_row_rect()
+	custom_minimum_size = Vector2(maxf(MIN_PLATE.x, row.end.x + PLATE_PAD),
+			maxf(MIN_PLATE.y, row.end.y + PLATE_PAD))
+	size = custom_minimum_size
+
+func _slot_row_rect() -> Rect2:
+	var width := float(maxi(1, slot_capacity) - 1) * (SLOT_SIZE + SLOT_GAP) + SLOT_SIZE
+	return Rect2(SLOT_ORIGIN, Vector2(width, SLOT_SIZE))
 
 func set_reduced_motion(value: bool) -> void:
 	_reduced_motion = value
@@ -111,10 +137,9 @@ func _draw_floor() -> void:
 ## Charm slots: filled sockets for what you wear, empty outlines for what you
 ## could still wear. The loadout is readable in a glance without naming it.
 func _draw_slots() -> void:
-	var origin := Vector2(14.0, 76.0)
+	var row := _slot_row_rect()
 	for index in slot_capacity:
-		var at := origin + Vector2(float(index) * (SLOT_SIZE + SLOT_GAP), 0.0)
-		var rect := Rect2(at, Vector2(SLOT_SIZE, SLOT_SIZE))
+		var rect := Rect2(row.position + Vector2(float(index) * (SLOT_SIZE + SLOT_GAP), 0.0), Vector2(SLOT_SIZE, SLOT_SIZE))
 		var filled := index < equipped.size()
 		var style := _plate(Color(0.10, 0.20, 0.13, 0.80) if not filled else Color(0.22, 0.40, 0.24, 0.92),
 			Color("#8abf75") if filled else Color(1, 1, 1, 0.22), 8, 2)
