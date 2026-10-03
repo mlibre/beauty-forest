@@ -21,7 +21,6 @@ var soothed := false
 var damage_claimed := false
 var reduced_motion := false
 var _boss_window := 0.0
-var _was_gold := false
 var _slow_time := 0.0
 var _slow_multiplier := 1.0
 var _hurt_time := 0.0
@@ -306,9 +305,9 @@ func tick_behavior(delta: float, player_position: Vector3, aggro_range: float, s
 func is_boss_vulnerable() -> bool:
     return is_big and _boss_window > 0.0
 
-func set_gold_window(gold: bool) -> bool:
+func set_gold_window(gold: bool) -> void:
     if not _halo_material:
-        return false
+        return
     var color := Color("#ffd34f") if gold else Color("#d6efff")
     _halo_material.albedo_color = color
     _halo_material.emission = color
@@ -316,11 +315,6 @@ func set_gold_window(gold: bool) -> bool:
     if _halo:
         var target_scale := 1.10 + sin(Time.get_ticks_msec() * 0.012) * 0.10 if gold else 1.0
         _halo.scale = _halo.scale.lerp(Vector3(target_scale, target_scale, target_scale), 0.25)
-    if gold and not _was_gold:
-        _was_gold = true
-        return true
-    _was_gold = gold
-    return false
 
 func set_reduced_motion(value: bool) -> void:
     reduced_motion = value

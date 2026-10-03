@@ -109,7 +109,6 @@ var _walker_charms := ""
 ## The worn charms' data keys, kept separate from the joined names so the pause
 ## card can draw the loadout as icons and still speak a charm's name in a hover.
 var _walker_charm_keys: Array[String] = []
-var _walker_charm_count := 0
 var _walker_sparkles := 0
 var _walker_forecast := ""
 ## What the glowing waypoint is actually pointing at, in words. The corner card

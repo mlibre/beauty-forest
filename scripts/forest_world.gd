@@ -131,9 +131,6 @@ func build_dragon(room: Dictionary, finale: bool) -> Node3D:
             spike.rotation = Vector3(deg_to_rad(-18.0 * row), 0.0, deg_to_rad(12.0 + float(spine_index) * 4.0))
             body.add_child(spike)
 
-    # A tapering tail that overlaps itself into one curve. The first version
-    # stepped the segments 0.78 apart with a 0.10 radius drop, which read as a
-    # row of loose beads trailing off the back.
     # A tapering tail that overlaps into one continuous curve. The steps are
     # shorter than each segment (0.62 apart, 2.5+ long) on purpose: spaced
     # further, the segments read as a row of loose beads trailing off the back

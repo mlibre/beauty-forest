@@ -49,7 +49,6 @@ func update_hud(state: Dictionary) -> void:
     # the vitals sockets can draw both -- so the charm row has to pick its keys
     # against the charm table rather than trust the list.
     _walker_charm_keys = _charm_keys_only(state.get("charm_keys", []))
-    _walker_charm_count = _walker_charm_keys.size()
     _walker_sparkles = int(state.get("sparkles", 0))
 
 ## The subset of `keys` that names a CHARM.

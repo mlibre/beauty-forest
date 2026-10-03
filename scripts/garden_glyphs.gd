@@ -136,7 +136,6 @@ static func _draw_glyph(image: Image, key: String, size: int) -> Image:
 			_ellipse_ring(image, _at(0.5, 0.60, s), s * 0.21, s * 0.26, _ink(), 3)
 			_line(image, _at(0.5, 0.34, s), _at(0.5, 0.42, s), _ink(), 3)
 			_arc_cap(image, _at(0.5, 0.34, s), s * 0.13, PI, TAU, _ink(), 3)
-			_line(image, _at(0.29, 0.60, s), _at(0.29, 0.60, s), _ink(), 2)
 			# The flame inside: a small glow, not a fill of the whole body.
 			_glow_dot(image, _at(0.5, 0.60, s), s * 0.10, _gold())
 		SPARKLE:
