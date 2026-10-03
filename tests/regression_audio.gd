@@ -102,6 +102,40 @@ func _run() -> void:
         director.play_song_launch()
     director.play_footstep()
     _check(director._cache.size() == before_cache, "muted events still synthesized/cached sounds")
+    # Entering an uncached region used to build its whole ambient bed inside the
+    # frame that changed region: 128k samples at 16kHz, ~110ms, against a 6.9ms
+    # steady-state frame -- a 15x hitch on each region's first entry, four times
+    # a run. The bed holds no content above 400Hz, so the rate came down to 8kHz.
+    #
+    # Measure the WORK, not the wall clock. A wall-clock budget was tried first
+    # and flaked under CPU contention (91ms against an 80ms budget) -- it was
+    # measuring the test machine, not the generator. Sample count is the property
+    # that actually determines the cost, and it is deterministic.
+    var fresh := AudioDirector.new()
+    root.add_child(fresh)
+    await process_frame
+    var worst_samples := 0
+    for region_key: String in ["sunlit-roots", "pollen-halls", "mushroom-lull", "roost"]:
+        var entry_start := Time.get_ticks_usec()
+        fresh.start_ambient(region_key)
+        var bed_now: AudioStreamWAV = fresh._ambient_player.stream
+        worst_samples = maxi(worst_samples, bed_now.data.size() / 2)
+        await process_frame
+    var bed: AudioStreamWAV = fresh._ambient_player.stream
+    _check(worst_samples <= 64000,
+        "an ambient bed generated %d samples; at 8kHz the whole cost is 64000" % worst_samples)
+    # Nyquist must stay well clear of the loudest partial (2x the 130.81Hz root).
+    _check(bed != null and bed.mix_rate <= 8000,
+        "the ambient bed is generated at %s Hz; every partial in it is below 400Hz" % (
+            str(bed.mix_rate) if bed != null else "nothing"))
+    _check(bed != null and bed.mix_rate >= 4000,
+        "the ambient bed sample rate dropped too far; check the Nyquist margin over the loudest partial")
+    # The bed must still be eight seconds of audio, whatever the rate.
+    _check(bed != null and is_equal_approx(float(bed.data.size()) / 2.0 / float(bed.mix_rate), 8.0),
+        "the ambient bed is no longer eight seconds long")
+    fresh.stop_ambient()
+    fresh.queue_free()
+
 
     # Randomized launch pitch must not create a new cached PCM stream per note.
     director.set_muted(false)

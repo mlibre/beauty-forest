@@ -358,7 +358,16 @@ func _make_tone(frequencies: Array[float], duration: float, volume: float, brigh
 
 func _make_ambient(root: float) -> AudioStreamWAV:
     var duration := 8.0
-    var sample_rate := 16000
+    # 8kHz, not 16kHz. Every partial in this bed is below 400Hz -- the root
+    # (98-130Hz), its 1.5x and 2x harmonics, and a 0.19Hz LFO -- plus a
+    # low-passed noise term. Measured with Goertzel over the shipped 16kHz bed:
+    # energy above 500Hz is 0.0073% of the energy below it, so a 16kHz bed was
+    # spending 116ms of a frame generating numbers no ear can distinguish, and
+    # costing a 15x frame hitch on every region's first entry (4 regions = 4
+    # hitches per run). 8kHz keeps a 4kHz Nyquist, 9x above the loudest partial,
+    # and halves the work: 57ms. The lower rates measured faster still, but 8kHz
+    # keeps a real margin above the noise term's own top end.
+    var sample_rate := 8000
     var sample_count := int(duration * float(sample_rate))
     var bytes := PackedByteArray()
     bytes.resize(sample_count * 2)
