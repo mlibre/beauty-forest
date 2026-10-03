@@ -347,6 +347,27 @@ func _dragon_duplicate_small(source: Node3D, index: int) -> Node3D:
         child.add_child(sphere)
     return child
 
+## A chime may not settle on the stairwell, and the stairwell's footprint is
+## bigger than one cell. build_dream_chimes() used to reserve the LANDMARK'S OWN
+## CELL only, so a chime one cell away still rendered inside the 1.30m arch ring
+## and its own 0.42m ring interpenetrated it -- measured as close as 2.12m,
+## inside the 1.72m of combined visible radius the two actually need. Reserve the
+## whole disc, so the spread is pushed out past the art rather than just off the
+## landmark's origin.
+## 1.9m covers that 1.72m of visible footprint with a cell of slack.
+const LANDMARK_CLEAR_RADIUS := 1.9
+
+func _reserve_landmark(occupied: Dictionary, position: Vector3) -> void:
+    if position == Vector3.ZERO:
+        return
+    var centre := Vector2i(int(position.x), int(position.z))
+    occupied[centre] = true
+    var cells := int(ceil(LANDMARK_CLEAR_RADIUS))
+    for dx in range(-cells, cells + 1):
+        for dz in range(-cells, cells + 1):
+            if Vector2(float(dx), float(dz)).length() <= LANDMARK_CLEAR_RADIUS:
+                occupied[centre + Vector2i(dx, dz)] = true
+
 func build_dream_chimes(room: Dictionary) -> Array[Node3D]:
     for chime: Node3D in chimes:
         _free_child(chime)
@@ -355,9 +376,7 @@ func build_dream_chimes(room: Dictionary) -> Array[Node3D]:
     # Seed the spread with the cells the landmark props already own, so a chime
     # cannot settle on top of the stairwell's glow disc or Peddle's canopy.
     for landmark: Vector3 in [stair_position, merchant_position, dragon_position]:
-        if landmark == Vector3.ZERO:
-            continue
-        occupied[Vector2i(int(landmark.x), int(landmark.z))] = true
+        _reserve_landmark(occupied, landmark)
     for chime_index in range(5):
         var cell := _spread_cell(room, occupied, 2.8, chime_index)
         occupied[cell] = true
