@@ -55,14 +55,18 @@ static func get_glyph(key: String) -> Texture2D:
 	return texture
 
 static func has_glyph(key: String) -> bool:
-	return not _draw_glyph(_blank_image(), key, CACHE_SIZE).get_data().is_empty() and _is_known(key)
+	# A created Image's data buffer is never empty, so the old guard
+	# `not _draw_glyph(...).get_data().is_empty()` reported ink for every key
+	# and could not tell the hollow-ring fallback apart from a real glyph.
+	return _is_known(key)
 
 static func _is_known(key: String) -> bool:
 	if key in [LANTERN, SPARKLE, STAIRS, SOUL, MOTE, WISP, HEART, SHIELD, CAMP, BOOK, CART, CHIME, DRAGON]:
 		return true
 	# Charm, stanza and verse keys share a namespace, and `moss`/`lullaby`
 	# exist in two tables at once, so wares ask with a prefix. An unprefixed
-	# key is still accepted -- it just resolves against the charm table.
+	# key must resolve against the charm table only: letting it claim a
+	# stanza or verse of ink let a bare 'petals' paint the hollow gap-ring.
 	var bare := key
 	if bare.begins_with(VERSE_PREFIX):
 		return _verse_glyphs().has(bare.trim_prefix(VERSE_PREFIX))
@@ -73,13 +77,7 @@ static func _is_known(key: String) -> bool:
 	for charm: Dictionary in BeautyContent.CHARMS:
 		if String(charm["key"]) == bare:
 			return true
-	for stanza: Dictionary in BeautyContent.STANZAS:
-		if String(stanza["key"]) == bare:
-			return true
-	for verse: Dictionary in BeautyContent.MOTE_VERSES:
-		if String(verse["key"]) == bare:
-			return true
-	return BeautyContent.WISP_TYPES.has(bare)
+	return false
 
 # --- palette ---------------------------------------------------------------
 # Warm, bright and unmistakably friendly: nothing here is ever dark, grey or

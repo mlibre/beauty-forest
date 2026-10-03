@@ -317,6 +317,21 @@ func _check_colliding_sockets_keep_their_own_art(game: Node) -> bool:
     if not ok(not leaked and game.ui._walker_charm_keys.has("moss"),
             "the pause charm row should hold no song keys: %s" % str(game.ui._walker_charm_keys)):
         return false
+    # The same collision means a BARE verse key must never report itself as
+    # ink: it would paint the hollow gap-ring or the charm art of the same
+    # name, and has_glyph is the gate that was supposed to catch the gap.
+    if not ok(not GardenGlyphs.has_glyph("petals"),
+            "a bare verse key reported ink (hollow-ring or a shared charm)"):
+        return false
+    if not ok(not GardenGlyphs.has_glyph("lodestar"),
+            "a bare counter-melody key reported ink"):
+        return false
+    if not ok(GardenGlyphs.has_glyph(GardenGlyphs.STANZA_PREFIX + "petals"),
+            "a prefixed verse key must report ink"):
+        return false
+    if not ok(GardenGlyphs.has_glyph("moss"),
+            "a charm key must still report ink as itself"):
+        return false
     game.charms_equipped.clear()
     game.stanzas_equipped = {"petals": true, "echoes": true}
     game._refresh_ui()
