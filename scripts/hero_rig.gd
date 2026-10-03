@@ -323,39 +323,45 @@ func _make_idle_animation() -> Animation:
     var animation := Animation.new()
     animation.length = 2.4
     animation.loop_mode = Animation.LOOP_LINEAR
-    _add_vector_track(animation, "Model/Hips:position", Vector3(0, 0.78, 0), Vector3(0, 0.805, 0), Vector3(0, 0.78, 0), [0.0, 1.2, 2.4])
-    _add_vector_track(animation, "Model/Hips/LeftArmPivot:rotation", Vector3(0.06, 0, -0.08), Vector3(0.10, 0, -0.10), Vector3(0.06, 0, -0.08), [0.0, 1.2, 2.4])
-    _add_vector_track(animation, "Model/Hips/RightArmPivot:rotation", Vector3(-0.08, 0, 0.08), Vector3(-0.03, 0, 0.11), Vector3(-0.08, 0, 0.08), [0.0, 1.2, 2.4])
+    _add_vector_track(animation, "Model/Hips:position", [Vector3(0, 0.78, 0), Vector3(0, 0.805, 0), Vector3(0, 0.78, 0)], [0.0, 1.2, 2.4])
+    _add_vector_track(animation, "Model/Hips/LeftArmPivot:rotation", [Vector3(0.06, 0, -0.08), Vector3(0.10, 0, -0.10), Vector3(0.06, 0, -0.08)], [0.0, 1.2, 2.4])
+    _add_vector_track(animation, "Model/Hips/RightArmPivot:rotation", [Vector3(-0.08, 0, 0.08), Vector3(-0.03, 0, 0.11), Vector3(-0.08, 0, 0.08)], [0.0, 1.2, 2.4])
     return animation
 
 func _make_walk_animation() -> Animation:
     var animation := Animation.new()
     animation.length = 0.72
     animation.loop_mode = Animation.LOOP_LINEAR
-    _add_vector_track(animation, "Model/Hips/LeftLegPivot:rotation", Vector3(0.52, 0, 0), Vector3(-0.52, 0, 0), Vector3(0.52, 0, 0), [0.0, 0.36, 0.72])
-    _add_vector_track(animation, "Model/Hips/RightLegPivot:rotation", Vector3(-0.52, 0, 0), Vector3(0.52, 0, 0), Vector3(-0.52, 0, 0), [0.0, 0.36, 0.72])
-    _add_vector_track(animation, "Model/Hips/LeftArmPivot:rotation", Vector3(-0.42, 0, -0.08), Vector3(0.42, 0, -0.08), Vector3(-0.42, 0, -0.08), [0.0, 0.36, 0.72])
-    _add_vector_track(animation, "Model/Hips/RightArmPivot:rotation", Vector3(0.42, 0, 0.08), Vector3(-0.42, 0, 0.08), Vector3(0.42, 0, 0.08), [0.0, 0.36, 0.72])
-    _add_vector_track(animation, "Model/Hips:position", Vector3(0, 0.78, 0), Vector3(0, 0.83, 0), Vector3(0, 0.78, 0), [0.0, 0.18, 0.36, 0.54, 0.72])
+    _add_vector_track(animation, "Model/Hips/LeftLegPivot:rotation", [Vector3(0.52, 0, 0), Vector3(-0.52, 0, 0), Vector3(0.52, 0, 0)], [0.0, 0.36, 0.72])
+    _add_vector_track(animation, "Model/Hips/RightLegPivot:rotation", [Vector3(-0.52, 0, 0), Vector3(0.52, 0, 0), Vector3(-0.52, 0, 0)], [0.0, 0.36, 0.72])
+    _add_vector_track(animation, "Model/Hips/LeftArmPivot:rotation", [Vector3(-0.42, 0, -0.08), Vector3(0.42, 0, -0.08), Vector3(-0.42, 0, -0.08)], [0.0, 0.36, 0.72])
+    _add_vector_track(animation, "Model/Hips/RightArmPivot:rotation", [Vector3(0.42, 0, 0.08), Vector3(-0.42, 0, 0.08), Vector3(0.42, 0, 0.08)], [0.0, 0.36, 0.72])
+    # A walk cycle is two bounce arcs per circuit, so the hips ride five keys:
+    # down, rise, down, rise, down. Passing it through as one up-down cycle
+    # let the second rise never exist and the hero looked like half a walk.
+    _add_vector_track(animation, "Model/Hips:position", [Vector3(0, 0.78, 0), Vector3(0, 0.83, 0), Vector3(0, 0.78, 0), Vector3(0, 0.83, 0), Vector3(0, 0.78, 0)], [0.0, 0.18, 0.36, 0.54, 0.72])
     return animation
 
 func _make_swing_animation() -> Animation:
     var animation := Animation.new()
     animation.length = 0.52
     animation.loop_mode = Animation.LOOP_NONE
-    _add_vector_track(animation, "Model/Hips/RightArmPivot:rotation", Vector3(-0.15, 0, 0.12), Vector3(-1.15, 0, -0.20), Vector3(-0.15, 0, 0.12), [0.0, 0.17, 0.34, 0.52])
-    _add_vector_track(animation, "Model/Hips/RightArmPivot/StaffPivot:rotation", Vector3(0, 0, 0), Vector3(0.32, -0.22, -0.16), Vector3(0, 0, 0), [0.0, 0.17, 0.34, 0.52])
-    _add_vector_track(animation, "Model/Hips:rotation", Vector3(0, 0, 0), Vector3(-0.08, 0.16, 0), Vector3(0, 0, 0), [0.0, 0.20, 0.52])
+    # The arm reaches the flourish at 0.17, holds it through the note until
+    # 0.34, and returns by 0.52. Dropping the hold key made the arm rebound
+    # the instant it reached the pose.
+    _add_vector_track(animation, "Model/Hips/RightArmPivot:rotation", [Vector3(-0.15, 0, 0.12), Vector3(-1.15, 0, -0.20), Vector3(-1.15, 0, -0.20), Vector3(-0.15, 0, 0.12)], [0.0, 0.17, 0.34, 0.52])
+    _add_vector_track(animation, "Model/Hips/RightArmPivot/StaffPivot:rotation", [Vector3(0, 0, 0), Vector3(0.32, -0.22, -0.16), Vector3(0.32, -0.22, -0.16), Vector3(0, 0, 0)], [0.0, 0.17, 0.34, 0.52])
+    _add_vector_track(animation, "Model/Hips:rotation", [Vector3(0, 0, 0), Vector3(-0.08, 0.16, 0), Vector3(0, 0, 0)], [0.0, 0.20, 0.52])
     return animation
 
-func _add_vector_track(animation: Animation, track_path: String, from: Vector3, middle: Vector3, to: Vector3, times: Array) -> void:
+func _add_vector_track(animation: Animation, track_path: String, values: Array, times: Array) -> void:
     var track := animation.add_track(Animation.TYPE_VALUE)
     animation.track_set_path(track, NodePath(track_path))
     animation.track_set_interpolation_type(track, Animation.INTERPOLATION_CUBIC)
-    animation.track_insert_key(track, float(times[0]), from)
-    if times.size() >= 3:
-        animation.track_insert_key(track, float(times[1]), middle)
-    animation.track_insert_key(track, float(times[-1]), to)
+    # One key per value, at the matching time: authoring more times than keys
+    # would silently drop the ride the invisible key was meant to hold.
+    for index in range(times.size()):
+        animation.track_insert_key(track, float(times[index]), values[index])
 
 func set_walk_motion(walk_amount: float) -> void:
     _walk_target = clampf(walk_amount, 0.0, 1.0)

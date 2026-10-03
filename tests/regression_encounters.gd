@@ -80,7 +80,16 @@ func _check_dragon_clear_hands_the_way_to_the_stair(game: Node) -> bool:
     await frames(12)
     if not ok(not game.dragon_exists, "dragon_exists survived the dragon being tucked in"):
         return false
-    if not ok(game.ui._walker_objective == "Wander toward the glowing stair",
+    # The objective line repaints on the same 0.10 s pulse that hops the HUD; a
+    # headless run tips under that horizon by frame-count timing, so spin
+    # until the refresh has actually had its say.
+    var saw_stair := false
+    for _i in range(30):
+        await frames(1)
+        if game.ui._walker_objective.contains("glowing stair"):
+            saw_stair = true
+            break
+    if not ok(saw_stair,
             "after the lullaby the objective still read: %s" % game.ui._walker_objective):
         return false
     game._start_run(1)

@@ -33,6 +33,25 @@ func _run() -> void:
 	var walk_samples := await _sample(leg, "rotation:x", 8)
 	_check(_varied(walk_samples), "the walk cycle never moves the leg: %s" % str(walk_samples))
 
+	var walk: Animation = rig._make_walk_animation()
+	var hips_track := -1
+	for track in range(walk.get_track_count()):
+		if walk.track_get_path(track) == NodePath("Model/Hips:position"):
+			hips_track = track
+	_check(hips_track >= 0, "the walk animation has no hips track")
+	if hips_track >= 0:
+		_check(walk.track_get_key_count(hips_track) == 5,
+			"the walk bob collapsed to %d of its 5 authored keys" % walk.track_get_key_count(hips_track))
+	var swing: Animation = rig._make_swing_animation()
+	var arm_track := -1
+	for track in range(swing.get_track_count()):
+		if swing.track_get_path(track) == NodePath("Model/Hips/RightArmPivot:rotation"):
+			arm_track = track
+	_check(arm_track >= 0, "the swing animation has no arm track")
+	if arm_track >= 0:
+		_check(swing.track_get_key_count(arm_track) == 4,
+			"the lantern swing collapsed to %d of its 4 authored keys" % swing.track_get_key_count(arm_track))
+
 	var arm: Node3D = rig.get_node("Model/Hips/RightArmPivot")
 	rig.set_motion(0.0, 1.0)
 	var swing_samples := await _sample(arm, "rotation:z", 10)
