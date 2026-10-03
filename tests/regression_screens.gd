@@ -36,6 +36,8 @@ func _run() -> void:
         return
     if not await _check_a_restart_silences_old_toasts(game):
         return
+    if not await _check_menu_backdrop_wisps_are_alive(game):
+        return
 
     finish(game, "BEAUTY_FOREST_SCREENS")
 
@@ -133,6 +135,32 @@ func _check_a_restart_silences_old_toasts(game: Node) -> bool:
         return false
     if not ok(not game.ui._toast_label.text.contains("old walk") and not game.ui._toast_label.text.contains("another one"),
             "a stale toast label stayed painted after the restart: %s" % game.ui._toast_label.text):
+        return false
+    return true
+
+func _check_menu_backdrop_wisps_are_alive(game: Node) -> bool:
+    ## The title floor spawns "wandering wisps... just drift near the spawn",
+    ## but nothing ever called tick_behavior on the menu: they rendered frozen
+    ## at a quarter of their pop-in scale behind the title card.
+    game.mode = game.Mode.MENU
+    game._load_floor(1, true)
+    await frames(4)
+    if game.wisps.is_empty():
+        return ok(false, "no backdrop wisps spawned on the title floor")
+    var awake: int = 0
+    for wisp in game.wisps:
+        if wisp._spawn_pop < 1.0:
+            awake += 1
+    if not ok(awake > 0, "menu wisps arrived fully emerged, with no pop-in"):
+        return false
+    for _i in range(40):
+        await physics_frame
+    var emerged := 0
+    for wisp in game.wisps:
+        if wisp._spawn_pop >= 1.0:
+            emerged += 1
+    if not ok(emerged == game.wisps.size(),
+            "menu wisps never finished emerging: %d/%d ticked" % [emerged, game.wisps.size()]):
         return false
     return true
 

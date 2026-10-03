@@ -172,7 +172,21 @@ func _process(delta: float) -> void:
         _refresh_ui()
 
 func _physics_process(delta: float) -> void:
-    if mode != Mode.PLAYING or player == null or ending_pending:
+    if mode != Mode.PLAYING and mode != Mode.MENU:
+        return
+    if player == null or ending_pending:
+        return
+    if mode == Mode.MENU:
+        # The title backdrop's wisps still need their idle tick: nothing else
+        # ever calls tick_behavior on the menu floor, and they were painting
+        # frozen, half-popped ghosts behind the title card. No contact, no
+        # combat, no chimes -- the forest just idles.
+        var menu_aggro := 14.0
+        var menu_kindness := float(settings.get("wisp_speed", 0.85)) / 0.85
+        for wisp: Wisp in wisps:
+            if not is_instance_valid(wisp) or not wisp.alive:
+                continue
+            wisp.tick_behavior(delta, player.global_position, menu_aggro, 1.0, menu_kindness)
         return
     pulse_cooldown = maxf(0.0, pulse_cooldown - delta)
     note_cooldown = maxf(0.0, note_cooldown - delta)
