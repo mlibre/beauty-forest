@@ -93,6 +93,7 @@ var _reduced_motion := false
 var _high_contrast := false
 var _text_scale := 1.0
 var _compact_hud := false
+var _log_chrome_wanted := true
 ## The walker's numbers, parked by GameUI.update_hud so the pause menu can show
 ## the run's full state on demand without the director building a second copy
 ## of every label.
@@ -170,6 +171,10 @@ func _process(delta: float) -> void:
 func set_text_chrome_visible(visible_now: bool) -> void:
     _vitals.visible = not visible_now
     _log_label.visible = visible_now
+    # The touch relayout pass re-decides the log slot every resize; without
+    # the player's last explicit choice parked, it reads "compact or not" as
+    # "paint it", and the hidden log creeps back onto the play screen.
+    _log_chrome_wanted = visible_now
 
 func set_hud_visible(value: bool) -> void:
     if _hud:

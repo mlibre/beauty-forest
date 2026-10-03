@@ -29,8 +29,27 @@ func _run() -> void:
 		return
 	if not await _check_touch_pause_matches_the_escape_key(game):
 		return
+	if not await _check_a_relayout_does_not_resurrect_the_hidden_log(game):
+		return
 
 	finish(game, "BEAUTY_FOREST_TOUCH")
+
+func _check_a_relayout_does_not_resurrect_the_hidden_log(game: Node) -> bool:
+	## Start of a walk hides the white chatter (set_text_chrome_visible(false)).
+	## On a touch device the very NEXT relayout -- a window resize, a slider
+	## change, a panel close -- used to re-read the layout's own answer and
+	## paint Mote's log right back onto the play screen.
+	game._start_run(1)
+	await frames(4)
+	ok(not game.ui._log_label.visible, "the walk started with its log painted")
+	game.ui._touch_root.visible = true
+	game.ui._fit_layout()
+	await frames(2)
+	if not ok(not game.ui._log_label.visible,
+			"a relayout resurrected the hidden log on a touch device"):
+		return false
+	game.ui._touch_root.visible = false
+	return true
 
 func _touch_button_named(game: Node, needle: String) -> Button:
 	for button in buttons_in(game.ui._touch_root):

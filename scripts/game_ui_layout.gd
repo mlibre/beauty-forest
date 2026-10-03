@@ -82,9 +82,10 @@ func _fit_layout() -> void:
                 Vector2(log_spot.x, joystick.position.y - log_rect.size.y - 10.0),
                 Vector2(joystick.end.x + 10.0, log_spot.y),
             ], log_blockers)
-            # The compact-HUD pass already decides whether the chatter is wanted
-            # at all, so only let the touch layout take that decision away.
-            _log_label.visible = not _compact_hud and found.is_finite()
+            # The compact-HUD pass AND the player's set_text_chrome_visible
+            # call both decide the log slot; a resize must never override
+            # either, or the hidden play-screen log would creep back.
+            _log_label.visible = _log_chrome_wanted and not _compact_hud and found.is_finite()
             if found.is_finite():
                 log_spot = found
         _log_label.position = log_spot
