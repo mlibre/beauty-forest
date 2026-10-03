@@ -228,7 +228,12 @@ func _award_sticker(key: String) -> void:
         return
     stickers.append(key)
     meta["stickers"] = stickers.slice(-40)
-    BeautyData.save_meta(meta)
+    if not BeautyData.save_meta(meta):
+        # The game is about to congratulate the player for something it could
+        # not write down -- a full or read-only disk makes this routine, and the
+        # failure used to reach only the console, so the next launch would forget
+        # the sticker the toast just announced. Say so, once, gently.
+        ui.add_log("Mote: “Oh — I couldn't be saved just now. This sticker may not stay.”")
     ui.show_toast("Sticker earned: %s — %s" % [String(BeautyContent.STICKERS.get(key, key)), _sticker_description(key)])
     audio.play_tone(783.99, 0.42, 0.055, 1)
 

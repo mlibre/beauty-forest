@@ -28,8 +28,9 @@ func _run() -> void:
     _test_save_round_trips()
     _test_missing_collection_keys_keep_the_satchel()
     _test_save_failures_preserve_data()
-    await _test_unreadable_satchel_is_never_overwritten()
     await _test_the_save_guard_refuses_a_damaged_satchel()
+    await _test_a_failed_save_is_visible_to_the_player()
+    await _test_unreadable_satchel_is_never_overwritten()
     _test_loadout_limits()
     _test_weighted_pick_boundaries()
     _test_profile_isolation()
@@ -373,6 +374,77 @@ func _test_save_failures_preserve_data() -> void:
     check(is_equal_approx(float(BeautyData.load_settings().get("text_scale", 0.0)), 1.25), "a failed settings save must preserve prior settings")
     _remove_path(BeautyData.save_path() + ".tmp")
     _remove_path(BeautyData.settings_path() + ".tmp")
+
+
+func _test_a_failed_save_is_visible_to_the_player() -> void:
+    # A save failure that preserves the prior save was covered; whether the
+    # PLAYER finds out was not. Nine call sites discard save_meta()'s bool and
+    # rely on the push_warning inside, which only the console sees. Measured:
+    # with saving blocked, the game put "Sticker earned: First Nap" on screen,
+    # the pause summary counted the sticker, and not one on-screen string
+    # mentioned that it had not been written down -- so the game congratulated
+    # the player for something the next launch would forget.
+    var game := (load("res://scenes/main.tscn") as PackedScene).instantiate()
+    root.add_child(game)
+    await process_frame
+    await process_frame
+
+    # Block every save the way a full or read-only disk would.
+    _remove_path(BeautyData.save_path() + ".tmp")
+    check(DirAccess.make_dir_absolute(BeautyData.save_path() + ".tmp") == OK,
+        "the blocked staging fixture must be creatable")
+
+    check(not ((game.get("meta") as Dictionary).get("stickers", []) as Array).has("first_nap"),
+        "test setup: the fixture sticker was already held")
+    game.call("_award_sticker", "first_nap")
+    # Toasts expire on a tween clock, so watch the screen across the window
+    # rather than sampling one instant: a single sample after the toast has faded
+    # would see an empty slot and pass or fail for the wrong reason.
+    var texts: Array[String] = []
+    for _frame in 400:
+        await process_frame
+        texts = _collect_label_texts(game)
+        if _saw_celebration(texts) and _saw_notice(texts):
+            break
+
+    var in_memory: Array = (game.get("meta") as Dictionary).get("stickers", [])
+    var on_disk: Array = BeautyData.load_meta().get("stickers", [])
+    check(in_memory.has("first_nap"), "test setup: the sticker was not announced in memory")
+    check(not on_disk.has("first_nap"), "test setup: the blocked save unexpectedly reached disk")
+    # The game claimed the sticker, so it has to admit when it could not keep it.
+    check(_saw_celebration(texts), "test setup: the sticker celebration never appeared")
+    check(_saw_notice(texts),
+        "a save failed while the game announced a sticker, and nothing on screen admitted it [labels=%s]" % str(texts))
+
+    _remove_path(BeautyData.save_path() + ".tmp")
+    game.queue_free()
+    await process_frame
+
+## Both of these match on specific wording. A loose "does any label mention
+## saving" search passes on the menu subtitle ("no hurry, no losing ♥"), and a
+## loose "does any label mention the run" passes on "Visits 0 · Deepest floor 0".
+func _saw_celebration(texts: Array[String]) -> bool:
+    for text: String in texts:
+        if text.begins_with("Sticker earned"):
+            return true
+    return false
+
+func _saw_notice(texts: Array[String]) -> bool:
+    for text: String in texts:
+        var lower := text.to_lower()
+        if lower.contains("couldn't be saved") or lower.contains("could not be saved"):
+            return true
+    return false
+
+func _collect_label_texts(node: Node) -> Array[String]:
+    var out: Array[String] = []
+    if node is Label:
+        var text := String((node as Label).text).strip_edges()
+        if not text.is_empty():
+            out.append(text)
+    for child in node.get_children():
+        out.append_array(_collect_label_texts(child))
+    return out
 
 func _test_profile_isolation() -> void:
     ## The whole point of the redirect: a test run must not touch the player's
