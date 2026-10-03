@@ -86,9 +86,15 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
                     largest_area = float(room["area"])
                     largest = room
             world.build_dragon(largest, dragon_finale)
+            # Relocate BEFORE building the chimes. build_dream_chimes() seeds its
+            # spread with the cells the landmark props already own, stair included,
+            # so building the chimes first reserved the STALE stair position and
+            # left them free to settle on the stairwell the relocation was about to
+            # move into their clearing (measured on 5 of 30 dragon floors). Order
+            # was the shared cause; the stair now knows its final home first.
+            _relocate_stair_from(largest)
             var chime_room := _farthest_non_dragon_room(largest)
             world.build_dream_chimes(chime_room)
-            _relocate_stair_from(largest)
             stair_visible = false
         world.set_objectives_visible(stair_visible, merchant_exists, dragon_exists)
         hit_this_floor = false
@@ -166,16 +172,26 @@ func _farthest_non_dragon_room(dragon_room: Dictionary) -> Dictionary:
             best = room
     return best
 
+## Move the stairwell off Snoozle's clearing, onto the chime clearing.
+##
+## It must NOT be rooms[0]. rooms[0] is the spawn clearing, and the hero always
+## starts at its centre, so relocating there put the revealed stairwell exactly
+## under the player's feet: the floor's whole tail is "wander down to the stair"
+## and the interact radius is 2.3m, so one press of E descended without walking
+## a step (measured on 21 of 30 dragon floors). The chimes are already built in
+## the clearing farthest from the spawn, so the stair belongs there instead --
+## a real walk, and it finishes where the last chime was.
 func _relocate_stair_from(room: Dictionary) -> void:
     if not _point_in_room(world.stair_position, room):
         return
-    for candidate: Dictionary in dungeon["rooms"]:
-        if candidate != room:
-            world.stair_position = Vector3(candidate["cx"], 0, candidate["cy"])
-            var stair := world.get_node_or_null("Stairwell")
-            if stair:
-                (stair as Node3D).position = world.stair_position
-            return
+    var spawn_room: Dictionary = dungeon["rooms"][0]
+    var candidate: Dictionary = _farthest_non_dragon_room(room)
+    if candidate == spawn_room or candidate == room:
+        return
+    world.stair_position = Vector3(candidate["cx"], 0, candidate["cy"])
+    var stair := world.get_node_or_null("Stairwell")
+    if stair:
+        (stair as Node3D).position = world.stair_position
 
 func _point_in_room(point: Vector3, room: Dictionary) -> bool:
     return point.x >= float(room["x"]) and point.x < float(room["x"]) + float(room["w"]) \
