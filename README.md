@@ -22,13 +22,39 @@ is, with two bare numbers beside their icons. Four things are on it:
 - a **lantern ring** in the top-left; the arc is how much warmth you have left
 - a **sparkle** glyph and count for what you can spend
 - the **floor you are on**
-- a **row of charm slots**, one picture per charm you are wearing
+- a **row of charm sockets**, one picture per charm you are wearing — plus one
+  empty socket for every socket the current depth has opened and you have not
+  filled, so a full loadout reads as *room to grow* rather than a dead end
 
 Where the walk wants you to go is a **glowing marker in the world**, not a
 sentence. Your lantern's own light dims and reddens as warmth falls, so being
 hurt is something you *see* — the toast adds only the figure you can't see, like
 `−7 warmth`. Everything else — level, song power, the charm list, the forecast,
 what each key does — waits inside the pause menu, which you opened on purpose.
+
+## Growth
+
+Nothing in this game has a ceiling. The creatures below you scale without bound,
+so everything you carry has to scale with them or the walk stops being a walk:
+
+- **The hero keeps levelling.** A level costs soul on a *linear* curve, matching
+  the linear, unbounded scaling of everything down there. This used to be
+  exponential: simulated to floor 400 the hero stalled at level 41 while the
+  creatures grew 72×, and the song-to-creature ratio fell from 1.20 to 0.12 and
+  kept falling. Past about floor 30 the only difficulty knob left was your own
+  reaction time. Now the hero is at level 538 by floor 400 with the ratio holding
+  between 1.4 and 1.6 the whole way down — checked by `_audit/probe_growth.gd`,
+  which walks the real `RunState` rather than a model of it.
+- **Your loadout grows.** Charm sockets start at three and open one per floor,
+  so by the last floor of a campaign there is room for every charm on the shelf.
+  Descending is how you earn room.
+- **A charm can be bought twice.** The second copy is the same ware made
+  stronger, marked with gold pips on its own icon — so the shelf keeps paying
+  out on wares you already love instead of running out of new ones.
+- **Sparkle income scales with depth**, so Peddle's cart is a live decision on
+  every floor rather than a formality you complete once and never think about
+  again.
+- **Lantern songs are free and uncapped.** Hum every one you have found.
 
 Mote still talks to you, in two different ways. Most of it is **personality**:
 a Big Feeling is "just one feeling wearing a very big coat." That lives in a

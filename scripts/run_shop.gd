@@ -2,12 +2,38 @@ class_name RunShop
 extends RunState
 
 ## Peddle's cart and the loadout: what the hero owns, what each thing is worth,
-## what a full set of slots evicts, and which settings the run obeys.
+## and which settings the run obeys.
 ##
-## Split out of RunState. Every function here answers "what may I buy, wear and
-## hum", which is a single question about the run's inventory -- kept apart from
-## the progression arithmetic above it so neither file has to know the other's
+## Split out of RunState. Every function here answers "what may I buy and wear",
+## which is a single question about the run's inventory -- kept apart from the
+## progression arithmetic above it so neither file has to know the other's
 ## vocabulary.
+##
+## There is no slot cap here any more, and no eviction. Capacity grows with
+## depth (BeautyContent.loadout_capacity) and a charm can be owned twice, so
+## the shelf never runs out of things worth buying. What used to be a swap --
+## "which of your three charms should I throw away for this one?" -- is gone,
+## because on a deep walk the honest answer is "wear them all".
+
+## The next tier of `key` the hero could own, or 0 when it owns both copies.
+func _next_tier(key: String) -> int:
+    var best := 0
+    for owned: Dictionary in charms_owned:
+        if String(owned.get("key", "")) == key:
+            best = maxi(best, int(owned.get("tier", 1)))
+    return best + 1 if best < BeautyContent.TIER_SCALES.size() - 1 else 0
+
+func _owns(key: String, tier: int) -> bool:
+    for owned: Dictionary in charms_owned:
+        if String(owned.get("key", "")) == key and int(owned.get("tier", 1)) == tier:
+            return true
+    return false
+
+func _wearing(key: String, tier: int) -> bool:
+    for worn: Dictionary in charms_equipped:
+        if String(worn.get("key", "")) == key and int(worn.get("tier", 1)) == tier:
+            return true
+    return false
 
 func _shop_state() -> Dictionary:
     var current_mote: Dictionary = {}
@@ -23,152 +49,106 @@ func _shop_state() -> Dictionary:
         "mote_verse": current_mote,
         "hp": hp,
         "hp_max": hp_max,
+        "capacity": loadout_capacity(),
     }
 
 func _on_buy_requested(key: String) -> void:
-    var record: Dictionary = {}
-    for charm: Dictionary in BeautyContent.CHARMS:
-        if String(charm["key"]) == key:
-            record = charm
-            break
+    var record := BeautyContent.charm(key)
     if record.is_empty():
         return
-    var price := int(record.get("price", 0))
+    if key == "tea":
+        _buy_tea(record)
+        return
+    var tier := _next_tier(key)
+    if tier == 0:
+        # Already owned at its deepest tier. The card is dimmed for this, but a
+        # press can still arrive from a stale panel, so answer rather than
+        # silently charging for nothing.
+        ui.add_log("Peddle: “You already have the deepest %s I make. Wear it well!”" % String(record["name"]))
+        return
+    var price := BeautyContent.charm_price(key, tier)
     if sparkles < price:
         ui.show_toast("Not quite enough sparkles. The wares will keep.")
         return
-    if key == "tea":
-        if hp >= hp_max:
-            # Belt and braces: never charge for a heal that cannot happen.
-            ui.add_log("Peddle: “No tea for you — you are warm as a toast. Save those sparkles!”")
-            return
-        sparkles -= price
-        hp = hp_max
-        audio.play_chord([523.25, 659.25, 783.99], 0.55, 0.08)
-        ui.add_log("Peddle: “Sip slowly. Forest time is wonderfully flexible.”")
+    sparkles -= price
+    charms_owned.append({"key": key, "tier": tier})
+    charms_equipped.append({"key": key, "tier": tier})
+    if key == "scarf":
+        # Max warmth is owned by _recalculate_loadout below, which rebuilds it
+        # from the worn loadout. Bumping it here did nothing (the recompute
+        # overwrote it four lines later) and read as a second source of truth,
+        # so only the scarf's warming heal stays.
+        hp = minf(hp_max, hp + 30.0)
+    audio.play_chord([392.0, 523.25, 659.25], 0.62, 0.09)
+    var label := BeautyContent.charm_label(key, tier)
+    if charms_equipped.size() > loadout_capacity():
+        # Capacity grows with depth, so this can only happen if a walk kept its
+        # loadout and then went somewhere shallower. Say what happened rather
+        # than quietly carrying a ware the HUD cannot show.
+        charms_equipped.resize(loadout_capacity())
+        ui.add_log("Peddle: “%s is on, but that is the most this lantern can carry right now.”" % label)
     else:
-        if bool(charms_owned.get(key, false)):
-            return
-        sparkles -= price
-        charms_owned[key] = true
-        var equipped_count := charms_equipped.size()
-        if equipped_count < BeautyContent.MAX_CHARMS:
-            charms_equipped[key] = true
-        if key == "scarf":
-            # Max warmth is owned by _recalculate_loadout below, which rebuilds
-            # it from the equipped loadout. Bumping it here did nothing (the
-            # recompute overwrote it four lines later) and read as a second
-            # source of truth, so only the scarf's warming heal stays.
-            hp = minf(hp_max, hp + 30.0)
-        audio.play_chord([392.0, 523.25, 659.25], 0.62, 0.09)
-        if charms_equipped.has(key):
-            ui.add_log("Peddle: “One %s, wrapped in a leaf. It suits you.”" % String(record["name"]))
-        else:
-            # All three slots are taken, so this one waits in the pocket. Say so:
-            # taking the sparkles and saying "it suits you" while the charm does
-            # nothing is how a player ends up hunting for a power they never got.
-            ui.add_log("Peddle: “One %s, tucked safely in your pocket. Swap a charm on to wear it.”" % String(record["name"]))
+        ui.add_log("Peddle: “One %s, wrapped in a leaf. It suits you.”" % label)
     _award_sticker("shopper")
     _recalculate_loadout(false)
     ui.show_shop(_shop_state())
     _refresh_ui()
 
-func _on_charm_equip_requested(key: String) -> void:
-    if not bool(charms_owned.get(key, false)):
+func _buy_tea(record: Dictionary) -> void:
+    var price := int(record.get("price", 0))
+    if hp >= hp_max:
+        # Belt and braces: never charge for a heal that cannot happen.
+        ui.add_log("Peddle: “No tea for you — you are warm as a toast. Save those sparkles!”")
         return
-    if bool(charms_equipped.get(key, false)):
-        charms_equipped.erase(key)
+    if sparkles < price:
+        ui.show_toast("Not quite enough sparkles. The wares will keep.")
+        return
+    sparkles -= price
+    hp = hp_max
+    audio.play_chord([523.25, 659.25, 783.99], 0.55, 0.08)
+    ui.add_log("Peddle: “Sip slowly. Forest time is wonderfully flexible.”")
+
+func _on_charm_equip_requested(key: String, tier: int) -> void:
+    if not _owns(key, tier):
+        return
+    if _wearing(key, tier):
+        charms_equipped.erase({"key": key, "tier": tier})
     else:
-        if charms_equipped.size() >= BeautyContent.MAX_CHARMS:
-            charms_equipped = _loadout_replacing(key)
-            var rested := _evicted_charm_name()
-            ui.add_log("Peddle: “%s on. %s rests in your pocket — tap it any time to swap back.”" % [
-                _charm_name(key), rested])
-        else:
-            charms_equipped[key] = true
+        if charms_equipped.size() >= loadout_capacity():
+            # Should be unreachable while capacity tracks depth, but the card
+            # is built from an older depth if a walk changed floors while the
+            # cart was open. Answer instead of carrying an invisible ware.
+            ui.add_log("Peddle: “This lantern is full for now — wander deeper and there will be room.”")
+            return
+        charms_equipped.append({"key": key, "tier": tier})
+        # The row is ordered by the SHELF, not by when things were bought.
+        # Appending at the end used to shuffle every socket: resting a charm and
+        # wearing it again moved it to the back, so the player could not
+        # recognise their own build. Sockets are a thing you learn to read.
+        _reorder_worn_to_shelf()
     _recalculate_loadout(false)
     audio.play_tone(587.33, 0.24, 0.055, 1)
     ui.show_shop(_shop_state())
 
-## The loadout after swapping `key` in with every slot already full. Which worn
-## charm came off used to fall out of charms_owned.keys() order: the LAST owned
-## key that was wearing, which is neither the weakest nor the one a player would
-## pick, and the UI never said so. Iterating the WORN set instead and keeping the
-## first MAX_CHARMS-1 means the evicted charm is a stable, explainable choice,
-## and Peddle now names it out loud.
-func _loadout_replacing(key: String) -> Dictionary:
-    var next_loadout: Dictionary = {key: true}
-    var equipped_count := 1
-    for worn_key: String in charms_equipped.keys():
-        if worn_key == key:
-            continue
-        if equipped_count >= BeautyContent.MAX_CHARMS:
-            break
-        next_loadout[worn_key] = true
-        equipped_count += 1
-    _evicted = ""
-    for worn_key: String in charms_equipped.keys():
-        if not next_loadout.has(worn_key):
-            _evicted = worn_key
-            break
-    return next_loadout
-
-func _charm_name(key: String) -> String:
-    for charm: Dictionary in BeautyContent.CHARMS:
-        if String(charm["key"]) == key:
-            return String(charm["name"])
-    return key
-
-func _evicted_charm_name() -> String:
-    if _evicted == "":
-        return "The one underneath"
-    return _charm_name(_evicted)
+## Puts the worn list into the same order as the owned list, so a ware always
+## wears into the socket its shelf position implies.
+func _reorder_worn_to_shelf() -> void:
+    var ordered: Array[Dictionary] = []
+    for owned: Dictionary in charms_owned:
+        if _wearing(String(owned.get("key", "")), int(owned.get("tier", 1))):
+            ordered.append({"key": String(owned.get("key", "")),
+                "tier": int(owned.get("tier", 1))})
+    if ordered.size() == charms_equipped.size():
+        charms_equipped = ordered
 
 func _on_stanza_equip_requested(key: String) -> void:
     if bool(stanzas_equipped.get(key, false)):
         stanzas_equipped.erase(key)
     else:
-        if stanzas_equipped.size() >= BeautyContent.MAX_STANZAS:
-            stanzas_equipped = _stanzas_replacing(key)
-            ui.add_log("Mote: “%s it is. %s steps back for now — tap it again any time.”" % [
-                _stanza_name(key), _evicted_stanza_name()])
-        else:
-            stanzas_equipped[key] = true
+        stanzas_equipped[key] = true
     _recalculate_loadout(false)
     audio.play_tone(659.25, 0.24, 0.055, 1)
     ui.show_shop(_shop_state())
-
-## The stanza loadout after a swap. Same shape as _loadout_replacing: name what
-## steps aside, because the shop offers "try it on" for every verse and the
-## player has no other way to tell that one of the two they were humming just
-## stopped being sung.
-func _stanzas_replacing(key: String) -> Dictionary:
-    var next_stanzas: Dictionary = {key: true}
-    var stanza_count := 1
-    for existing: String in stanzas_equipped.keys():
-        if existing == key:
-            continue
-        if stanza_count >= BeautyContent.MAX_STANZAS:
-            break
-        next_stanzas[existing] = true
-        stanza_count += 1
-    _evicted_stanza = ""
-    for existing: String in stanzas_equipped.keys():
-        if not next_stanzas.has(existing):
-            _evicted_stanza = existing
-            break
-    return next_stanzas
-
-func _stanza_name(key: String) -> String:
-    for stanza: Dictionary in BeautyContent.STANZAS:
-        if String(stanza["key"]) == key:
-            return String(stanza["name"])
-    return key
-
-func _evicted_stanza_name() -> String:
-    if _evicted_stanza == "":
-        return "The other verse"
-    return _stanza_name(_evicted_stanza)
 
 func _on_mote_verse_requested(key: String) -> void:
     mote_verse_key = key

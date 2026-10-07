@@ -14,6 +14,16 @@ func _check(condition: bool, message: String) -> bool:
         _failures.append(message)
     return condition
 
+## Whether a loadout list holds `key`. This suite extends SceneTree rather
+## than TestCase, so it cannot reach the shared `wears` helper -- and it must not
+## grow a second copy of that: charms are `{key, tier}` entries now, so the
+## question is asked one way in one place.
+func _wears(list: Array, key: String) -> bool:
+    for entry: Variant in list:
+        if entry is Dictionary and String((entry as Dictionary).get("key", "")) == key:
+            return true
+    return false
+
 func _initialize() -> void:
     call_deferred("_run")
 
@@ -39,14 +49,22 @@ func _run() -> void:
     game._open_shop()
     game.sparkles = 20
     game._on_buy_requested("boots")
-    _check(game.charms_owned.get("boots", false), "buying Swift Boots did not put it in the satchel")
-    _check(game.charms_equipped.get("boots", false), "buying Swift Boots did not wear it")
+    _check(_wears(game.charms_owned, "boots"), "buying Swift Boots did not put it in the satchel")
+    _check(_wears(game.charms_equipped, "boots"), "buying Swift Boots did not wear it")
     await _frames(3)
     game._on_shop_closed()
     game.stanzas_equipped = {"petals": true, "echoes": true}
     game._on_stanza_equip_requested("dawn")
-    _check(game.stanzas_equipped.size() == 2, "equipping Dawn over a full pair left %d songs" % game.stanzas_equipped.size())
+    # Verses are free and uncapped, so humming a third ADDS to the two already
+    # sung. This used to assert the count stayed at 2 -- the old cap, which sent
+    # a player who had found a third song back to the cart for a charm instead.
+    _check(game.stanzas_equipped.size() == 3, "equipping Dawn alongside two verses left %d songs" % game.stanzas_equipped.size())
     _check(game.stanzas_equipped.get("dawn", false), "equipping Dawn did not wear it")
+    # Resting it must remove only itself, leaving the other two humming.
+    game._on_stanza_equip_requested("dawn")
+    _check(game.stanzas_equipped.size() == 2 and not game.stanzas_equipped.get("dawn", false),
+        "resting Dawn did not leave the other two songs alone: %s" % str(game.stanzas_equipped))
+    game._on_stanza_equip_requested("dawn")
     game._pause_game()
     game.ui.settings_open_requested.emit()
     await _frames(2)

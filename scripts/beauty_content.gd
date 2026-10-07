@@ -6,8 +6,53 @@ extends RefCounted
 ## queries that read it. Persistence and loadout math live in BeautyData.
 
 const CAMPAIGN_LENGTH := 13
-const MAX_CHARMS := 3
-const MAX_STANZAS := 2
+
+## How many wares the hero can wear, and how that number grows.
+##
+## It used to be a flat 3, which is the same mistake as the old level curve: the
+## creatures below grow without bound, so a loadout that stops at three is a
+## loadout that stops meaning anything. A player who earned the whole shelf
+## could use a fifth of it, forever, and the only lever left was which third.
+##
+## So capacity GROWS with depth, one socket per floor, and by the last floor of
+## a campaign there is room for one of EVERY charm on the shelf. That is the
+## honest shape: a floor-by-floor walk earns its way out of having to choose,
+## while the deeper copies still compete for the same sockets -- so a second
+## purchase is always a real trade, never a free upgrade nobody had to think
+## about. Past the end of the campaign the sockets keep opening.
+static func loadout_capacity(depth: int) -> int:
+    return LOADOUT_BASE + maxi(0, depth - 1)
+
+## Sockets on floor 1, before the walk has earned any more.
+const LOADOUT_BASE := 3
+
+## How many charms can be worn at once -- the shelf, less tea, which is a
+## consumable you drink rather than a ware you wear. Capacity must be able to
+## reach this by the end of the campaign, or the cart would be selling wares the
+## hero can buy but never put on.
+static func wearable_charms() -> int:
+    var count := 0
+    for entry: Dictionary in CHARMS:
+        if String(entry["key"]) != "tea":
+            count += 1
+    return count
+
+## Charm tiers. A charm can be bought twice: the second purchase is the same
+## ware made stronger, not a new icon, so the shelf keeps deepening forever
+## without the content table growing a combinatorial number of rows.
+##
+## `tier_scale` is the multiplier on every effect that charm carries.
+const TIER_NAMES := ["", "I", "II"]
+const TIER_SCALES := [1.0, 1.0, 1.6]
+
+static func tier_index(tier: int) -> int:
+    return clampi(tier, 1, TIER_SCALES.size() - 1)
+
+static func tier_name(tier: int) -> String:
+    return TIER_NAMES[tier_index(tier)]
+
+static func tier_scale(tier: int) -> float:
+    return TIER_SCALES[tier_index(tier)]
 
 const STYLE_DATA := {
     "gentle": {
@@ -296,6 +341,102 @@ const STICKERS := {
     "century": "Century of Kindness", "fact_finder": "Curious Mind", "feeling_friend": "Feeling Friend",
     "curious": "Curious Companion", "kindling": "Kindling Light",
 }
+
+## The charm behind `key`, or an empty dict if the key is not a charm.
+##
+## Callers read the shelf through this rather than indexing CHARMS, so a charm
+## can carry a tier and a price curve without every call site knowing.
+static func charm(key: String) -> Dictionary:
+    for entry: Dictionary in CHARMS:
+        if String(entry["key"]) == key:
+            return entry
+    return {}
+
+## What a charm costs at a given tier.
+##
+## Tier 1 is the shelf price. Each tier costs a flat multiple on top, so a
+## deep walk's second copies stay worth having without making the first one
+## look pointless.
+static func charm_price(key: String, tier: int) -> int:
+    var entry := charm(key)
+    if entry.is_empty():
+        return 0
+    return roundi(float(entry.get("price", 0)) * TIER_PRICE_SCALE[tier_index(tier)])
+
+## The charm's effects at a given tier: the same multipliers, scaled.
+##
+## Multiplicative effects (speed, cooldown, damage_taken) compound, while flat
+## additions (max_hp, heart_heal, invulnerable) scale as amounts. Treating both
+## the same way would make a tier-II Wool Scarf add 48 warmth and a tier-II
+## Moss Pillow soften bumps by 36%, which is not what "stronger" means.
+const TIER_PRICE_SCALE := [1.0, 1.0, 2.2]
+
+static func charm_effects_at(key: String, tier: int) -> Dictionary:
+    var entry := charm(key)
+    if entry.is_empty():
+        return {}
+    var scale := tier_scale(tier)
+    var out := {}
+    for field: String in entry:
+        if field in ["key", "name", "description", "price"]:
+            continue
+        var value: Variant = entry[field]
+        if typeof(value) != TYPE_FLOAT and typeof(value) != TYPE_INT:
+            continue
+        if typeof(value) == TYPE_INT:
+            out[field] = int(round(float(value) * scale))
+        else:
+            out[field] = lerpf(1.0, float(value), scale)
+    return out
+
+## The charm's name at a tier, so a stronger copy is visibly the same ware.
+static func charm_label(key: String, tier: int) -> String:
+    var entry := charm(key)
+    if entry.is_empty():
+        return key
+    var suffix := tier_name(tier)
+    if suffix.is_empty():
+        return String(entry["name"])
+    return "%s %s" % [String(entry["name"]), suffix]
+
+## The charm's own words at a tier.
+##
+## Recomputed from the scaled effects rather than reusing the tier-1 sentence,
+## because "Walk 15% swifter this run" describing a 24% pair of boots is a lie
+## the player reads in the one place they look for the truth.
+static func charm_blurb(key: String, tier: int) -> String:
+    var entry := charm(key)
+    if entry.is_empty():
+        return ""
+    if String(entry.get("key", "")) == "tea":
+        return String(entry["description"])
+    var scaled := charm_effects_at(key, tier)
+    var parts: Array[String] = []
+    if scaled.has("speed"):
+        parts.append("Walk %d%% swifter this run" % roundi(float(scaled["speed"]) * 100.0))
+    if scaled.has("cooldown"):
+        parts.append("Lantern song recharges %d%% faster" % roundi((1.0 - float(scaled["cooldown"])) * 100.0))
+    if scaled.has("song_damage"):
+        parts.append("Song-notes glow %d%% warmer" % roundi((float(scaled["song_damage"]) - 1.0) * 100.0))
+    if scaled.has("max_hp"):
+        parts.append("+%d max warmth" % int(scaled["max_hp"]))
+    if scaled.has("damage_taken"):
+        parts.append("Bumps hurt %d%% less" % roundi((1.0 - float(scaled["damage_taken"])) * 100.0))
+    if scaled.has("heart_heal"):
+        parts.append("Each thank-you heart restores +%d warmth" % int(scaled["heart_heal"]))
+    if scaled.has("invulnerable"):
+        parts.append("Starry shield lasts +%.1f seconds" % float(scaled["invulnerable"]))
+    if scaled.has("soul"):
+        parts.append("Soul-light glows %d%% richer" % roundi((float(scaled["soul"]) - 1.0) * 100.0))
+    if scaled.has("pickup"):
+        parts.append("Hearts find you from %d%% farther" % roundi(float(scaled["pickup"]) * 100.0))
+    if scaled.has("dash_cooldown"):
+        parts.append("Warm wool; dash rests sooner")
+    if scaled.has("lullaby_window"):
+        parts.append("Gold beat window is %d%% roomier" % roundi((float(scaled["lullaby_window"]) - 1.0) * 100.0))
+    if parts.is_empty():
+        return String(entry["description"])
+    return "; ".join(parts)
 
 static func story_floor(floor_number: int) -> int:
     return ((floor_number - 1) % CAMPAIGN_LENGTH) + 1

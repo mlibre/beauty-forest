@@ -45,8 +45,8 @@ func _run() -> void:
     game.hp_max = 140.0
     game.hp = 140.0
     game.level_hp_bonus = 40.0
-    game.charms_owned["boots"] = true
-    game._on_charm_equip_requested("boots")
+    game.charms_owned = loadout(["boots"])
+    game._on_charm_equip_requested("boots", 1)
     if not ok(is_equal_approx(game.hp_max, 140.0), "wearing a charm erased level-up max warmth (%f, expected 140.0)" % game.hp_max):
         return
 
@@ -68,15 +68,27 @@ func _run() -> void:
     game._on_buy_requested("scarf")
     if not ok(is_equal_approx(game.hp_max, 130.0), "a worn Wool Scarf gave %f max warmth, expected 130.0" % game.hp_max):
         return
-    # Three worn charms leave no slot, so the scarf stays in the pocket and must
-    # not inflate max warmth behind the player's back.
-    game.charms_equipped = {"boots": true, "moss": true, "honey": true}
-    game.charms_owned = {"boots": true, "moss": true, "honey": true}
+    # A ware that is owned but NOT worn must not inflate max warmth behind the
+    # player's back: max warmth is rebuilt from the WORN loadout, so a pocketed
+    # scarf is worth exactly nothing. The old check here forced this with a full
+    # loadout of three, back when three was the cap; now the honest way to reach
+    # the same state is to own the scarf and rest it by hand.
+    game.charms_equipped = loadout(["boots", "moss", "honey"])
+    game.charms_owned = loadout(["boots", "moss", "honey"])
     game._recalculate_loadout(false)
     var pocketed_before: float = game.hp_max
-    game._on_buy_requested("scarf")
-    if not ok(is_equal_approx(game.hp_max, pocketed_before), "a pocketed Wool Scarf changed max warmth (%f -> %f)" % [pocketed_before, game.hp_max]):
+    game.charms_equipped = loadout([["scarf", 1], ["boots", 1], ["moss", 1], ["honey", 1]])
+    game.charms_owned = loadout([["scarf", 1], ["boots", 1], ["moss", 1], ["honey", 1]])
+    game._recalculate_loadout(false)
+    var resting_before: float = game.hp_max
+    if not ok(is_equal_approx(resting_before, pocketed_before + 30.0),
+            "wearing a Wool Scarf did not add its 30 max warmth (%f -> %f)" % [pocketed_before, resting_before]):
         return
+    game._on_charm_equip_requested("scarf", 1)
+    if not ok(is_equal_approx(game.hp_max, pocketed_before),
+            "a RESTED Wool Scarf still counted toward max warmth (%f)" % game.hp_max):
+        return
+    game._on_charm_equip_requested("scarf", 1)
     game._resume_game()
     await frames(2)
 
@@ -391,8 +403,8 @@ func _run() -> void:
     var earned_xp: int = game.xp
     game.sparkles = earned_sparkles
     game.level = earned_level
-    game.charms_owned["boots"] = true
-    game.charms_equipped["boots"] = true
+    game.charms_owned = loadout(["boots"])
+    game.charms_equipped = loadout(["boots"])
     var ending_floor: int = game.floor_number
     var visits_before_continue := int(game.meta.get("runs", 0))
     game._on_restart_requested(true)
@@ -407,9 +419,9 @@ func _run() -> void:
         return
     if not ok(game.level == earned_level, "continuing deeper wiped the lantern level (%d, expected %d)" % [game.level, earned_level]):
         return
-    if not ok(bool(game.charms_owned.get("boots", false)), "continuing deeper wiped an owned charm"):
+    if not ok(wears(game.charms_owned, "boots"), "continuing deeper wiped an owned charm"):
         return
-    if not ok(bool(game.charms_equipped.get("boots", false)), "continuing deeper unwore equipped charms"):
+    if not ok(wears(game.charms_equipped, "boots"), "continuing deeper unwore equipped charms"):
         return
     if not ok(game.xp >= earned_xp, "continuing deeper wiped lantern soul"):
         return

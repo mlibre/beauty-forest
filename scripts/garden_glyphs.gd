@@ -18,6 +18,28 @@ const CACHE_SIZE := 64
 const STANZA_PREFIX := "verse:"
 const VERSE_PREFIX := "hum:"
 const WISP_PREFIX := "wisp:"
+## A charm can be owned twice, and the second copy is the same ware made
+## stronger. It needs its own glyph key so a socket can paint WHICH copy is on,
+## rather than showing two identical icons the player cannot tell apart.
+const TIER_PREFIX := "tier:"
+
+## The glyph key for a worn ware. Tier 1 is the ware's own key, so a first-copy
+## charm looks exactly as it always did; deeper tiers are marked with pips.
+static func worn_key(key: String, tier: int) -> String:
+	if tier <= 1:
+		return key
+	return "%s%d:%s" % [TIER_PREFIX, tier, key]
+
+## The charm key and tier inside a worn-key, for callers that need to name a
+## ware rather than draw it.
+static func split_worn_key(worn: String) -> Array:
+	if not worn.begins_with(TIER_PREFIX):
+		return [1, worn]
+	var rest := worn.trim_prefix(TIER_PREFIX)
+	var colon := rest.find(":")
+	if colon < 0:
+		return [1, rest]
+	return [int(rest.substr(0, colon)), rest.substr(colon + 1)]
 
 ## Concepts that are not wares. Kept as constants so the call sites read as
 ## the words a designer would say.
@@ -68,6 +90,16 @@ static func _is_known(key: String) -> bool:
 	# key must resolve against the charm table only: letting it claim a
 	# stanza or verse of ink let a bare 'petals' paint the hollow gap-ring.
 	var bare := key
+	if bare.begins_with(TIER_PREFIX):
+		# A tiered copy is only as drawable as the ware underneath it, and only
+		# at a tier that exists -- `tier:9:boots` must fall through to the
+		# hollow ring rather than borrow the boots ink for a tier with no
+		# strength behind it.
+		var parts := split_worn_key(bare)
+		var tier := int(parts[0])
+		if tier > 1 and tier >= BeautyContent.TIER_SCALES.size():
+			return false
+		return _is_known(String(parts[1]))
 	if bare.begins_with(VERSE_PREFIX):
 		return _verse_glyphs().has(bare.trim_prefix(VERSE_PREFIX))
 	if bare.begins_with(STANZA_PREFIX):
@@ -119,8 +151,30 @@ static func _blank_image() -> Image:
 static func _render(key: String, size: int) -> Image:
 	var image := _blank_image()
 	image.fill(Color(0, 0, 0, 0))
+	if key.begins_with(TIER_PREFIX):
+		# Draw the ware's own ink first, then stamp how many times it has been
+		# bought onto it. A stronger copy must still be recognisably the SAME
+		# ware -- so this decorates rather than replaces.
+		var parts := split_worn_key(key)
+		var tier := int(parts[0])
+		_draw_glyph(image, String(parts[1]), size)
+		_stamp_tier(image, tier, float(size))
+		return image
 	_draw_glyph(image, key, size)
 	return image
+
+## The pips that mark a ware's tier: one gold pip at the top-left, two in a row
+## below it, and so on up the corner, so a socket's strength is countable at a
+## glance without a numeral.
+static func _stamp_tier(image: Image, tier: int, s: float) -> void:
+	if tier <= 1:
+		return
+	var origin := Vector2(0.20, 0.20)
+	var step := s * 0.13
+	for pip in tier - 1:
+		var column := pip % 3
+		var row := pip / 3
+		_dot(image, origin + Vector2(float(column) * step, float(row) * step), s * 0.052, _gold())
 
 # --- drawing helpers -------------------------------------------------------
 # Every glyph draws inside a 0..1 unit box and is scaled by `s`, so the shapes

@@ -259,6 +259,43 @@ func _prune_notes() -> void:
         if not is_instance_valid(notes[index]):
             notes.remove_at(index)
 
+## What a wisp leaves in the purse.
+##
+## This used to be a flat 1 sparkle (3 for a big one) -- the same mistake as the
+## old level curve, one level up. Everything the hero meets and everything the
+## hero buys scales with depth, but income did not: the whole shelf of wares cost
+## about 90 sparkles, income plateaued near 40 a floor, and the cart bought
+## itself out by floor 7 of 13. After that the only things left to spend on were
+## tea, so two thirds of the walk had no economy at all.
+##
+## So income now grows with depth the way the creatures do -- unbounded, and on
+## the same curve -- which keeps the cart a live decision at every floor instead
+## of a formality the player completes once.
+func _wisp_payout(wisp: Wisp) -> int:
+    var base := PAYOUT_BIG if wisp.is_big else 1
+    return roundi(float(base) * _payout_scale())
+
+## The depth multiplier on every sparkle.
+##
+## This is the one place the exponential is honest rather than a mistake, because
+## it is exponential in DEPTH and depth is what the player is spending. The level
+## curve was wrong because it grew exponentially in LEVEL -- an unbounded
+## currency chasing an unbounded price. Here the same shape buys the same thing
+## forever: a tier-II ware costs 2.2x a tier-I one, so income growing on the same
+## curve means the cart never has a floor where it stops mattering.
+##
+## The slope is deliberately gentle. 1.085 per floor compounds to about 2x every
+## eight floors; at 8.5% the floor-400 payout was measured at 5.7 quadrillion
+## sparkles, which is not a number a player reads -- it is the purse telling them
+## the shopping phase is over. At 1.02 the same walk pays a few hundred a floor,
+## which still buys a deeper copy every floor but leaves the count meaningful.
+func _payout_scale() -> float:
+    return pow(PAYOUT_GROWTH, float(maxi(0, floor_number - 1)))
+
+## Sparkles earned per wisp, multiplied by PAYOUT_GROWTH each floor deeper.
+const PAYOUT_BIG := 3
+const PAYOUT_GROWTH := 1.02
+
 func _soothe_wisp(wisp: Wisp, distant: bool) -> void:
     if not is_instance_valid(wisp) or wisp.damage_claimed:
         return
@@ -275,7 +312,7 @@ func _soothe_wisp(wisp: Wisp, distant: bool) -> void:
         _award_sticker("big_hug")
     if wisp.is_feeling:
         _award_sticker("feeling_friend")
-    sparkles += 3 if was_big else 1
+    sparkles += _wisp_payout(wisp)
     CozyVFX.soothe_celebration(world, wisp.global_position, was_big)
     if _soothes_this_floor > 0 and _soothes_this_floor % 6 == 0:
         # A floor milestone, not a timer: no expiry, no pressure, just the

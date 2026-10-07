@@ -60,12 +60,19 @@ var level := 1
 var xp := 0
 var xp_next := 10
 var sparkles := 0
-var charms_owned: Dictionary = {}
-var charms_equipped: Dictionary = {}
+## What the hero owns and what it has on.
+##
+## Both are lists of `{"key": String, "tier": int}`. They used to be flag
+## dictionaries with a flat cap of three, which meant the same charm could only
+## ever be bought once, so the whole loadout stopped growing the moment the
+## third slot filled no matter how deep the walk went. A list with a tier lets
+## one ware be owned twice -- the second copy stronger -- so the shelf keeps
+## paying out for as long as the walk lasts.
+var charms_owned: Array[Dictionary] = []
+var charms_equipped: Array[Dictionary] = []
+## Verses are free, so there is no purse to stop them and no cap worth having:
+## the hero can hum every one it has found.
 var stanzas_equipped: Dictionary = {"petals": true, "echoes": true}
-## What a full-slot swap pushed aside, so Peddle or Mote can name it.
-var _evicted := ""
-var _evicted_stanza := ""
 var mote_verse_key := ""
 var charm_effects: Dictionary = {}
 var stanza_effects: Dictionary = {}
@@ -113,7 +120,7 @@ func _gain_xp(amount: int) -> void:
         xp -= xp_next
         level += 1
         levels += 1
-        xp_next = maxi(2, roundi(float(xp_next) * 1.35))
+        xp_next = _next_level_cost()
         var roll := randf()
         if roll < 0.40:
             level_hp_bonus += 20.0
@@ -137,6 +144,37 @@ func _gain_xp(amount: int) -> void:
         ui.show_toast("✦ Level %d — %d new fact%s in the Atlas!" % [level, levels, "" if levels == 1 else "s"])
         _celebrate(1.0)
     _refresh_ui()
+
+## What the NEXT level costs.
+##
+## This is the heart of the answer to "the creatures below can grow forever, so
+## why can't the hero". It used to be `xp_next *= 1.35` -- exponential -- while
+## everything the hero faces scales LINEARLY with depth, and the soul the hero
+## collects per floor grows linearly too. Exponential cost against linear income
+## means the hero stops levelling: simulated to floor 400, level 41 against
+## creatures scaled x72, so the song-to-creature ratio fell from 1.20 at floor 1
+## to 0.12 and kept falling forever. The loadout grew but the hero did not, so
+## past roughly floor 30 the only difficulty knob left was the player's own
+## reaction time.
+##
+## A LINEAR cost matches the world it lives in. Level count then grows about one
+## to one per floor, and the song-to-creature ratio settles in the 1.4-1.6 band
+## and stays there -- measured to floor 400, where the hero is level 538. Growth
+## is then unbounded in the way the creatures are: forever, and never running
+## away from the player either. Re-measure with _audit/probe_growth.gd.
+func _next_level_cost() -> int:
+    return maxi(2, roundi(LEVEL_COST_BASE + LEVEL_COST_SLOPE * float(level)))
+
+const LEVEL_COST_BASE := 10.0
+## Soul needed per level beyond the first. Measured against the per-floor soul
+## supply: this slope keeps the hero gaining roughly one level a floor.
+const LEVEL_COST_SLOPE := 45.0
+
+## How many wares the hero can wear at this depth. The HUD needs this too, and
+## the HUD does not inherit from RunShop, so it lives with the run's other
+## depth-derived facts rather than inside one subclass.
+func loadout_capacity() -> int:
+    return BeautyContent.loadout_capacity(floor_number)
 
 func _celebrate(duration: float) -> void:
     ## Soothing a wisp or levelling up makes THIS hero hop and glow, then settle.
@@ -243,11 +281,12 @@ func _sticker_description(key: String) -> String:
 func _refresh_ui() -> void:
     if ui == null or player == null or not is_instance_valid(player):
         return
-    # The HUD is fed ICONS, not sentences. Charm KEYS drive the vitals sockets;
-    # charm NAMES are sent too, but only the pause menu ever paints them.
+    # The HUD is fed ICONS, not sentences. Each worn ware arrives as its glyph
+    # key; a charm's tier rides along in the key itself so the socket can show
+    # WHICH copy it is, and the pause menu can name it.
     var charm_keys: Array[String] = []
-    for key: String in charms_equipped.keys():
-        charm_keys.append(key)
+    for worn: Dictionary in charms_equipped:
+        charm_keys.append(GardenGlyphs.worn_key(String(worn.get("key", "")), int(worn.get("tier", 1))))
     for key: String in stanzas_equipped.keys():
         if bool(stanzas_equipped.get(key, false)):
             # Stanzas share keys with charms (`moss`, `lullaby`), so the socket
@@ -255,11 +294,8 @@ func _refresh_ui() -> void:
             # card or socket can paint with no guessing.
             charm_keys.append(GardenGlyphs.STANZA_PREFIX + key)
     var charm_names: Array[String] = []
-    for key: String in charms_equipped.keys():
-        for charm: Dictionary in BeautyContent.CHARMS:
-            if String(charm["key"]) == key:
-                charm_names.append(String(charm["name"]))
-                break
+    for worn: Dictionary in charms_equipped:
+        charm_names.append(BeautyContent.charm_label(String(worn.get("key", "")), int(worn.get("tier", 1))))
     ui.update_hud({
         "floor": floor_number,
         "region_name": String(region.get("name", "Sunlit Roots")),
@@ -273,6 +309,7 @@ func _refresh_ui() -> void:
         "sparkles": sparkles,
         "charm_keys": charm_keys,
         "charm_names": charm_names,
+        "capacity": loadout_capacity(),
     })
     ui.update_map_player(player.global_position, _minimap_markers())
     # The lantern itself dims and reddens with warmth, so being hurt reads in

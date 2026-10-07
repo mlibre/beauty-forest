@@ -28,6 +28,13 @@ func update_hud(state: Dictionary) -> void:
         "sparkles": int(state.get("sparkles", 0)),
         "floor": int(state.get("floor", 1)),
         "charm_keys": state.get("charm_keys", []),
+        # How many wares the hero COULD wear here. The strip draws one empty
+        # socket per one, so room a deeper walk opens is visible while playing.
+        # This dict is rebuilt here rather than passed through, so a key left out
+        # is a field the strip silently loses -- which is what happened to this
+        # one: the strip fell back to "one socket per worn ware" and a full
+        # loadout looked identical at floor 1 and floor 13.
+        "capacity": int(state.get("capacity", 1)),
     })
     # Park the rest of the run's state for the pause menu, which is where the
     # player goes when they DO want the numbers spelled out.

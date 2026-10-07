@@ -15,7 +15,10 @@ signal journal_closed
 signal settings_open_requested
 signal settings_closed
 signal buy_requested(charm_key: String)
-signal charm_equip_requested(charm_key: String)
+## Which COPY to wear: a charm can be owned twice, so a press names both the ware
+## and its tier. Without the tier the panel could not say which of the two
+## identical icons the player meant.
+signal charm_equip_requested(charm_key: String, tier: int)
 signal stanza_equip_requested(stanza_key: String)
 signal mote_verse_requested(verse_key: String)
 signal touch_vector_changed(value: Vector2)

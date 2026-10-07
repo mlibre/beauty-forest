@@ -93,7 +93,7 @@ func _check_high_contrast_reaches_the_text() -> void:
 	await frames(2)
 	var carried := _card_fill(_ui._shop_card)
 	_ui.show_shop({
-		"sparkles": 10, "charms": {}, "owned": {}, "stanzas": {},
+		"sparkles": 10, "charms": loadout([]), "owned": loadout([]), "stanzas": {},
 		"mote_verse": {}, "hp": 100.0, "hp_max": 100.0,
 	})
 	await frames(3)

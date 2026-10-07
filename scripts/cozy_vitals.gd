@@ -25,7 +25,10 @@ var warmth := 1.0
 var sparkles := 0
 var floor_number := 1
 var equipped: Array[String] = []
-var slot_capacity := BeautyContent.MAX_CHARMS
+## How many wares the hero COULD wear at this depth, so the strip can show the
+## room a deeper walk will open up. This grows with depth rather than being a
+## constant, because a cap the player learns once is a cap they design around.
+var slot_capacity := 0
 var high_contrast := false
 ## The lantern glyph reddens and the whole strip tightens its glow as warmth
 ## falls, so being hurt is legible before you ever read anything.
@@ -53,13 +56,17 @@ func set_values(state: Dictionary) -> void:
 	equipped.clear()
 	for key: String in names:
 		equipped.append(key)
-	# One socket per WORN ware, not per charm slot. The director hands this
-	# strip worn charms AND worn stanzas -- they share one key namespace so the
-	# icons can be drawn together -- so a full charm set is five keys, and
-	# sizing the row at MAX_CHARMS silently dropped the two songs the hero was
-	# still humming. Nothing on the play screen then said they were worn. The
-	# strip has to be able to show everything the loadout says it is wearing.
-	slot_capacity = maxi(1, equipped.size())
+	# Charm sockets and worn songs are two different things sharing one strip.
+	# Capacity counts CHARM sockets -- wares the hero pays for -- while verses are
+	# free and uncapped, so they get their own sockets rather than eating into the
+	# charm budget. Counting them together was why a floor-1 strip showed no room
+	# at all: five sockets, three charms and two songs, and the player could not
+	# tell which of the empty-looking slots a deeper walk would actually open.
+	var worn_songs := 0
+	for key: String in equipped:
+		if key.begins_with(GardenGlyphs.STANZA_PREFIX):
+			worn_songs += 1
+	slot_capacity = maxi(maxi(int(state.get("capacity", 1)) + worn_songs, equipped.size()), 1)
 	_resize_plate()
 	queue_redraw()
 

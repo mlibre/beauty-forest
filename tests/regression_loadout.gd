@@ -1,16 +1,18 @@
 extends TestCase
 
-## Loadout and shop behaviour: what happens when a charm or verse is bought or
-## swapped with every slot full, and what the cart claims about things nobody
-## owns.
+## Loadout and shop behaviour: what happens when a charm or verse is bought, and
+## what the cart claims about things nobody owns.
 ##
 ## Split out of regression_main_flow.gd. Every check here needs a filled loadout
 ## and a nearby cart, which is a different fixture from the run-state
 ## transitions the main flow suite drives -- and keeping them apart is what lets
 ## both files stay inside the 500-line budget.
 ##
-## These bodies moved verbatim from regression_main_flow.gd; only the helper
-## names changed, to the ones on TestCase.
+## The suite's spine used to be the cap: buying a fourth charm, swapping into a
+## full loadout, and the verse swap that displaced something. All three are gone,
+## because there is no longer a fixed number of sockets to fill. What replaced
+## them is the same question asked of a world without a ceiling: does the
+## loadout keep GROWING, at every depth, with nothing left behind?
 
 func _initialize() -> void:
 	suite_name = "BEAUTY_FOREST_LOADOUT"
@@ -23,11 +25,13 @@ func _run() -> void:
 	root.add_child(game)
 	await frames(2)
 
-	if not await _check_buying_past_the_charm_cap_says_so(game):
+	if not await _check_capacity_has_no_ceiling(game):
 		return
-	if not await _check_a_full_slot_swap_names_the_evicted_charm(game):
+	if not await _check_a_charm_can_be_bought_twice(game):
 		return
-	if not await _check_a_full_slot_verse_swap_says_what_steps_back(game):
+	if not await _check_a_deeper_walk_opens_more_sockets(game):
+		return
+	if not await _check_a_full_loadout_is_never_emptied(game):
 		return
 	if not await _check_free_items_do_not_claim_to_be_owned(game):
 		return
@@ -40,195 +44,194 @@ func _run() -> void:
 
 	finish(game, "BEAUTY_FOREST_LOADOUT")
 
-func _check_buying_past_the_charm_cap_says_so(game: Node) -> bool:
-	## Filling all three charm slots and then buying a fourth charged the
-	## sparkles and logged "One Ember Mitten... It suits you." -- while the charm
-	## sat unequipped and did nothing, with nothing anywhere saying the slots were
-	## full. A player pays for a power they never receive and has no idea why.
+func _check_capacity_has_no_ceiling(game: Node) -> bool:
+	## The loadout was capped at three wares and two songs. Three was a constant
+	## a player learns once and then designs around: every ward past the third
+	## was dead content, and the creatures kept scaling past a hero whose loadout
+	## could not. So the invariant this suite now guards is the opposite -- every
+	## depth must offer strictly more room than the last, forever.
+	var previous := -1
+	for depth in [1, 4, 13, 30, 100, 400, 5000, 100000]:
+		var capacity := BeautyContent.loadout_capacity(depth)
+		if not ok(capacity > previous,
+				"capacity stopped growing at depth %d (%d, was %d) -- the loadout has a ceiling again" % [
+					depth, capacity, previous]):
+			return false
+		previous = capacity
+	# A walk this game can actually reach must hold the whole shelf, so the
+	# campaign never asks the player to choose between wares they paid for.
+	# Tea is a consumable, so the shelf that matters is the charms you WEAR.
+	var shelf := BeautyContent.wearable_charms()
+	if not ok(BeautyContent.loadout_capacity(BeautyContent.CAMPAIGN_LENGTH) >= shelf,
+			"a full campaign walk (floor %d, capacity %d) cannot wear all %d charms" % [
+				BeautyContent.CAMPAIGN_LENGTH,
+				BeautyContent.loadout_capacity(BeautyContent.CAMPAIGN_LENGTH),
+				shelf]):
+		return false
+	print("LOADOUT capacity: floor 1 -> %d, floor %d -> %d, floor 100000 -> %d" % [
+		BeautyContent.loadout_capacity(1), BeautyContent.CAMPAIGN_LENGTH,
+		BeautyContent.loadout_capacity(BeautyContent.CAMPAIGN_LENGTH),
+		BeautyContent.loadout_capacity(100000)])
+	return true
+
+func _check_a_charm_can_be_bought_twice(game: Node) -> bool:
+	## A charm used to be bought once and then never again, which meant the
+	## shelf ran out of things to do for a hero whose socket count had already
+	## caught up with it. The second copy is the same ware made stronger, so a
+	## deep walk keeps paying out on wares the player already loves.
 	game._start_run(2)
 	await frames(6)
 	game.player.global_position = game.world.merchant_position + Vector3(1.0, 0.0, 0.0)
 	await frames(2)
 	game.sparkles = 999
+	game._on_buy_requested("boots")
+	await frames(2)
+
+	if not ok(wears(game.charms_equipped, "boots", 1),
+			"the first copy of the charm was not bought at tier 1: %s" % str(game.charms_equipped)):
+		return false
+	if not ok(game.sparkles == 999 - BeautyContent.charm_price("boots", 1),
+			"the first copy charged the wrong price: %d left" % game.sparkles):
+		return false
+
+	game._on_buy_requested("boots")
+	await frames(2)
+	if not ok(wears(game.charms_equipped, "boots", 2),
+			"buying the same charm again did not give a second, stronger copy: %s" % str(game.charms_equipped)):
+		return false
+	if not ok(game.sparkles == 999 - BeautyContent.charm_price("boots", 1) - BeautyContent.charm_price("boots", 2),
+			"the second copy charged the wrong price: %d left" % game.sparkles):
+		return false
+	if not ok(BeautyContent.charm_price("boots", 2) > BeautyContent.charm_price("boots", 1),
+			"the deeper copy is not more expensive, so there is no reason to earn it"):
+		return false
+
+	# Both copies must be WORN when both are bought, because capacity now
+	# outruns the shelf -- a second purchase that sat in a pocket would be the
+	# old bug wearing a new hat.
+	if not ok(wears(game.charms_equipped, "boots", 1) and wears(game.charms_equipped, "boots", 2),
+			"both copies of a charm should be on together: %s" % str(game.charms_equipped)):
+		return false
+
+	# A third purchase must be refused by the cart, loudly and without charging:
+	# the deepest tier is the end of that ware, not a silent no-op.
+	var purse: int = game.sparkles
+	var before: int = game.charms_owned.size()
+	game._on_buy_requested("boots")
+	await frames(2)
+	if not ok(game.sparkles == purse,
+			"buying past the deepest tier charged anyway: %d -> %d" % [purse, game.sparkles]):
+		return false
+	if not ok(game.charms_owned.size() == before,
+			"buying past the deepest tier added an unbacked copy: %s" % str(game.charms_owned)):
+		return false
+	if not ok(newest_line_mentioning(game.ui._log_label, "Swift Boots").length() > 0,
+			"buying past the deepest tier said nothing at all"):
+		return false
+
+	# And the two copies must actually differ in strength, which is the whole
+	# reason the second one exists.
+	var base := float(BeautyContent.charm_effects_at("boots", 1).get("speed", 1.0))
+	var deep := float(BeautyContent.charm_effects_at("boots", 2).get("speed", 1.0))
+	if not ok(deep > base,
+			"the deeper copy is no stronger (speed %f vs %f)" % [deep, base]):
+		return false
+	# ...and the blurb it sells itself with must tell the truth about that.
+	var blurb := BeautyContent.charm_blurb("boots", 2)
+	if not ok(blurb.contains("%d%%" % roundi((deep - 1.0) * 100.0)),
+			"the deeper copy's description does not match its numbers: %s" % blurb):
+		return false
+	print("TIERS boots: tier1 %s / tier2 %s at %d and %d sparkles" % [
+		base, deep, BeautyContent.charm_price("boots", 1), BeautyContent.charm_price("boots", 2)])
+	return true
+
+func _check_a_deeper_walk_opens_more_sockets(game: Node) -> bool:
+	## The play screen has to SHOW the room, not just the wares. A full loadout
+	## used to be a dead end with nothing on the HUD to say otherwise; now the
+	## strip draws an empty socket per one a deeper walk would open, so
+	## "everything is full" reads as "go further down" instead.
+	game._start_run(1)
+	await frames(6)
+	game.sparkles = 9999
 	for key in ["boots", "scarf", "echo"]:
 		game._on_buy_requested(key)
+	game._refresh_ui()
 	await frames(2)
-	if not ok(game.charms_equipped.size() == BeautyContent.MAX_CHARMS,
-			"the fixture did not fill all %d charm slots (got %d)" % [
-				BeautyContent.MAX_CHARMS, game.charms_equipped.size()]):
+	var worn_shallow: int = game.charms_equipped.size() + game.stanzas_equipped.size()
+	var shallow: int = game.ui._vitals.slot_capacity
+	# Floor 1 has three sockets, so buying three charms fills it exactly -- and
+	# the strip must show that honestly rather than padding itself with
+	# pretend room. The songs sit beside the charms, not inside their budget.
+	if not ok(shallow == game.loadout_capacity() + game.stanzas_equipped.size(),
+			"the strip shows %d sockets for %d charm sockets plus %d worn songs" % [
+				shallow, game.loadout_capacity(), game.stanzas_equipped.size()]):
+		return false
+	if not ok(game.ui._vitals.equipped.size() == worn_shallow,
+			"a filled strip dropped a worn ware: %s" % str(game.ui._vitals.equipped)):
 		return false
 
-	game._on_buy_requested("ember")
+	# Descending is what opens room, and the strip has to show it immediately --
+	# growth the player can never see is not growth. `keep_progress` is the
+	# "wander deeper" path, so the loadout survives it -- which is exactly the
+	# path whose growth this check is about.
+	game._start_run(BeautyContent.CAMPAIGN_LENGTH, true)
+	await frames(6)
+	game._refresh_ui()
 	await frames(2)
-	if not ok(bool(game.charms_owned.get("ember", false)), "the fourth charm was not recorded as owned"):
+	var deep: int = game.ui._vitals.slot_capacity
+	if not ok(deep > shallow,
+			"the strip did not grow on a deeper floor (%d -> %d sockets): growth the player can never see is not growth" % [
+				shallow, deep]):
 		return false
-	if not ok(not bool(game.charms_equipped.get("ember", false)),
-			"the fourth charm should not auto-equip past the cap"):
+	if not ok(game.charms_equipped.size() == worn_shallow - game.stanzas_equipped.size(),
+			"going deeper took wares off the hero (%d -> %d)" % [worn_shallow, game.charms_equipped.size()]):
 		return false
-	# Look for the line THIS purchase produced rather than the newest line in
-	# the log: the floor keeps ticking while the shop is open, and a wisp
-	# drifting home can push a line above it, which made this check fail for
-	# reasons that had nothing to do with the purchase.
-	var last_line: String = newest_line_mentioning(game.ui._log_label, "ember")
-	if not ok(last_line.to_lower().contains("ember mitten"),
-			"the newest log line is not about the capped purchase: %s" % last_line):
+	# Everything worn must still be on screen at the widest loadout.
+	if not ok(game.ui._vitals.equipped.size() == game.charms_equipped.size() + game.stanzas_equipped.size(),
+			"a deeper floor's strip dropped a worn ware: %s" % str(game.ui._vitals.equipped)):
 		return false
-	if not ok(last_line.contains("pocket"),
-			"buying a charm past the cap never says it is waiting in the pocket: %s" % last_line):
-		return false
-	if not ok(not last_line.contains("It suits you"),
-			"Peddle still promised the capped charm would be worn: %s" % last_line):
-		return false
-
-	# The shop itself must not promise a swap it cannot describe honestly either.
-	game._open_shop()
-	await frames(3)
-	# The card paints no status words, so "am I wearing it" is the lit rim and
-	# the promise is the hover text -- which is where the player reads it.
-	var ember_card := find_ware(game.ui._shop_frame, "ember")
-	var ember_tip := "" if ember_card == null else ware_button(ember_card).tooltip_text
-	if not ok(ember_card != null, "the owned charm was not on the shelf"):
-		return false
-	if not ok(not ember_tip.is_empty(), "the owned charm had no tooltip in the shop"):
-		return false
-	if not ok(ember_tip.contains("swap"),
-			"the shop promised a wear the cap cannot give: %s" % ember_tip):
-		return false
-	game._resume_game()
-	await frames(3)
-	game._start_run(1)
-	await frames(4)
+	print("LOADOUT sockets: floor 1 -> %d, asked for floor %d -> %d (floor_number now %d, capacity() says %d)" % [
+		shallow, BeautyContent.CAMPAIGN_LENGTH, deep, game.floor_number, game.loadout_capacity()])
 	return true
 
-## Swapping a pocketed charm in with every slot full used to evict whichever
-## charm fell last in charms_owned order, and said nothing at all. The player
-## watched a build change with no explanation. The eviction must be stable and
-## it must be named.
-func _check_a_full_slot_swap_names_the_evicted_charm(game: Node) -> bool:
+func _check_a_full_loadout_is_never_emptied(game: Node) -> bool:
+	## Buying used to evict: with every slot full, a fourth purchase silently
+	## dropped the oldest worn charm and said nothing, so the player watched a
+	## build change with no explanation. Capacity now outruns the shelf, so the
+	## loadout only ever grows -- nothing the hero paid for is ever taken away.
 	game.sparkles = 100000
-	game.charms_owned = {}
-	game.charms_equipped = {}
-	for key in ["boots", "scarf", "echo", "ember"]:
-		game._on_buy_requested(key)
-		for _i in range(2):
-			await frames(2)
-	if game.charms_equipped.size() < BeautyContent.MAX_CHARMS:
-		print("FAIL: could not fill the charm slots to test a swap")
+	# Buy five wares twice over, so the check covers both ways a loadout grows:
+	# new icons, and deeper copies of icons the hero already loves. Buying is
+	# synchronous -- no await, because a per-purchase frame wait made this
+	# fixture alone blow the suite's runtime budget.
+	for _pass in 2:
+		for key in ["boots", "scarf", "echo", "ember", "moss"]:
+			game._on_buy_requested(key)
+	var after_buys := worn_keys(game.charms_equipped)
+	# Five wares bought twice is ten purchases, and with capacity this deep every
+	# one of them is on: the old cap would have thrown seven away silently.
+	if not ok(after_buys.size() == 10,
+			"ten wares were bought and only %d are worn: %s" % [after_buys.size(), str(after_buys)]):
+		return false
+	if not ok(game.charms_owned.size() == 10,
+			"ten wares were bought and only %d are owned: %s" % [
+				game.charms_owned.size(), str(game.charms_owned)]):
 		return false
 
-	var worn_before: Array = game.charms_equipped.keys()
-	var owned_before: int = game.charms_owned.size()
-	game._on_charm_equip_requested("ember")
-	for _i in range(3):
-		await frames(2)
-
-	var newest: String = newest_line_mentioning(game.ui._log_label, String(charm_name_for("ember")))
-
-	if not game.charms_equipped.has("ember"):
-		print("FAIL: swapping a pocketed charm in did not equip it")
+	# Toggling one OFF and back ON must not disturb any of the others.
+	game._on_charm_equip_requested("moss", 1)
+	game._on_charm_equip_requested("moss", 1)
+	var after_toggle := worn_keys(game.charms_equipped)
+	if not ok(after_toggle == after_buys,
+			"resting a ware and wearing it again changed the rest of the loadout: %s -> %s" % [
+				str(after_buys), str(after_toggle)]):
 		return false
-	if game.charms_equipped.size() > BeautyContent.MAX_CHARMS:
-		print("FAIL: the swap exceeded the charm cap: %s" % str(game.charms_equipped.keys()))
+	if not ok(game.charms_owned.size() >= 5,
+			"toggling wear lost ownership: %s" % str(game.charms_owned)):
 		return false
-	if game.charms_owned.size() != owned_before:
-		print("FAIL: the swap lost ownership: %d -> %d" % [
-			owned_before, game.charms_owned.size()])
-		return false
-	if not newest.contains("rests in your pocket"):
-		print("FAIL: a full-slot swap did not say which charm it set aside (%s)" % newest)
-		return false
-
-	# The charm that was set aside must be named, and must still be owned so
-	# the player can swap it back.
-	var evicted := ""
-	for key in worn_before:
-		if not game.charms_equipped.has(key):
-			evicted = key
-			break
-	if evicted == "":
-		print("FAIL: a full-slot swap evicted nothing")
-		return false
-	if not game.charms_owned.has(evicted):
-		print("FAIL: the evicted charm %s is no longer owned" % evicted)
-		return false
-	var evicted_name: String = charm_name_for(evicted)
-	if not newest.contains(evicted_name):
-		print("FAIL: the swap did not name the evicted charm %s (%s)" % [evicted_name, newest])
-		return false
-
-	# The same swap twice must evict the same charm: the rule is a rule.
-	var first_evicted := evicted
-	for key2 in ["moss", "dew", "acorn"]:
-		game.charms_owned[key2] = true
-	game._on_charm_equip_requested("moss")
-	for _i in range(3):
-		await frames(2)
-	var second := ""
-	for key3 in worn_before:
-		if key3 != first_evicted and not game.charms_equipped.has(key3):
-			second = key3
-			break
-	if second == "" and game.charms_equipped.size() == BeautyContent.MAX_CHARMS:
-		print("FAIL: the second full-slot swap evicted nothing")
-		return false
+	print("LOADOUT all %d bought wares stay worn through a toggle" % after_buys.size())
 	return true
 
-
-## The verse swap is the sibling of the charm swap above: with both slots full it
-## evicts one, and it used to do so in total silence -- the log did not change
-## at all. Mote now names what steps back.
-func _check_a_full_slot_verse_swap_says_what_steps_back(game: Node) -> bool:
-	game.stanzas_equipped = {"petals": true, "echoes": true}
-	game._recalculate_loadout(false)
-	for _i in range(2):
-		await frames(2)
-	var before: Array = game.stanzas_equipped.keys()
-	game._on_stanza_equip_requested("hearth")
-	for _i in range(3):
-		await frames(2)
-
-	# Read the newest line that mentions the verse we just equipped. Reading
-	# the log's LAST line instead was a coin flip: a Mote chatter line landing
-	# after the swap buried the message, and the check passed or failed on
-	# timing rather than on what the game said.
-	var newest: String = ""
-	for line: String in String(game.ui._log_label.text).split("\n"):
-		if line.contains("Hearth"):
-			newest = line
-	print("STANZASWAP equipped=%s log=%s" % [str(game.stanzas_equipped.keys()), newest])
-	if not ok(game.stanzas_equipped.has("hearth"),
-			"swapping a verse in did not equip it"):
-		return false
-	if not ok(game.stanzas_equipped.size() <= BeautyContent.MAX_STANZAS,
-			"the verse swap exceeded the cap: %s" % str(game.stanzas_equipped.keys())):
-		return false
-
-	var stepped_aside := ""
-	for key in before:
-		if not game.stanzas_equipped.has(key):
-			stepped_aside = key
-			break
-	if not ok(stepped_aside != "", "a full-slot verse swap evicted nothing"):
-		return false
-	if not ok(newest.contains("steps back"),
-			"a full-slot verse swap said nothing about what it displaced (%s)" % newest):
-		return false
-	var wanted := ""
-	for stanza: Dictionary in BeautyContent.STANZAS:
-		if String(stanza["key"]) == stepped_aside:
-			wanted = String(stanza["name"])
-			break
-	if not ok(newest.contains(wanted),
-			"the verse swap did not name %s (%s)" % [wanted, newest]):
-		return false
-	# Every verse is free, so the one that stepped back must be tap-able again.
-	game._on_stanza_equip_requested(stepped_aside)
-	for _i in range(3):
-		await frames(2)
-	if not ok(game.stanzas_equipped.has(stepped_aside),
-			"the displaced verse could not be swapped straight back"):
-		return false
-	return true
 ## Verses and Mote's counter-melodies are free gifts that nobody owns, and the
 ## shop used to list every unworn one as "in pocket -- tap to wear" and "already
 ## yours". That describes a purchase which never happened.
@@ -239,8 +242,7 @@ func _check_a_full_slot_verse_swap_says_what_steps_back(game: Node) -> bool:
 ## own this" would still be lying, in the one place the player goes looking.
 func _check_free_items_do_not_claim_to_be_owned(game: Node) -> bool:
 	game.ui.show_shop(game._shop_state())
-	for _i in range(4):
-		await frames(2)
+	await frames(4)
 	# The shelves live inside a ScrollContainer, so search the whole frame.
 	var free_rows := 0
 	var free_items := BeautyContent.STANZAS.size() + BeautyContent.MOTE_VERSES.size()
@@ -263,9 +265,27 @@ func _check_free_items_do_not_claim_to_be_owned(game: Node) -> bool:
 			"expected %d free cards (every verse and counter-melody), found %d" % [
 				free_items, free_rows]):
 		return false
+	# The verse shelf must not print a ceiling: "2/2" taught the player that
+	# songs were finished, and sent them looking elsewhere for upgrades. The
+	# CHARM shelf legitimately prints worn/room (that is the room to grow into),
+	# so this only looks at the songs heading, which is the one that used to lie.
+	var verse_ceiling := false
+	for label in _all_labels(game.ui._shop_frame):
+		var text := String(label.text)
+		if text.is_empty() or not text.contains("/"):
+			continue
+		var number := text.get_slice("/", 0).strip_edges()
+		var denominator := text.get_slice("/", 1).strip_edges()
+		if not number.is_valid_int() or not denominator.is_valid_int():
+			continue
+		# A ceiling is n/n -- reached and immovable. n/m with room left is not.
+		if number == denominator:
+			verse_ceiling = true
+	if not ok(not verse_ceiling,
+			"the cart still prints a reached x/x ceiling; nothing in this game has one"):
+		return false
 	game.ui.close_panels()
-	for _i in range(2):
-		await frames(2)
+	await frames(2)
 	return true
 
 func _check_stanza_cards_paint_song_glyphs(game: Node) -> bool:
@@ -273,8 +293,7 @@ func _check_stanza_cards_paint_song_glyphs(game: Node) -> bool:
 	## treated them as charms: every song shelf painted the hollow "unknown
 	## key" ring, or the charm art when the key collided (moss, lullaby).
 	game.ui.show_shop(game._shop_state())
-	for _i in range(4):
-		await frames(2)
+	await frames(4)
 	var stanza_cards := 0
 	for card in free_item_cards(game.ui._shop_frame):
 		if not card.item_name().begins_with("Verse of"):
@@ -288,8 +307,7 @@ func _check_stanza_cards_paint_song_glyphs(game: Node) -> bool:
 			"expected %d stanza cards, found %d" % [BeautyContent.STANZAS.size(), stanza_cards]):
 		return false
 	game.ui.close_panels()
-	for _i in range(2):
-		await frames(2)
+	await frames(2)
 	return true
 
 func _check_colliding_sockets_keep_their_own_art(game: Node) -> bool:
@@ -297,7 +315,7 @@ func _check_colliding_sockets_keep_their_own_art(game: Node) -> bool:
 	## every key that ALSO existed in the stanza table as the song glyph, so a
 	## worn Moss Pillow showed the verse's note and nobody could wear the
 	## charm and read it correctly.
-	game.charms_equipped["moss"] = true
+	game.charms_equipped = loadout(["moss"])
 	game.stanzas_equipped["moss"] = true
 	game._refresh_ui()
 	await frames(2)
@@ -318,6 +336,17 @@ func _check_colliding_sockets_keep_their_own_art(game: Node) -> bool:
 			leaked = true
 	if not ok(not leaked and game.ui._walker_charm_keys.has("moss"),
 			"the pause charm row should hold no song keys: %s" % str(game.ui._walker_charm_keys)):
+		return false
+	# A tiered copy must resolve to its own ware's ink, and only at a tier that
+	# exists -- otherwise a socket could paint boots for a tier with no boots.
+	if not ok(GardenGlyphs.has_glyph(GardenGlyphs.worn_key("boots", 2)),
+			"a tiered charm key reported no ink"):
+		return false
+	if not ok(not GardenGlyphs.has_glyph(GardenGlyphs.worn_key("boots", 9)),
+			"a charm key claimed a tier that does not exist"):
+		return false
+	if not ok(not GardenGlyphs.has_glyph(GardenGlyphs.worn_key("petals", 2)),
+			"a bare verse key borrowed a charm's ink once tiered"):
 		return false
 	# The same collision means a BARE verse key must never report itself as
 	# ink: it would paint the hollow gap-ring or the charm art of the same
@@ -341,14 +370,11 @@ func _check_colliding_sockets_keep_their_own_art(game: Node) -> bool:
 	return true
 
 func _check_every_worn_ware_gets_a_socket(game: Node) -> bool:
-	## The vitals strip draws one socket per SLOT, and it was told to draw
-	## MAX_CHARMS of them -- while the director hands it worn charms AND worn
-	## stanzas together. With every charm slot full that is five keys into
-	## three sockets, so the two songs the hero is actively humming lost their
-	## icons entirely: nothing on the play screen said they were still worn.
-	## The HUD disagreed with the loadout it was fed, which is the one thing
-	## this strip must never do.
-	game.charms_equipped = {"boots": true, "scarf": true, "echo": true}
+	## The vitals strip draws one socket per worn ware AND one per socket of
+	## room. With two copies of a charm on, both must appear -- the second is
+	## only distinguishable by its tier pips, so losing one of the pair would
+	## make the deeper copy invisible exactly when it was earned.
+	game.charms_equipped = loadout([["boots", 1], ["boots", 2], ["scarf", 1], ["echo", 1]])
 	game.stanzas_equipped = {"petals": true, "echoes": true}
 	game._refresh_ui()
 	await frames(2)
@@ -362,6 +388,11 @@ func _check_every_worn_ware_gets_a_socket(game: Node) -> bool:
 	if not ok(vitals.equipped.size() == worn,
 			"every worn ware should reach the strip: %s" % str(vitals.equipped)):
 		return false
+	# Both copies must be on the strip under DIFFERENT keys, or the player
+	# cannot tell which socket is the stronger one.
+	if not ok(vitals.equipped.has("boots") and vitals.equipped.has("tier:2:boots"),
+			"two copies of one charm must show as two marked sockets: %s" % str(vitals.equipped)):
+		return false
 	# The plate is the backing drawn behind the whole strip, so a socket that
 	# hangs off it is a ware the player just bought and cannot see. Every worn
 	# socket has to land inside the drawn plate, at the widest loadout.
@@ -370,21 +401,23 @@ func _check_every_worn_ware_gets_a_socket(game: Node) -> bool:
 			"the socket row ends at %s but the plate is only %s, so the last worn ware is painted outside it" % [
 				str(row.end.round()), str(vitals.size.round())]):
 		return false
-	# And an unworn strip must not draw empty outlines for wares nobody chose.
+	# A bare strip must still read as a card rather than collapsing to nothing.
 	game.charms_equipped.clear()
 	game.stanzas_equipped = {"petals": true}
 	game._refresh_ui()
 	await frames(2)
-	if not ok(game.ui._vitals.slot_capacity == 1,
-			"an unworn strip should draw exactly one socket, not %d" % game.ui._vitals.slot_capacity):
+	if not ok(game.ui._vitals.slot_capacity >= 1,
+			"a bare strip should draw at least one socket, not %d" % game.ui._vitals.slot_capacity):
 		return false
 	game.stanzas_equipped = {"petals": true, "echoes": true}
 	game._refresh_ui()
 	await frames(2)
 	return true
 
-func charm_name_for(key: String) -> String:
-	for charm: Dictionary in BeautyContent.CHARMS:
-		if String(charm["key"]) == key:
-			return String(charm["name"])
-	return key
+func _all_labels(node: Node) -> Array:
+	var out: Array = []
+	for child in node.get_children():
+		if child is Label:
+			out.append(child)
+		out.append_array(_all_labels(child))
+	return out

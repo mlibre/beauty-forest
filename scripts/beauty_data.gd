@@ -105,15 +105,26 @@ static func meta_read_failed() -> bool:
 
 ## Move an unreadable file aside instead of overwriting it. Returns the backup
 ## path, or "" when the move failed and the original is still in place.
+##
+## The name is stamped per SECOND, so two quarantines in the same second collide
+## -- the second finds the first already there and overwrites it. That made this
+## hard to test (the suite had to guess this format to plant a blocking path) and
+## easy to get wrong, so the format lives in one named function instead of being
+## spelled out at the call site and again in the test.
 static func _quarantine(path: String, label: String) -> String:
-    var stamp := Time.get_datetime_string_from_system().replace(":", "-").replace("T", "_")
-    var backup := "%s.corrupt-%s" % [path, stamp]
+    var backup := quarantine_path(path)
     var error := DirAccess.rename_absolute(path, backup)
     if error != OK:
         push_warning("Could not set the damaged %s aside (%s); leaving it in place." % [label, error_string(error)])
         return ""
     push_warning("The %s could not be read, so it was kept at %s rather than overwritten." % [label, backup])
     return backup
+
+## Where a damaged file at `path` gets moved. Exposed so a test can plant the
+## exact path this will try and make a rename fail on purpose.
+static func quarantine_path(path: String) -> String:
+    return "%s.corrupt-%s" % [path, Time.get_datetime_string_from_system()
+        .replace(":", "-").replace("T", "_")]
 
 static func load_meta() -> Dictionary:
     var target := save_path()
@@ -295,26 +306,34 @@ static func _setting_float(value: Variant, minimum: float, maximum: float, fallb
         return clampf(fallback, minimum, maximum)
     return clampf(number, minimum, maximum)
 
-static func charm_effects(owned: Dictionary) -> Dictionary:
-    var effects := {
-        "speed": 1.0, "cooldown": 1.0, "song_damage": 1.0, "damage_taken": 1.0,
-        "soul": 1.0, "pickup": 1.0, "dash_cooldown": 1.0, "lullaby_window": 1.0,
-        "max_hp": 0.0, "heart_heal": 0.0, "invulnerable": 0.0,
-    }
-    var equipped := 0
-    for charm: Dictionary in BeautyContent.CHARMS:
-        var key := String(charm["key"])
-        if key == "tea" or not _dictionary_flag(owned, key):
-            continue
-        equipped += 1
-        if equipped > BeautyContent.MAX_CHARMS:
-            break
-        for effect_key in ["speed", "cooldown", "song_damage", "damage_taken", "soul", "pickup", "dash_cooldown", "lullaby_window"]:
-            if charm.has(effect_key):
-                effects[effect_key] = float(effects[effect_key]) * float(charm[effect_key])
-        for effect_key in ["max_hp", "heart_heal", "invulnerable"]:
-            if charm.has(effect_key):
-                effects[effect_key] = float(effects[effect_key]) + float(charm[effect_key])
+## The loadout arithmetic: worn charms and verses turned into multipliers.
+##
+## `worn` is the list of things the hero has on -- each entry a
+## `{"key": String, "tier": int}` -- so a charm can be owned twice and both
+## copies worn. Content tables live in BeautyContent.
+
+## Multiplicative charm effects. These COMPOUND across the loadout, which is
+## what makes a deeper walk feel stronger rather than merely bigger.
+const CHARM_MULTIPLIERS := ["speed", "cooldown", "song_damage", "damage_taken",
+    "soul", "pickup", "dash_cooldown", "lullaby_window"]
+## Flat charm effects, which ADD. See `charm_effects_at` for why the two kinds
+## are scaled differently by a charm's tier.
+const CHARM_ADDITIONS := ["max_hp", "heart_heal", "invulnerable"]
+
+static func charm_effects(worn: Array) -> Dictionary:
+    var effects := {}
+    for field: String in CHARM_MULTIPLIERS:
+        effects[field] = 1.0
+    for field: String in CHARM_ADDITIONS:
+        effects[field] = 0.0
+    for entry: Dictionary in worn:
+        var scaled := BeautyContent.charm_effects_at(String(entry.get("key", "")), int(entry.get("tier", 1)))
+        for field: String in CHARM_MULTIPLIERS:
+            if scaled.has(field):
+                effects[field] = float(effects[field]) * float(scaled[field])
+        for field: String in CHARM_ADDITIONS:
+            if scaled.has(field):
+                effects[field] = float(effects[field]) + float(scaled[field])
     return effects
 
 static func stanza_effects(equipped: Dictionary) -> Dictionary:
@@ -324,13 +343,9 @@ static func stanza_effects(equipped: Dictionary) -> Dictionary:
         "note_cooldown": 1.0, "distant_soul": 1.0, "pulse_damage": 1.0,
         "heart_rate": 0.0, "soul": 1.0,
     }
-    var equipped_count := 0
     for stanza: Dictionary in BeautyContent.STANZAS:
         if not _dictionary_flag(equipped, String(stanza["key"])):
             continue
-        equipped_count += 1
-        if equipped_count > BeautyContent.MAX_STANZAS:
-            break
         for effect_key in stanza.keys():
             if effect_key in ["key", "name", "description"]:
                 continue

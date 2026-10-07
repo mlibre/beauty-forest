@@ -146,18 +146,39 @@ func _ware_tooltip(item: Dictionary, card: CozyCard, sparkles: int, slots_full: 
     if card.selected:
         return "%s — wearing it now. Tap to rest it." % what
     if card.owned:
-        # With every slot taken the tap swaps rather than adds, and "tap to
+        # With every socket taken the tap waits rather than adding, and "tap to
         # wear" would be a small lie.
-        var swap_note := " Tap to swap it in for a charm you are wearing." if slots_full else " Tap to wear it."
+        var swap_note := " Tap to wear it — wander deeper if every socket is full." if slots_full else " Tap to wear it."
         return "%s — already yours.%s" % [what, swap_note]
     if slots_full:
-        return "%s — all %d charm slots are full, so this waits in your pocket until you swap one." % [
-            what, BeautyContent.MAX_CHARMS]
+        return "%s — every socket is full, so this waits in your pocket until you go deeper." % what
     if card.price > 0 and not card.affordable:
         var short := card.price - sparkles
         return "You need %d sparkles — soothe %d more wisp%s. It will keep. ♥" % [
             card.price, short, "" if short == 1 else "s"]
     return what
+
+## The next tier of `key` the hero does not own yet, or 0 when it owns them all.
+func _next_tier(owned: Array, key: String) -> int:
+    var best := 0
+    for entry: Variant in owned:
+        if entry is Dictionary and String((entry as Dictionary).get("key", "")) == key:
+            best = maxi(best, int((entry as Dictionary).get("tier", 1)))
+    return best + 1 if best < BeautyContent.TIER_SCALES.size() - 1 else 0
+
+func _owns(owned: Array, key: String, tier: int) -> bool:
+    for entry: Variant in owned:
+        if entry is Dictionary and String((entry as Dictionary).get("key", "")) == key \
+                and int((entry as Dictionary).get("tier", 1)) == tier:
+            return true
+    return false
+
+func _wearing(equipped: Array, key: String, tier: int) -> bool:
+    for entry: Variant in equipped:
+        if entry is Dictionary and String((entry as Dictionary).get("key", "")) == key \
+                and int((entry as Dictionary).get("tier", 1)) == tier:
+            return true
+    return false
 
 func show_shop(state: Dictionary) -> void:
     _dismiss_beat_ring()
@@ -197,32 +218,69 @@ func show_shop(state: Dictionary) -> void:
         if warmth_full:
             (tea.get_parent() as Button).tooltip_text = "You are warm as a toast already — keep these sparkles for a charm ♥"
 
-    var owned: Dictionary = state.get("owned", {})
-    var equipped: Dictionary = state.get("charms", {})
-    var slots_full := equipped.size() >= BeautyContent.MAX_CHARMS
+    var owned: Array = state.get("owned", [])
+    var equipped: Array = state.get("charms", [])
+    var capacity := int(state.get("capacity", 1))
+    var slots_full := equipped.size() >= capacity
     # The heading carries the count, so it never has to be read off a sentence:
-    # a gold rim on a card is "wearing", and this is how many there are.
+    # a gold rim on a card is "wearing", and this is how many there are. The
+    # second number is the ROOM -- a deeper walk opens more sockets, and saying
+    # so on the cart is what turns a full shelf from a dead end into an
+    # invitation to go further down.
     var charm_shelf := _shelf(list, "COZY CHARMS", "scarf", "%d/%d" % [
-        equipped.size(), BeautyContent.MAX_CHARMS])
+        equipped.size(), capacity])
     for charm: Dictionary in BeautyContent.CHARMS:
         var key := String(charm["key"])
         if key == "tea":
             continue
-        var is_owned := bool(owned.get(key, false))
-        var worn := bool(equipped.get(key, false))
+        # A charm can be owned twice, and the second copy is the same ware made
+        # stronger. So the card offers the DEEPEST copy the hero does not own --
+        # but never at the cost of being a dead button. An owned charm that the
+        # purse cannot afford the deeper copy of must still offer its own copy
+        # to wear or rest, because that press is free and the player has earned
+        # it. Choosing the best AVAILABLE action, rather than the best possible
+        # one, is what keeps a full purse from looking like a dead shelf.
+        var offered_tier := _next_tier(owned, key)
+        if offered_tier == 0:
+            # Every copy is owned, so there is nothing left to buy: the card
+            # offers the DEEPEST one, which is the ware worth wearing or
+            # resting. Falling back to tier 1 here would leave a hero wearing
+            # two Swift Boots looking at the weak one's card.
+            offered_tier = maxi(1, BeautyContent.TIER_SCALES.size() - 1)
+        if not _owns(owned, key, offered_tier) and _owns(owned, key, 1) \
+                and BeautyContent.charm_price(key, offered_tier) > sparkles:
+            # The deeper copy exists and is wanted, but this purse cannot reach
+            # it. Offer the copy the hero DOES have, because wearing and
+            # resting it is free and never a dead press.
+            offered_tier = 1
+        var is_owned := _owns(owned, key, offered_tier)
+        var worn := is_owned and _wearing(equipped, key, offered_tier)
+        var offered := charm.duplicate(true)
+        offered["tier"] = offered_tier
+        offered["name"] = BeautyContent.charm_label(key, offered_tier)
+        offered["description"] = BeautyContent.charm_blurb(key, offered_tier)
+        offered["price"] = BeautyContent.charm_price(key, offered_tier)
         # An owned charm toggles wear; an unowned one buys. Which of the two it
         # is has to be visible before the press, so the card's tooltip leads
         # with it and the rim only ever answers "am I wearing it".
-        _ware_card(charm_shelf, charm, sparkles, worn, is_owned, false, slots_full,
+        _ware_card(charm_shelf, offered, sparkles, worn, is_owned, false, slots_full,
             func():
                 if is_owned:
-                    charm_equip_requested.emit(key)
+                    charm_equip_requested.emit(key, offered_tier)
                 else:
                     buy_requested.emit(key))
 
     var stanzas: Dictionary = state.get("stanzas", {})
-    var stanza_shelf := _shelf(list, "LANTERN SONGS", GardenGlyphs.STANZA_PREFIX + "petals", "%d/%d" % [
-        stanzas.size(), BeautyContent.MAX_STANZAS])
+    # Verses cost nothing and there is no purse to stop them, so the count is
+    # simply how many are being hummed -- with no ceiling to print. A "2/2" here
+    # taught the player that songs had a cap they had already reached, and sent
+    # them to the rest of the cart for the upgrades they needed.
+    var humming := 0
+    for is_on: Variant in stanzas.values():
+        if bool(is_on):
+            humming += 1
+    var stanza_shelf := _shelf(list, "LANTERN SONGS", GardenGlyphs.STANZA_PREFIX + "petals",
+        str(humming) if humming > 0 else "")
     for stanza: Dictionary in BeautyContent.STANZAS:
         var key := String(stanza["key"])
         # Stanzas share keys with charms (`moss`, `lullaby`), so the card can

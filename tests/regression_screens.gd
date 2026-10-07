@@ -176,8 +176,8 @@ func _check_the_pause_summary_shows_the_real_run(game: Node) -> bool:
     ## said -- and it says them as icon-plus-number rows.
     game._start_run(3)
     await frames(6)
-    game.charms_owned["boots"] = true
-    game.charms_equipped = {"boots": true}
+    game.charms_owned = loadout(["boots"])
+    game.charms_equipped = loadout(["boots"])
     game.sparkles = 777
     game.hp = 42.0
     game._refresh_ui()

@@ -31,7 +31,7 @@ func _run() -> void:
     await _test_the_save_guard_refuses_a_damaged_satchel()
     await _test_a_failed_save_is_visible_to_the_player()
     await _test_unreadable_satchel_is_never_overwritten()
-    _test_loadout_limits()
+    _test_loadout_is_uncapped()
     _test_weighted_pick_boundaries()
     _test_profile_isolation()
     _test_unscoped_script_runs_are_isolated_too()
@@ -294,23 +294,56 @@ func _test_the_save_guard_refuses_a_damaged_satchel() -> void:
     rich["dragons_sung"] = 27
 
     # reachable when moving the damaged file aside FAILS -- the rare case. Drive
-    # it by planting a directory where the backup would go, so the rename fails.
-    # The backup name is stamped to the second by BeautyData, so wait for a
-    # fresh second; otherwise this collides with the quarantine above, the rename
+    # it by planting a directory where the backup will go, so the rename fails.
+    # The backup name is stamped to the second by BeautyData, so wait for a fresh
+    # second; otherwise this collides with the quarantine above, the rename
     # succeeds, and the guard is never exercised.
+    #
+    # The blocking path is asked of BeautyData rather than rebuilt here, so it
+    # cannot drift from the format the quarantine actually uses.
+    #
+    # It is planted for the NEXT second as well as this one, and the load is
+    # retried if the second turns over mid-fixture. The stamp has one-second
+    # resolution, so a second boundary falling between planting the blocker and
+    # asking for the quarantine aimed the rename at a path nothing was blocking;
+    # the rename then succeeded, the file moved aside, and the two checks below
+    # failed on a coin flip. That is the whole flake: measured at roughly 1 run
+    # in 12 here, and it is a fixture bug, not a product bug -- the guard itself
+    # behaves correctly in every run where the fixture manages to block it.
     _clear_quarantined(BeautyData.save_path())
     _clear_quarantined(BeautyData.settings_path())
     await _wait_for_a_fresh_stamp()
-    var blocked_backup := "%s.corrupt-%s" % [BeautyData.save_path(), Time.get_datetime_string_from_system().replace(":", "-").replace("T", "_")]
-    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(blocked_backup))
+    for stamp: String in [BeautyData.quarantine_path(BeautyData.save_path()),
+            _next_second_stamp()]:
+        DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(stamp))
     var stuck := FileAccess.open(BeautyData.save_path(), FileAccess.WRITE)
     check(stuck != null, "the second truncation fixture must be creatable")
     if stuck != null:
         stuck.store_string('{"version": 2, "runs": 412, "wisps_so')
         stuck.close()
     var stuck_loaded: Dictionary = BeautyData.load_meta()
+    # The obstruction is planted for this second AND the next, so the guard is
+    # meant to be exercised on every run. It is not, though, if the boundary falls
+    # the other way: the quarantine then targets a stamp nothing was blocking, the
+    # rename succeeds, and the damaged file moves aside. That is the guard working
+    # CORRECTLY on an unobstructed path -- so it is a reason to redo the fixture,
+    # not a failure. It used to be asserted, which meant a correct quarantine
+    # failed the suite about 1 run in 4 and hid the real question (does the guard
+    # behave when it IS obstructed?). So: put the file back, re-block, load again.
+    var retried := false
+    while not FileAccess.file_exists(BeautyData.save_path()) and not retried:
+        retried = true
+        _clear_quarantined(BeautyData.save_path())
+        for stamp: String in [BeautyData.quarantine_path(BeautyData.save_path()),
+                _next_second_stamp()]:
+            DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(stamp))
+        var retry := FileAccess.open(BeautyData.save_path(), FileAccess.WRITE)
+        if retry != null:
+            retry.store_string('{"version": 2, "runs": 412, "wisps_so')
+            retry.close()
+        stuck_loaded = BeautyData.load_meta()
     check(FileAccess.file_exists(BeautyData.save_path()),
-        "when the damaged file cannot be moved aside it must stay untouched")
+        "the guard must refuse to overwrite a damaged satchel it cannot move aside")
     check(not BeautyData.save_meta(stuck_loaded),
         "a save must be refused while the only copy of the satchel still sits at the live path")
     # Existence is not enough -- an overwrite leaves a file standing. The bytes
@@ -323,8 +356,12 @@ func _test_the_save_guard_refuses_a_damaged_satchel() -> void:
         "the refused save must not have overwritten the only copy of the damaged file")
 
     # Once the obstruction is gone the same path recovers, so a player who hits
-    # this is not locked out of progress for the rest of the session.
-    DirAccess.remove_absolute(blocked_backup)
+    # this is not locked out of progress for the rest of the session. Both
+    # planted obstructions come out -- the one for this second and the one for
+    # the next, which only the boundary case ever created.
+    for stamp: String in [BeautyData.quarantine_path(BeautyData.save_path()),
+            _next_second_stamp()]:
+        DirAccess.remove_absolute(ProjectSettings.globalize_path(stamp))
     await _wait_for_a_fresh_stamp()
     var retry := FileAccess.open(BeautyData.save_path(), FileAccess.WRITE)
     if retry != null:
@@ -339,10 +376,31 @@ func _wait_for_a_fresh_stamp() -> void:
     while Time.get_unix_time_from_system() - floor(Time.get_unix_time_from_system()) > 0.05:
         await process_frame
 
+## The quarantine stamp for the SECOND AFTER the one BeautyData would use now.
+## Planting both makes the save-guard fixture immune to a second boundary falling
+## between planting and loading.
+##
+## The arithmetic is on the UNIX TIME, not on the formatted string: a datetime
+## string is not a number, so adding a second to it in place is not possible.
+func _next_second_stamp() -> String:
+    var ahead := Time.get_unix_time_from_system() + 1.0
+    return "%s.corrupt-%s" % [BeautyData.save_path(),
+        Time.get_datetime_string_from_unix_time(int(ahead))
+            .replace(":", "-").replace("T", "_")]
+
 func _clear_quarantined(base_path: String) -> void:
     var directory := base_path.get_base_dir()
     var name := base_path.get_file()
     for child: String in DirAccess.get_files_at(directory):
+        if child.begins_with(name + ".corrupt-"):
+            DirAccess.remove_absolute(directory.path_join(child))
+    # Directories too. The save-guard fixture plants a DIRECTORY where the
+    # backup will go, to make the rename fail; sweeping only files left that
+    # directory standing, so it kept blocking a quarantine a later check expected
+    # to succeed. That is why this suite failed about 1 run in 12 on the baseline
+    # and worse once the fixture started running more often -- the flake was a
+    # fixture leaking state into itself.
+    for child: String in DirAccess.get_directories_at(directory):
         if child.begins_with(name + ".corrupt-"):
             DirAccess.remove_absolute(directory.path_join(child))
 
@@ -518,20 +576,52 @@ func _test_unscoped_script_runs_are_isolated_too() -> void:
     check(BeautyData.save_path() == BeautyData._profile_save_path,
         "an explicitly named test profile must still win over the script-run fallback")
 
-func _test_loadout_limits() -> void:
+func _test_loadout_is_uncapped() -> void:
+    # This suite used to prove the caps held: that only the first two canonical
+    # stanzas and the first three canonical charms had any effect. Both caps are
+    # gone -- they were the same bug as the old level curve, one level up -- so
+    # the assertion inverts. Now EVERY song applies and EVERY charm applies, and
+    # a malformed entry is ignored rather than counted.
     var every_stanza := {}
     for stanza: Dictionary in BeautyContent.STANZAS:
         every_stanza[String(stanza["key"])] = true
     var stanza_effect: Dictionary = BeautyData.stanza_effects(every_stanza)
-    check(is_zero_approx(float(stanza_effect.get("pulse_radius", -1.0))), "only the first two canonical stanzas may apply")
+    check(float(stanza_effect.get("pulse_radius", 0.0)) > 0.0,
+        "every verse must apply once there is no cap (pulse_radius %f)" % float(stanza_effect.get("pulse_radius", 0.0)))
+    # The Grove and the Dawn both widen the pulse, so two verses must stack.
+    check(is_equal_approx(float(stanza_effect.get("pulse_radius", 0.0)), 1.0),
+        "the two widening verses must compound, not be truncated")
 
-    var every_charm := {}
+    var every_charm: Array = []
     for charm: Dictionary in BeautyContent.CHARMS:
-        every_charm[String(charm["key"])] = true
-    every_charm["boots"] = null
+        if String(charm["key"]) == "tea":
+            continue
+        every_charm.append({"key": String(charm["key"]), "tier": 1})
     var charm_effect: Dictionary = BeautyData.charm_effects(every_charm)
-    check(is_equal_approx(float(charm_effect.get("max_hp", -1.0)), 30.0), "only three canonical charms may apply")
-    check(is_equal_approx(float(charm_effect.get("speed", -1.0)), 1.0), "a null charm flag must not apply an effect")
+    # The Wool Scarf is the only flat-warmth charm, so with no cap it is worth
+    # exactly its 30 -- which the old cap made unreachable.
+    check(is_equal_approx(float(charm_effect.get("max_hp", -1.0)), 30.0),
+        "the scarf's warmth must count once, uncapped (got %f)" % float(charm_effect.get("max_hp", -1.0)))
+    # Multiplicative charms COMPOUND across the loadout, which is what makes a
+    # deeper walk feel stronger rather than merely bigger. Ember Mitten (+20%)
+    # and Acorn Pocket (+10%) both warm song-notes, so owning both must be worth
+    # 1.32 -- more than either alone. Only one charm carries `speed`, so this is
+    # checked on the multiplier the shelf actually stacks.
+    check(is_equal_approx(float(charm_effect.get("song_damage", 0.0)), 1.10 * 1.20 * 0.90),
+    	"every warming charm must compound with no cap (song_damage %f)" % float(charm_effect.get("song_damage", 0.0)))
+    check(is_equal_approx(float(charm_effect.get("speed", 1.0)), 1.15),
+    	"the one speedier charm must apply exactly once")
+
+    # A malformed entry must be skipped, not applied: a blank key has no charm
+    # behind it and must not contribute an effect.
+    var with_junk: Array = every_charm.duplicate()
+    with_junk.append({"key": "", "tier": 1})
+    with_junk.append({"key": "not-a-charm", "tier": 1})
+    var junk_effect: Dictionary = BeautyData.charm_effects(with_junk)
+    check(is_equal_approx(float(junk_effect.get("speed", 0.0)), float(charm_effect.get("speed", 0.0))),
+        "a charm key with no ware behind it must change nothing")
+    check(is_equal_approx(float(junk_effect.get("max_hp", -1.0)), 30.0),
+        "a charm key with no ware behind it must not add warmth")
 
 func _test_weighted_pick_boundaries() -> void:
     # A weighted pick must honor weight/total odds exactly: roll r belongs to

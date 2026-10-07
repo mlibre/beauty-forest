@@ -273,7 +273,7 @@ func _run() -> void:
 
 	# The shop must not sell a heal that cannot do anything: a live Warm Tea
 	# button at full warmth used to charge 3 sparkles for a silent no-op.
-	var full_state := {"sparkles": 9, "charms": {}, "owned": {}, "stanzas": {}, "mote_verse": {}, "hp": 100.0, "hp_max": 100.0}
+	var full_state := {"sparkles": 9, "charms": loadout([]), "owned": loadout([]), "stanzas": {}, "mote_verse": {}, "hp": 100.0, "hp_max": 100.0}
 	_ui.show_shop(full_state)
 	await frames(3)
 	var cold_button := _find_shop_button("tea")
@@ -315,11 +315,14 @@ func _run() -> void:
 	# wear it" / "tap to rest it" — the loadout could no longer be changed.
 	var broke_state := {
 		"sparkles": 0,
-		"charms": {"boots": true},
-		"owned": {"boots": true},
+		# Charms are `{key, tier}` entries now -- a charm can be owned twice, so
+		# a flag dictionary cannot say which copy this is.
+		"charms": loadout(["boots"]),
+		"owned": loadout(["boots"]),
 		"stanzas": {"petals": true, "echoes": true},
 		"mote_verse": {},
 		"hp": 100.0, "hp_max": 100.0,
+		"capacity": 3,
 	}
 	_ui.show_shop(broke_state)
 	await frames(3)
@@ -327,7 +330,7 @@ func _run() -> void:
 	ok(worn_boots != null, "the shop lost an owned charm")
 	if worn_boots != null:
 		ok(not worn_boots.disabled, "a worn charm could not be rested with 0 sparkles")
-	broke_state["charms"] = {}
+	broke_state["charms"] = loadout([])
 	_ui.show_shop(broke_state)
 	await frames(3)
 	var pocket_boots := _find_shop_button("boots")
@@ -336,7 +339,7 @@ func _run() -> void:
 		ok(not pocket_boots.disabled, "a pocketed charm could not be worn with 0 sparkles")
 	# An unowned charm is still gated on the price it costs.
 	_ui.show_shop({
-		"sparkles": 0, "charms": {}, "owned": {}, "stanzas": {},
+		"sparkles": 0, "charms": loadout([]), "owned": loadout([]), "stanzas": {},
 		"mote_verse": {}, "hp": 100.0, "hp_max": 100.0,
 	})
 	await frames(3)

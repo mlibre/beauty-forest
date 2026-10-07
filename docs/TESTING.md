@@ -27,6 +27,18 @@ failure — `tests/support/test_case.gd` collects checks and owns the exit code,
 because Godot's own `assert()` only logs a `SCRIPT ERROR` and keeps going, which
 let suites print their OK line with the game broken.
 
+## Indentation
+
+GDScript in this project is one indentation style per *file*, and a file that
+mixes tabs and spaces fails to parse — the whole project then fails to load with
+a cascade of `Could not resolve super class` errors that name the wrong file.
+
+```bash
+./scripts/check_indent.sh
+```
+
+Run this before blaming a parse error on the script it names.
+
 ## Integration smoke
 
 Boots `scenes/main.tscn` and drives a whole run: menu → floor → rewards → shop →
@@ -160,3 +172,24 @@ through an early failure path.
 godot --headless --path . --import                                   # import/check
 godot --headless --path . --check-only --script res://path/to/file.gd # parse one script
 ```
+
+## Dev probes
+
+Not tests — they measure and print, and assert nothing, so they cannot fail a
+run. They exist so the numbers in `README.md` are claims you can re-check
+instead of take on faith.
+
+| Probe | Question it answers |
+| --- | --- |
+| `_audit/probe_growth.gd` | Does the hero keep pace with creatures that scale without bound? Walks the real `RunState` to floor 400. |
+| `_audit/probe_frame_cost.gd` | What does a floor cost per frame, and how does it scale with depth? |
+
+The growth probe is the one that guards the central promise of the game. It
+prints the level, the song-to-creature ratio and the worst ratio on the walk; the
+hero reaches level 538 by floor 400 with the ratio held in a 1.4–1.6 band. If a
+change to the level curve, soul income or creature scaling ever reintroduces the
+runaway, the ratio falls off a cliff and the probe shows it immediately.
+
+Read the frame-cost column as **microseconds**. It sums the six phases that
+`_physics_process` runs once each, so ~750 µs at floor 40 is under a millisecond
+against a 16 667 µs frame — not the 750 ms a "ms/frame" label once implied.

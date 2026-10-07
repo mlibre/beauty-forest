@@ -244,6 +244,49 @@ func ware_button(card: CozyCard) -> Button:
 	return card.get_parent() as Button
 
 
+## Whether a loadout list (owned or worn) holds `key` at `tier`.
+##
+## Charms are `{"key", "tier"}` entries rather than flag keys, because a charm
+## can be bought twice and both copies are distinct things. Suites should not
+## have to reach into that shape, so they ask this instead.
+func wears(list: Array, key: String, tier: int = 1) -> bool:
+	for entry: Variant in list:
+		if entry is Dictionary and String((entry as Dictionary).get("key", "")) == key \
+				and int((entry as Dictionary).get("tier", 1)) == tier:
+			return true
+	return false
+
+
+## A loadout list built from plain keys, for fixtures that only care WHICH wares
+## are present. Every entry lands at tier 1 unless a tier is given.
+##
+## Returns the typed `Array[Dictionary]` the run's own fields declare, because
+## assigning a plain `Array` to them is rejected at runtime -- a fixture that
+## "just builds a list" fails only once the whole suite is loaded.
+func loadout(keys: Array) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for entry: Variant in keys:
+		if entry is String:
+			out.append({"key": String(entry), "tier": 1})
+		elif entry is Array and (entry as Array).size() == 2:
+			out.append({"key": String((entry as Array)[0]), "tier": int((entry as Array)[1])})
+		elif entry is Dictionary:
+			out.append((entry as Dictionary).duplicate())
+	return out
+
+
+## The glyph keys a loadout list would paint, in order. Tier 1 is the ware's
+## own key; deeper tiers carry a tier prefix, so a suite can tell the two copies
+## of a charm apart.
+func worn_keys(list: Array) -> Array:
+	var out: Array = []
+	for entry: Variant in list:
+		if entry is Dictionary:
+			out.append(GardenGlyphs.worn_key(String((entry as Dictionary).get("key", "")),
+				int((entry as Dictionary).get("tier", 1))))
+	return out
+
+
 ## The first Button in a subtree whose painted text contains `needle`.
 func button_with_text(node: Node, needle: String) -> Button:
 	for candidate in buttons_in(node):

@@ -51,10 +51,25 @@ func _run() -> void:
 	await _frames(4)
 	var pause_seen := _report("PAUSE", ui._root)
 
-	ui.show_shop({"sparkles": 9, "charms": {"scarf": true}, "owned": {"scarf": true},
-		"stanzas": {"moss": true}, "mote_verse": {"key": "lullaby"}, "hp": 100.0, "hp_max": 100.0})
+	# A charm is `{"key", "tier"}` now, not a flag key: a charm can be owned twice
+	# and a flag dictionary cannot say which copy this is. This fixture used to
+	# pass the old shape, which aborted show_shop halfway through -- and the
+	# census then happily reported a 17-char shop instead of failing, because a
+	# screen that rendered half of itself still "passed" its budget. Every screen
+	# is now checked for having actually built, so a mid-render abort is a
+	# failure rather than a suspiciously good number.
+	ui.show_shop({"sparkles": 9, "charms": _loadout(["scarf"]), "owned": _loadout(["scarf"]),
+		"stanzas": {"moss": true}, "mote_verse": {"key": "lullaby"}, "hp": 100.0, "hp_max": 100.0,
+		"capacity": 4})
 	await _frames(4)
 	var shop_seen := _report("SHOP", ui._shop_content)
+	# The cart is the screen the icon-not-instructions rule was written for: a
+	# shelf of picture cards. If it built none, the count above is vacuous and a
+	# half-rendered shop would beat its budget for the wrong reason.
+	if _visible_ware_cards(ui._shop_content).size() < BeautyContent.CHARMS.size():
+		printerr("CENSUS_UNMEASURABLE: the cart built no wares, so SHOP reported %d chars for the wrong reason" % shop_seen["chars"])
+		quit(1)
+		return
 
 	# The screens below existed before the budget did, and none of them was
 	# measured: the census walked the player through play, menu, pause and cart
@@ -225,6 +240,15 @@ func _walking_screen_is_live(ui: GameUI) -> void:
 
 func _settings() -> Dictionary:
 	return {"high_contrast": false, "reduced_motion": false, "compact_hud": false, "text_scale": 1.0}
+
+## A loadout of charms at their first tier. A charm is `{"key", "tier"}` rather
+## than a bare key because a charm can be worn at more than one tier, and a flag
+## dictionary cannot say which one it is talking about.
+func _loadout(keys: Array) -> Array:
+	var out: Array = []
+	for key: String in keys:
+		out.append({"key": key, "tier": 1})
+	return out
 
 func _report(screen: String, node: Node) -> Dictionary:
 	var chars := 0
