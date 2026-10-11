@@ -114,6 +114,7 @@ godot --headless --path . --script res://tests/capture_text_census.gd
   | `ENDING` | 240 | 176 | the dragons-are-snuggled card: dragon, heart, chime |
   | `JOURNAL` | 380 | 294 | two facts, two stickers; grows with the collection |
   | `SETTINGS` | 320 | 250 | checkboxes and slider rows |
+  | `DRAFT` | 420 | ~345 | the level-up draft: heading, 3 one-word cards, one line, plus the log strip beneath (like every `_root` screen) |
   | `WALK-CUE` | 32 | 31 | the longest thing the toast can say mid-walk |
 
   `PLAYING` is 0 because the HUD genuinely paints no text, but that zero used to

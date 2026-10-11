@@ -51,9 +51,9 @@ so everything you carry has to scale with them or the walk stops being a walk:
 - **Your loadout grows.** Charm sockets start at three and open one per floor,
   so by the last floor of a campaign there is room for every charm on the shelf.
   Descending is how you earn room.
-- **A charm can be bought twice.** The second copy is the same ware made
-  stronger, marked with gold pips on its own icon — so the shelf keeps paying
-  out on wares you already love instead of running out of new ones.
+- **A charm can be bought three times.** Each deeper copy is the same ware
+  made stronger, marked with gold pips on its own icon — so the shelf keeps
+  paying out on wares you already love instead of running out of new ones.
 - **Sparkle income scales with depth**, so Peddle's cart is a live decision on
   every floor rather than a formality you complete once and never think about
   again.
