@@ -119,3 +119,11 @@ const SIGNS := [
     "Deeper is warmer. Trust the stairwell.",
     "If you can read this, a wisp lightened it for you.",
 ]
+
+## What the wishing pool murmurs back when a sparkle settles on the water.
+const WISH_LINES := [
+    "A ring of light rises from the water.",
+    "The pool keeps your sparkle and sends warmth up your sleeve.",
+    "Something below seems a little happier.",
+    "The moss around the pool turns gold for a breath.",
+]

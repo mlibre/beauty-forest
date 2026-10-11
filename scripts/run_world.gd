@@ -4,6 +4,10 @@ extends "res://scripts/run_ceremonies.gd"
 ## player and Mote, objective placement, stairs, interaction and the camera.
 ## Combat and lullaby state it resets live in RunCombat.
 
+## The floor the pool last granted a wish on, so one sparkle buys one small
+## blessing per floor and the pool never becomes a heal fountain.
+var _wish_floor := 0
+
 func _update_camera(delta: float) -> void:
     if player == null or not is_instance_valid(player):
         return
@@ -17,6 +21,7 @@ func _update_camera(delta: float) -> void:
 func _load_floor(number: int, menu_stage: bool = false) -> void:
     ending_pending = false
     ending_countdown = 0.0
+    _wish_floor = 0
     _reset_lullaby()
     if is_instance_valid(world):
         world.get_parent().remove_child(world)
@@ -129,9 +134,17 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
             ui.show_story(String(vignette[0]), String(vignette[1]))
         # A region says hello on its first floor: `min` is that floor for the
         # campaign's own regions and for a composed endless chapter alike.
-        if floor_number == int(region.get("min", 1)):
-            ui.add_log("Mote: “%s”" % String(region["entry"]))
+        # A toast, not the hidden log: the greeting is the region's one moment.
+        # Floor 1 is the exception -- its vignette card IS the welcome, and a
+        # second greeting would put a sentence over the walk itself.
+        if floor_number > 1 and floor_number == int(region.get("min", 1)):
+            ui.show_toast(String(region["entry"]), 3.6)
         ui.add_log("Mote: “Today’s forecast: %s — %s.”" % [String(floor_modifier.get("name", "cozy air")), String(floor_modifier.get("description", "the woods are humming"))])
+        # A milestone cheer: every tenth floor the forest throws petals, so a
+        # long walk has something to look forward to that is not a threat.
+        if floor_number > 1 and floor_number % 10 == 0:
+            CozyVFX.burst(world, player.global_position + Vector3(0, 3.0, 0), Color("#ffe9a8"), 56, 1.6, 2.6)
+            ui.show_toast("The forest cheers — %d floors deep!" % floor_number, 3.0)
         if merchant_exists:
             ui.show_toast("Peddle’s cart is nearby. Press F when you’re ready to browse.")
         if _has_feeling_floor():
@@ -223,11 +236,37 @@ func _try_interact() -> void:
     if feeling != null and feeling.is_boss_vulnerable():
         _begin_feeling_lullaby(feeling)
         return
+    if world and is_instance_valid(world.get_node_or_null("WishingPool")):
+        var pool := world.get_node("WishingPool") as Node3D
+        if pool and player.global_position.distance_to(pool.global_position) < 2.6:
+            _make_a_wish()
+            return
     var near_chime := _nearest_chime()
     if near_chime != null:
-        ui.add_log("Mote: “Let the chime drift close on its own — no button needed.”")
+        ui.add_cue("chimes drift close — no button")
         return
-    ui.add_log("Mote: “Wander toward whatever is glowing. I’ll keep the map, and your sleeve. Lightly.”")
+    ui.add_cue("wander toward whatever glows")
+
+## The wishing pool was the one landmark nothing could do anything with: an
+## elaborate prop whose only interaction was Mote's generic fallback line. Now
+## E near the water tosses one sparkle and the pool answers with a ring of
+## light and a little warmth -- once per floor, so it stays a small ritual,
+## not a heal fountain. A player with no sparkles gets told what it wants.
+func _make_a_wish() -> void:
+    if _wish_floor == floor_number:
+        ui.add_cue("the pool heard you already")
+        return
+    if sparkles < 1:
+        ui.add_cue("the pool likes a sparkle")
+        return
+    _wish_floor = floor_number
+    sparkles -= 1
+    hp = minf(hp_max, hp + 15.0)
+    var pool := world.get_node("WishingPool") as Node3D
+    CozyVFX.ring(world, pool.global_position + Vector3.UP * 0.3, Color("#ffe9a8"), 2.8, 1.2)
+    audio.play_chord([523.25, 659.25, 880.0], 0.6, 0.08)
+    ui.show_story("The pool glows ✦", "%s\n+15 warmth, with the forest’s thanks." % String(BeautyContent.random_choice(BeautyLore.WISH_LINES)), 3.6)
+    _refresh_ui()
 
 func _descend() -> void:
     hp = minf(hp_max, hp + 30.0)
