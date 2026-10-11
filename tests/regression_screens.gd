@@ -53,7 +53,31 @@ func _run() -> void:
         return
     if not await _check_every_worn_ware_gets_a_socket(game):
         return
+    if not await _check_the_ending_facts_row_uses_the_book_glyph(game):
+        return
     finish(game, "BEAUTY_FOREST_SCREENS")
+
+func _check_the_ending_facts_row_uses_the_book_glyph(game: Node) -> bool:
+    ## The ending's third tally row counts fun facts. It carried the CHIME --
+    ## the icon every other screen uses for song power -- so the picture said
+    ## the opposite of what the number beside it counts. Facts live in Mote's
+    ## memory book, whose glyph is already the memory-book mark on the touch
+    ## bar; the ending borrows it now.
+    game.ui.close_panels()
+    game.ui.show_ending(2, {"runs": 7, "best_floor": 6, "wisps_soothed": 19, "facts": 5})
+    await frames(4)
+    var book_seen := false
+    var chime_seen := false
+    for node in game.ui._overlay_content.find_children("*", "TextureRect", true, false):
+        var icon := node as TextureRect
+        if icon == null:
+            continue
+        if icon.texture == GardenGlyphs.get_glyph(GardenGlyphs.BOOK):
+            book_seen = true
+        if icon.texture == GardenGlyphs.get_glyph(GardenGlyphs.CHIME):
+            chime_seen = true
+    return ok(book_seen and not chime_seen,
+            "the ending's facts row still showed the chime glyph: book_seen=%s chime_seen=%s" % [str(book_seen), str(chime_seen)])
 
 func _check_the_next_step_names_the_real_target(game: Node) -> bool:
     ## The pause screen's corner card read "Wander toward the glowing stair" on

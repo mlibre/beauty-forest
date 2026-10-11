@@ -382,7 +382,10 @@ func show_ending(dragons: int, meta: Dictionary) -> void:
     _overlay_content.add_child(_tally_rows([
         [GardenGlyphs.DRAGON, "%d" % dragons],
         [GardenGlyphs.HEART, "%d" % int(meta.get("wisps_soothed", 0))],
-        [GardenGlyphs.CHIME, "%d" % int(meta.get("facts", 0))],
+        # The facts row carried the CHIME, the icon every other screen uses
+        # for song power; facts live in Mote's memory book, so the book is
+        # the honest mark here too.
+        [GardenGlyphs.BOOK, "%d" % int(meta.get("facts", 0))],
     ]))
     _overlay_content.add_child(_spacer(18))
     var deeper := _centered_button("♥  Wander deeper", true, func(): restart_requested.emit(true))
