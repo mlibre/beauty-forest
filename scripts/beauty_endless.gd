@@ -13,7 +13,8 @@ extends RefCounted
 ## region, its own two Big Feelings, its own story vignettes and its own finale
 ## dragon, from the warm pools below, seeded by the chapter number. The same
 ## chapter is always the same forest (saves, waymarks and word of mouth stay
-## true), and no two chapters ever read alike.
+## true), and the name walk visits every adjective x noun pairing exactly once
+## before it cycles -- no two of the first 196 chapters ever read alike.
 
 ## The campaign's floor count lives here, not in BeautyContent: the content
 ## tables ask this module endless questions (region, feeling, story), so every
@@ -114,12 +115,18 @@ static func story_in_chapter(floor_number: int) -> int:
 ## A chapter's composed region. Deterministic per chapter: chapter 7 is always
 ## the same forest, or saves and stories could not agree about it.
 static func region(chapter: int) -> Dictionary:
+    ## The name walks every adjective x noun pairing exactly once before it
+    ## cycles: chapter c's pairing is unique across the whole 196-chapter bloom
+    ## and both words move every chapter, so no two chapters of one run ever
+    ## read alike. A seeded draw could not promise that -- it re-served forests
+    ## as little as three chapters apart.
+    var index := maxi(1, chapter) - 1
+    var adjective: String = REGION_ADJECTIVES[index % REGION_ADJECTIVES.size()]
+    var noun: String = REGION_NOUNS[((index / REGION_NOUNS.size()) + index) % REGION_NOUNS.size()]
+    var name := "%s %s" % [adjective, noun]
+    ## Palettes and entry lines stay a seeded, deterministic draw per chapter.
     var rng := RandomNumberGenerator.new()
-    rng.seed = hash("endless-chapter-%d" % maxi(1, chapter))
-    var name := "%s %s" % [
-        REGION_ADJECTIVES[rng.randi() % REGION_ADJECTIVES.size()],
-        REGION_NOUNS[rng.randi() % REGION_NOUNS.size()],
-    ]
+    rng.seed = hash("endless-palette-%d" % maxi(1, chapter))
     var palette: Dictionary = REGION_PALETTES[rng.randi() % REGION_PALETTES.size()]
     var shift := float(chapter % 5) * 0.02
     var colors := {}

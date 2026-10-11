@@ -66,16 +66,25 @@ func _check_endless_regions_compose(game: Node) -> bool:
     if not ok(third["ambient"] in BeautyEndless.AMBIENT_MOODS,
             "chapter 3 borrows an ambient mood the score does not know: %s" % str(third.get("ambient"))):
         return false
-    var names := {}
     for chapter in range(1, 9):
         var composed: Dictionary = BeautyEndless.region(chapter)
-        names[String(composed["name"])] = true
         var first: int = BeautyContent.CAMPAIGN_LENGTH + (chapter - 1) * BeautyEndless.CHAPTER_LENGTH + 1
         if not ok(int(composed["min"]) == first and int(composed["max"]) == first + BeautyEndless.CHAPTER_LENGTH - 1,
                 "chapter %d claims floors %d..%d, expected %d..%d" % [
                     chapter, int(composed["min"]), int(composed["max"]), first, first + BeautyEndless.CHAPTER_LENGTH - 1]):
             return false
-    if not ok(names.size() >= 6, "eight chapters produced only %d distinct region names" % names.size()):
+    ## The name space is 14 x 14 = 196 pairings and the walk must visit every
+    ## one before cycling: no two of the first 196 chapters may share a name,
+    ## or a deep run meets the same forest twice and the compose promise dies.
+    var bloom := {}
+    var first_dupe := ""
+    for chapter in range(1, 197):
+        var region_name := String(BeautyEndless.region(chapter)["name"])
+        if not bloom.has(region_name):
+            bloom[region_name] = chapter
+        elif first_dupe.is_empty():
+            first_dupe = "chapters %d and %d are both \"%s\"" % [bloom[region_name], chapter, region_name]
+    if not ok(bloom.size() == 196, "the 196-chapter bloom repeated a forest: %s" % first_dupe):
         return false
     for floor_number in range(1, BeautyContent.CAMPAIGN_LENGTH + 1):
         var expected := "Sunlit Roots" if floor_number <= 4 else ("Pollen Halls" if floor_number <= 8 else ("Mushroom Lull" if floor_number <= 12 else "Snoozle’s Roost"))
