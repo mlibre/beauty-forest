@@ -7,7 +7,21 @@ Run everything from the project root.
 
 ## Regressions
 
-Every suite below is headless-safe. Run them all:
+Every suite below is headless-safe. Run the whole battery:
+
+```bash
+tools/battery.sh
+```
+
+The battery runs every headless suite **twice**: once in the machine's current
+`.godot` state, and once with `.godot/global_script_class_cache.cfg` emptied
+and restored around the run. The second pass is the state a player's machine
+carries — a checkout that pulled new classes but has never opened the editor —
+and a suite may only call itself green if it passes both ways. Per-suite logs
+land in `.godot/battery_logs/`.
+
+The same suites, one pass, by hand (the `case` skips the two suites that need
+a display, below):
 
 ```bash
 for test in tests/regression_*.gd; do
@@ -16,7 +30,7 @@ for test in tests/regression_*.gd; do
 done
 ```
 
-The `case` skips the two suites that need a display (below). One suite:
+One suite:
 
 ```bash
 godot --headless --path . --script res://tests/regression_player.gd
@@ -61,7 +75,14 @@ godot --headless --path . --script res://tests/regression_cold_boot.gd
   under a `const <Name> := preload("res://...")` in its own file or in a chain
   ancestor — inherited consts are members, so a child may use them; and every
   preload const must point at the file that actually declares the class it is
-  named after. It runs in under a second.
+  named after. It runs in under a second. The same file also forbids engine
+  type-string lookups (`find_children`, `find_child`, `is_class`) from naming a
+  project class: those strings resolve through ClassDB, where a script class is
+  registered only while the editor's cache is warm, so on a cold or stale boot
+  the lookup matches nothing — no error, just an empty result. That is how the
+  shop once read as empty on a stale-cache machine while every suite stayed
+  green on the one that had built the cache. Walk the tree and cast
+  (`as` / `is`) instead; both are decided at compile time.
 - `regression_cold_boot.gd` replays the player's exact situation once per run:
   it copies the project into a throwaway `user://coldboot_copy` (no `.godot`,
   no tests, no VCS noise), launches a second headless engine process against

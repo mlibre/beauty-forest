@@ -17,6 +17,7 @@ extends "res://tests/support/test_case.gd"
 # on first boot. regression_architecture holds this file to it.
 const BeautyData := preload("res://scripts/beauty_data.gd")
 const BeautyLore := preload("res://scripts/beauty_lore.gd")
+const CozyWaypoint := preload("res://scripts/cozy_waypoint.gd")
 
 func _initialize() -> void:
     suite_name = "BEAUTY_FOREST_SCREENS"
@@ -82,7 +83,14 @@ func _check_the_menu_paints_no_walk_marker(game: Node) -> bool:
     game.mode = game.Mode.MENU
     game._load_floor(1, true)
     await frames(8)
-    var beacons: Array = game.world.find_children("*", "CozyWaypoint", true, false)
+    # find_children's type string resolves through ClassDB, where script classes
+    # exist only with a warm editor cache -- on a cold or stale boot "CozyWaypoint"
+    # would match nothing and this check would pass for the wrong reason. Walk
+    # everything and cast instead: `is` is decided at compile time, no cache.
+    var beacons: Array = []
+    for child in game.world.find_children("*", "", true, false):
+        if child is CozyWaypoint:
+            beacons.append(child)
     if not ok(beacons.is_empty(), "a walk marker showed during the menu"):
         return false
     if not ok(game.ui._walker_objective.is_empty(),
