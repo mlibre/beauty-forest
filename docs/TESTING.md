@@ -155,15 +155,20 @@ Both defend the "bright, cozy, never dark" brief from opposite sides:
 
 ## Art gates
 
-Both are dev tools, not shipped. Worth running after any art change: every
+All three are dev tools, not shipped. Worth running after any art change: every
 glyph is drawn pixel by pixel into an `Image` at runtime, so nothing about
 legibility shows up in a screenshot review.
 
 ```bash
 godot --headless --path . --script res://tests/capture_glyphs_check.gd
 godot --headless --path . --script res://tests/capture_text_census.gd
+godot --headless --path . --script res://tests/capture_glyphs.gd
 ```
 
+- `capture_glyphs.gd` renders every known glyph onto one contact sheet for
+  eyeballing the icon language as a set. It writes to `user://glyph_sheet.png`
+  — the absolute path is printed when it finishes — never inside the project,
+  so the editor does not spawn a `.png.import` sidecar at the repo root.
 - `capture_glyphs_check.gd` rejects any glyph too dark, desaturated, solid or
   thin to read against sunlit grass. Currently 57 glyphs, 0 needing attention.
 - `capture_text_census.gd` counts the text a player can actually see per screen

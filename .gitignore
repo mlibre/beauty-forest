@@ -2,12 +2,7 @@
 .godot/
 /android/
 
-# Godot regenerates this from --doctool; it is 6.7MB of reference data that
-# nothing in the project reads.
+# Only written if you run godot --dump-extension-api yourself (it always dumps
+# to the current folder); 6.7MB of engine reference data nothing here reads.
+# Run it from a scratch folder outside the project if you ever need one.
 extension_api.json
-
-# Written by tests/capture_glyphs.gd to compare one render against the next.
-glyph_sheet.png
-# Godot writes the import sidecar beside any tracked resource; this one is
-# only generated because the sheet above is imported on sight.
-glyph_sheet.png.import
