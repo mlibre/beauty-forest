@@ -27,6 +27,26 @@ func _initialize() -> void:
 		for i in count:
 			souls += int(round(float(1 + 0.25 * (floor - 1)) * randf_range(4.0, 12.0)))
 		game._gain_xp(souls)
+		# Growth is CHOSEN now: every level deals three glyph cards and
+		# the walker picks one. This probe walks a balanced policy --
+		# song 40%, warmth 40%, both 20% -- the same average song
+		# growth the old random perk handed out, so the ratio answers
+		# "does a reasonable picker keep pace", not "does one specific
+		# build". A walker who never picks song falls behind on
+		# purpose; Peddle's cart (echo, ember, chorus) and the draft's
+		# own song cards are the levers that choice is about.
+		while game.pending_boons > 0:
+			var roll := randf()
+			var key := "song"
+			if roll >= 0.80:
+				key = "both"
+			elif roll >= 0.40:
+				key = "warmth"
+			for boon: Dictionary in RunBoons.BOON_POOL:
+				if String(boon["key"]) == key:
+					game._apply_boon(boon)
+					break
+			game.pending_boons -= 1
 		if floor in marks:
 			var creature := 10.0 * (1.0 + 0.18 * float(floor - 1))
 			var ratio: float = game.attack / creature

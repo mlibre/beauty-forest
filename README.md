@@ -37,14 +37,17 @@ what each key does — waits inside the pause menu, which you opened on purpose.
 Nothing in this game has a ceiling. The creatures below you scale without bound,
 so everything you carry has to scale with them or the walk stops being a walk:
 
-- **The hero keeps levelling.** A level costs soul on a *linear* curve, matching
-  the linear, unbounded scaling of everything down there. This used to be
-  exponential: simulated to floor 400 the hero stalled at level 41 while the
-  creatures grew 72×, and the song-to-creature ratio fell from 1.20 to 0.12 and
-  kept falling. Past about floor 30 the only difficulty knob left was your own
-  reaction time. Now the hero is at level 538 by floor 400 with the ratio holding
-  between 1.4 and 1.6 the whole way down — checked by `_audit/probe_growth.gd`,
-  which walks the real `RunState` rather than a model of it.
+- **The hero keeps levelling — and chooses how.** A level costs soul on a
+  *linear* curve, matching the linear, unbounded scaling of everything down
+  there. This used to be exponential: simulated to floor 400 the hero stalled at
+  level 41 while the creatures grew 72×. It also used to be a slot machine:
+  every level handed the hero an arbitrary perk, so the game's one growth moment
+  never asked you anything. Now every level offers three glyph cards and you
+  pick — warmth, song, both, and, as the floors deepen, gifts that sharpen the
+  walk itself. A balanced picker reaches level 538 by floor 400 with the
+  song-to-creature ratio holding between 1.3 and 1.6 the whole way down —
+  checked by `_audit/probe_growth.gd`, which walks the real `RunState` under
+  that balanced policy.
 - **Your loadout grows.** Charm sockets start at three and open one per floor,
   so by the last floor of a campaign there is room for every charm on the shelf.
   Descending is how you earn room.
