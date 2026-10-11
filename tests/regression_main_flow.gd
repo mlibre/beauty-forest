@@ -139,14 +139,16 @@ func _run() -> void:
     game.player.global_position += Vector3(6.0, 0.0, 0.0)
     game._touch_shop()
     await frames(1)
-    var shop_line := ""
-    if not game.ui._log_label.text.is_empty():
-        shop_line = game.ui._log_label.text.split("\n")[-1]
-    if not ok("every thirteen-floor stretch" in shop_line,
-            "the not-near-cart hint does not describe the story cycle; Mote said: %s" % shop_line):
+    # The whole strip is the witness, not its last line: a wisp that wanders
+    # into grumble range the same frame lands its line after the hint and
+    # scrolls it off the 4-line tail -- the last-line read flaked on exactly
+    # that race (the log named a Crawler grumble where the hint should be).
+    var shop_strip: String = game.ui._log_label.text
+    if not ok("every thirteen-floor stretch" in shop_strip,
+            "the not-near-cart hint does not describe the story cycle; Mote's strip said: %s" % shop_strip):
         return
-    if not ok(not ("floors 2, 4, 7, and 10" in shop_line),
-            "the not-near-cart hint still names absolute floors; Mote said: %s" % shop_line):
+    if not ok(not ("floors 2, 4, 7, and 10" in shop_strip),
+            "the not-near-cart hint still names absolute floors; Mote's strip said: %s" % shop_strip):
         return
 
     # Turning on reduced motion snaps the world, the wisps and the hero to
