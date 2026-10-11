@@ -40,6 +40,7 @@ func _run() -> void:
     world.remove_child(collected)
     collected.free()
     _check_chimes_avoid_the_landmark_props(world)
+    _check_reduced_motion_settles_props_to_rest(world)
     world.build_floor(2, dungeon, false)
     _check_rebuild_teardown(world)
 
@@ -305,6 +306,40 @@ func _check_chimes_avoid_the_landmark_props(world: ForestWorld) -> void:
                 chime.global_position.z - pool.position.z).length()
             ok(pool_distance > 2.0,
                 "a dream chime settled %.2f m from the wishing pool, on top of its rim" % pool_distance)
+
+func _check_reduced_motion_settles_props_to_rest(world: ForestWorld) -> void:
+    ## The early return used to freeze the ambient animations at whatever
+    ## phase they were in when the setting landed: a chime hung up to 13cm
+    ## off its hover line, the dragon's breath and halo held arbitrary
+    ## mid-swing values until the next floor rebuild. Rest is the promise,
+    ## not a paused swing.
+    world.set("_reduced_motion", false)
+    world.set("_time", 0.0)
+    world._process(0.25)
+    var chime: Node3D = world.chimes[0]
+    var base_y: float = float(chime.get_meta("base_y", 0.78))
+    var drifted: float = chime.position.y - base_y
+    if not ok(absf(drifted) > 0.01, "fixture expected a mid-bob chime, offset was %f" % drifted):
+        return
+    var body: Node3D = world.get("_dragon_body")
+    var breath: float = (body.scale.x if body else 1.0)
+    if not ok(absf(breath - 1.0) > 0.001, "fixture expected a mid-breath dragon, scale was %f" % breath):
+        return
+    var light: OmniLight3D = world.get("_dragon_light")
+    var energy: float = (light.light_energy if light else 1.2)
+    if not ok(absf(energy - 1.2) > 0.005, "fixture expected a mid-pulse halo, energy was %f" % energy):
+        return
+    world.set_reduced_motion(true)
+    world._process(0.25)
+    ok(is_equal_approx(chime.position.y, base_y),
+        "reduced motion left a chime %f m off its hover line" % (chime.position.y - base_y))
+    if body:
+        ok(body.scale.is_equal_approx(Vector3.ONE),
+            "reduced motion left the dragon's breath frozen at scale %f" % body.scale.x)
+    if light:
+        ok(is_equal_approx(light.light_energy, 1.2),
+            "reduced motion left the halo frozen at energy %f" % light.light_energy)
+    world.set_reduced_motion(false)
 
 func _synthetic_dungeon() -> Dictionary:
     var size := 48

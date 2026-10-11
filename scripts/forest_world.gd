@@ -445,6 +445,22 @@ func _process(delta: float) -> void:
             chimes.remove_at(index)
 
     if _reduced_motion:
+        # Reduced motion holds the props at REST, not at whatever phase the
+        # animations froze in: the bare return used to leave a chime hanging
+        # up to 13cm off its hover line and the dragon's breath, halo and
+        # Peddle's bob at arbitrary mid-swing values until the next rebuild.
+        # The wind and water shaders keep their last _time -- a stopped clock
+        # is their rest.
+        for chime: Node3D in chimes:
+            if is_instance_valid(chime):
+                chime.position.y = float(chime.get_meta("base_y", 0.78))
+        if _dragon_body:
+            _dragon_body.scale = Vector3.ONE
+        if _dragon_light:
+            _dragon_light.light_energy = 1.2
+        if _merchant_body:
+            _merchant_body.position.y = 0.0
+            _merchant_body.rotation.z = 0.0
         return
 
     _time += delta
