@@ -5,6 +5,8 @@ extends "res://scripts/run_world.gd"
 ## combat and floor construction are inherited from RunState, RunCombat and
 ## RunWorld.
 
+const InputActions := preload("res://scripts/input_actions.gd")
+
 func _ready() -> void:
     randomize()
     _rng.randomize()
@@ -13,7 +15,7 @@ func _ready() -> void:
     selected_style = String(meta.get("style", "standard"))
     if not BeautyContent.STYLE_DATA.has(selected_style):
         selected_style = "standard"
-    _ensure_input_actions()
+    InputActions.ensure()
 
     camera = Camera3D.new()
     camera.name = "SteadyIsometricCamera"
@@ -68,35 +70,6 @@ func _connect_ui() -> void:
     ui.touch_settings_requested.connect(_open_settings)
     ui.touch_pause_requested.connect(_touch_pause)
     ui.settings_changed.connect(func(value): _apply_settings(value, true))
-
-func _ensure_input_actions() -> void:
-    _add_action("bf_left", [KEY_A, KEY_LEFT], JOY_AXIS_LEFT_X, -1.0)
-    _add_action("bf_right", [KEY_D, KEY_RIGHT], JOY_AXIS_LEFT_X, 1.0)
-    _add_action("bf_forward", [KEY_W, KEY_UP], JOY_AXIS_LEFT_Y, -1.0)
-    _add_action("bf_back", [KEY_S, KEY_DOWN], JOY_AXIS_LEFT_Y, 1.0)
-    _add_action("bf_dash", [KEY_SHIFT], -1, 0.0, [JOY_BUTTON_RIGHT_SHOULDER, JOY_BUTTON_LEFT_SHOULDER])
-    _add_action("bf_interact", [KEY_E], -1, 0.0, [JOY_BUTTON_A])
-    _add_action("bf_shop", [KEY_F], -1, 0.0, [JOY_BUTTON_Y])
-    _add_action("bf_journal", [KEY_J], -1, 0.0, [JOY_BUTTON_LEFT_STICK])
-    _add_action("bf_settings", [KEY_C], -1, 0.0, [JOY_BUTTON_BACK])
-    _add_action("bf_pause", [KEY_ESCAPE], -1, 0.0, [JOY_BUTTON_START])
-
-func _add_action(action: StringName, keys: Array, axis: int = -1, axis_value: float = 0.0, buttons: Array = []) -> void:
-    if not InputMap.has_action(action):
-        InputMap.add_action(action, 0.25)
-    for key: Variant in keys:
-        var event := InputEventKey.new()
-        event.physical_keycode = int(key)
-        InputMap.action_add_event(action, event)
-    if axis >= 0:
-        var motion := InputEventJoypadMotion.new()
-        motion.axis = axis
-        motion.axis_value = axis_value
-        InputMap.action_add_event(action, motion)
-    for button: Variant in buttons:
-        var joy := InputEventJoypadButton.new()
-        joy.button_index = int(button)
-        InputMap.action_add_event(action, joy)
 
 func _advance_pause_state() -> void:
     # The one state machine both the Escape key and the touch pause button run,
