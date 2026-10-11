@@ -1,11 +1,6 @@
 class_name CozyWaypoint
 extends Node3D
 
-# Deps are pinned by path on purpose: a fresh clone ships no
-# editor-built global-class cache, and bare names would not parse
-# on first boot. regression_architecture holds this file to it.
-const GardenGlyphs := preload("res://scripts/garden_glyphs.gd")
-
 ## A diegetic "go here" marker, floating in the world over the thing the player
 ## should walk to.
 ##
@@ -21,7 +16,6 @@ const FLOAT_HEIGHT := 2.35
 const BOB_SPEED := 1.6
 const BOB_AMOUNT := 0.16
 
-var glyph_key := GardenGlyphs.STAIRS
 var tint := Color("#bdf0bd")
 ## How urgently to ask. 0 = a gentle invitation, 1 = this is the floor's whole
 ## point (the dragon, a Big Feeling that is ready to sing).
@@ -75,8 +69,7 @@ func _ready() -> void:
 	_light.position.y = FLOAT_HEIGHT
 	add_child(_light)
 
-func configure(new_glyph: String, new_tint: Color, new_urgency: float) -> void:
-	glyph_key = new_glyph
+func configure(new_tint: Color, new_urgency: float) -> void:
 	tint = new_tint
 	urgency = clampf(new_urgency, 0.0, 1.0)
 	if _core != null and is_instance_valid(_core):

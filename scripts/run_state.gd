@@ -325,7 +325,6 @@ func _update_waypoint() -> void:
             ui._walker_objective = ""
         return
     var target := Vector3.ZERO
-    var glyph := GardenGlyphs.STAIRS
     var tint := Color("#bdf0bd")
     var urgency := 0.0
     var has_target := false
@@ -341,7 +340,6 @@ func _update_waypoint() -> void:
         return
     if dragon_exists:
         target = world.dragon_position
-        glyph = GardenGlyphs.DRAGON
         tint = Color("#ffe095")
         urgency = 0.85
         has_target = true
@@ -350,28 +348,24 @@ func _update_waypoint() -> void:
         var feeling := _near_feeling(40.0)
         if feeling != null:
             target = feeling.global_position
-            glyph = GardenGlyphs.HEART
             tint = Color("#ffad72") if not feeling.is_boss_vulnerable() else Color("#ffe066")
             urgency = 0.6
             has_target = true
             objective = "Sit with the Very Big Wisp and sing it down"
     elif not world.chimes.is_empty():
         target = world.chimes[0].global_position
-        glyph = GardenGlyphs.CHIME
         tint = Color("#bfe8ff")
         urgency = 0.7
         has_target = true
         objective = "Follow the chime — it is holding a fact for you"
     elif merchant_exists:
         target = world.merchant_position
-        glyph = GardenGlyphs.CART
         tint = Color("#ffd56e")
         urgency = 0.35 if _near_merchant() else 0.2
         has_target = true
         objective = "Wander to Peddle's cart and browse the cozy things"
     elif stair_visible:
         target = world.stair_position
-        glyph = GardenGlyphs.STAIRS
         urgency = 0.0
         has_target = true
         objective = "Wander toward the glowing stair"
@@ -383,7 +377,7 @@ func _update_waypoint() -> void:
     if _waypoint == null or not is_instance_valid(_waypoint):
         return
     _waypoint.global_position = target
-    _waypoint.configure(glyph, tint, urgency)
+    _waypoint.configure(tint, urgency)
     # Stop asking once the player is standing at the stair.
     _waypoint.set_arrived(stair_visible and not dragon_exists and player.global_position.distance_to(world.stair_position) < 2.3)
 
