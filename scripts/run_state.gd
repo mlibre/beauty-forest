@@ -144,7 +144,11 @@ func _gain_xp(amount: int) -> void:
         CozyVFX.burst(world, player.global_position + Vector3.UP * 1.1, Color("#ffe99a"), 44, 2.0, 1.25)
         CozyVFX.ring(world, player.global_position + Vector3.UP * 0.2, Color("#ffe99a"), 3.2, 0.9)
         audio.play_level()
-        ui.show_toast("✦ Level %d — %d new fact%s in the Atlas!" % [level, levels, "" if levels == 1 else "s"])
+        # The facts land in Mote's memory book -- the only name any screen
+        # carries for it. The toast used to say "the Atlas", a place the game
+        # never built, and a player sent looking for it learned to stop
+        # trusting the game's signposts.
+        ui.show_toast("✦ Level %d — %d new fact%s in Mote’s book!" % [level, levels, "" if levels == 1 else "s"])
         _celebrate(1.0)
     _refresh_ui()
 

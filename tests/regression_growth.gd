@@ -47,8 +47,23 @@ func _run() -> void:
         return
     if not await _check_the_socket_row_stays_on_screen(game):
         return
+    if not await _check_the_level_toast_names_the_real_book(game):
+        return
 
     finish(game, "BEAUTY_FOREST_GROWTH")
+
+func _check_the_level_toast_names_the_real_book(game: Node) -> bool:
+    ## The level-up toast announced new facts "in the Atlas" -- a name no
+    ## screen in this game carries. The facts live in Mote's memory book; the
+    ## toast now says so, because a player sent looking for a place the game
+    ## never built learns to stop trusting its signposts.
+    game.ui.clear_toast()
+    var xp_needed: int = game.xp_next - game.xp
+    game._gain_xp(xp_needed)
+    await frames(2)
+    var toast: String = game.ui._toast_label.text
+    return ok("Atlas" not in toast and "book" in toast,
+            "the level-up toast still names a place the game never built: %s" % toast)
 
 func _check_endless_regions_compose(game: Node) -> bool:
     ## Chapter 7 must always be chapter 7's forest: saves, waymarks and stories
