@@ -259,6 +259,11 @@ func _make_a_wish() -> void:
     if sparkles < 1:
         ui.add_cue("the pool likes a sparkle")
         return
+    # A full lantern would clamp the warmth away: payment with nothing back.
+    # The pool waits -- a wish is still there once a bump has made room.
+    if hp >= hp_max:
+        ui.add_cue("your lantern is already full")
+        return
     _wish_floor = floor_number
     sparkles -= 1
     hp = minf(hp_max, hp + 15.0)

@@ -25,6 +25,7 @@ func _run() -> void:
 
     _check_objective_props_do_not_stack_on_generated_floors()
     await _check_the_relocated_stair_leaves_the_spawn()
+    await _check_the_pool_never_takes_a_sparkle_for_nothing()
     _check_reduced_motion_initial_state(world)
     _check_pool_water_animates(world)
     _check_ambient_life_centering(world, dungeon)
@@ -408,3 +409,34 @@ func _check_the_relocated_stair_leaves_the_spawn() -> bool:
         return false
     printerr("RELOCATION_SAMPLE: %d dragon floors, %d put the stair on the spawn" % [dragon_floors, on_spawn])
     return true
+
+func _check_the_pool_never_takes_a_sparkle_for_nothing() -> void:
+    ## The wish pool charges one sparkle and answers with +15 warmth. A walker
+    ## whose lantern was already full got nothing back for it: the sparkle was
+    ## spent, the warmth clamped away, and the story card still said "with the
+    ## forest's thanks". A gift that takes payment and gives nothing in return
+    ## is a shop trick, so the pool politely waits until the warmth can land.
+    ## Driven through the real game, because the wish lives on the run state.
+    var packed: PackedScene = load("res://scenes/main.tscn")
+    var game: Node = packed.instantiate()
+    root.add_child(game)
+    await frames(2)
+    game._start_run(1)
+    await frames(4)
+    game.sparkles = 5
+    game.hp = game.hp_max
+    game._make_a_wish()
+    if not ok(game.sparkles == 5,
+            "the pool took a sparkle from a walker whose lantern was already full"):
+        root.remove_child(game)
+        game.free()
+        return
+    # And the wish still works the moment the warmth has somewhere to go.
+    game.hp = game.hp_max - 30.0
+    game._make_a_wish()
+    ok(game.sparkles == 4, "a hurt walker's wish was refused too")
+    ok(absf(game.hp - (game.hp_max - 15.0)) < 0.01,
+            "the wish healed %.1f instead of 15" % [game.hp - (game.hp_max - 30.0)])
+    root.remove_child(game)
+    game.free()
+    await frames(2)
