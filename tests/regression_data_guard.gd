@@ -79,9 +79,7 @@ func _test_the_save_guard_refuses_a_damaged_satchel() -> void:
     _clear_quarantined(BeautyData.save_path())
     _clear_quarantined(BeautyData.settings_path())
     await _wait_for_a_fresh_stamp()
-    for stamp: String in [BeautyData.quarantine_path(BeautyData.save_path()),
-            _next_second_stamp(BeautyData.save_path())]:
-        DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(stamp))
+    _obstruct_quarantine(BeautyData.save_path())
     var stuck := FileAccess.open(BeautyData.save_path(), FileAccess.WRITE)
     ok(stuck != null, "the second truncation fixture must be creatable")
     if stuck != null:
@@ -100,9 +98,7 @@ func _test_the_save_guard_refuses_a_damaged_satchel() -> void:
     while not FileAccess.file_exists(BeautyData.save_path()) and not retried:
         retried = true
         _clear_quarantined(BeautyData.save_path())
-        for stamp: String in [BeautyData.quarantine_path(BeautyData.save_path()),
-                _next_second_stamp(BeautyData.save_path())]:
-            DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(stamp))
+        _obstruct_quarantine(BeautyData.save_path())
         var retry := FileAccess.open(BeautyData.save_path(), FileAccess.WRITE)
         if retry != null:
             retry.store_string('{"version": 2, "runs": 412, "wisps_so')
@@ -122,12 +118,9 @@ func _test_the_save_guard_refuses_a_damaged_satchel() -> void:
         "the refused save must not have overwritten the only copy of the damaged file")
 
     # Once the obstruction is gone the same path recovers, so a player who hits
-    # this is not locked out of progress for the rest of the session. Both
-    # planted obstructions come out -- the one for this second and the one for
-    # the next, which only the boundary case ever created.
-    for stamp: String in [BeautyData.quarantine_path(BeautyData.save_path()),
-            _next_second_stamp(BeautyData.save_path())]:
-        DirAccess.remove_absolute(ProjectSettings.globalize_path(stamp))
+    # this is not locked out of progress for the rest of the session. The suite's
+    # own sweeper takes out every planted stamp, files and directories alike.
+    _clear_quarantined(BeautyData.save_path())
     await _wait_for_a_fresh_stamp()
     var retry := FileAccess.open(BeautyData.save_path(), FileAccess.WRITE)
     if retry != null:
@@ -142,17 +135,25 @@ func _wait_for_a_fresh_stamp() -> void:
     while Time.get_unix_time_from_system() - floor(Time.get_unix_time_from_system()) > 0.05:
         await process_frame
 
-## The quarantine stamp for the SECOND AFTER the one BeautyData would use now.
-## Planting both makes a save-guard fixture immune to a second boundary falling
-## between planting and loading.
+## Plant a DIRECTORY on every quarantine stamp the loader could pick for the
+## next few seconds, so the rename fails and the damaged file stays put. The
+## fixture used to plant exactly two stamps -- now and now+1 -- which made it
+## immune to a second boundary but not to the two or three a cold parse can
+## take: the load landed in an unplanted second, quarantined the fixture's own
+## damaged file, and the setup failed on its own assertion roughly one run in
+## three cache-free. A planted RANGE converts that wall-clock race into a
+## bounded quantity the suite controls.
 ##
 ## The arithmetic is on the UNIX TIME, not on the formatted string: a datetime
 ## string is not a number, so adding a second to it in place is not possible.
-func _next_second_stamp(base_path: String) -> String:
-    var ahead := Time.get_unix_time_from_system() + 1.0
-    return "%s.corrupt-%s" % [base_path,
-        Time.get_datetime_string_from_unix_time(int(ahead))
-            .replace(":", "-").replace("T", "_")]
+func _obstruct_quarantine(base_path: String, seconds: int = 6) -> void:
+    var directory := ProjectSettings.globalize_path(base_path.get_base_dir())
+    var name := base_path.get_file()
+    for ahead in range(0, seconds + 1):
+        var stamp := "%s.corrupt-%s" % [name,
+            Time.get_datetime_string_from_unix_time(int(Time.get_unix_time_from_system()) + ahead)
+                .replace(":", "-").replace("T", "_")]
+        DirAccess.make_dir_recursive_absolute(directory.path_join(stamp))
 
 func _clear_quarantined(base_path: String) -> void:
     var directory := base_path.get_base_dir()
@@ -355,13 +356,9 @@ func _test_unreadable_settings_are_never_overwritten() -> void:
         if replant != null:
             replant.store_string("[cozy]\nreduced_motion = tr")
             replant.close()
-        for stamp: String in [BeautyData.quarantine_path(BeautyData.settings_path()),
-                _next_second_stamp(BeautyData.settings_path())]:
-            DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(stamp))
+        _obstruct_quarantine(BeautyData.settings_path())
         BeautyData.load_settings()
-    for stamp: String in [BeautyData.quarantine_path(BeautyData.settings_path()),
-            _next_second_stamp(BeautyData.settings_path())]:
-        DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(stamp))
+    _obstruct_quarantine(BeautyData.settings_path())
     BeautyData.load_settings()
     ok(FileAccess.file_exists(BeautyData.settings_path()),
         "test setup: the damaged settings file must still sit at the live path (quarantine obstructed)")
@@ -377,9 +374,8 @@ func _test_unreadable_settings_are_never_overwritten() -> void:
 
     # Recovery mirrors the satchel: once the obstruction is gone, the next
     # load moves the damaged file aside and saving works again immediately.
-    for stamp: String in [BeautyData.quarantine_path(BeautyData.settings_path()),
-            _next_second_stamp(BeautyData.settings_path())]:
-        DirAccess.remove_absolute(ProjectSettings.globalize_path(stamp))
+    # The sweeper takes out every planted stamp, not just two of them.
+    _clear_quarantined(BeautyData.settings_path())
     await _wait_for_a_fresh_stamp()
     BeautyData.load_settings()
     var kept := _find_quarantined(BeautyData.settings_path())
