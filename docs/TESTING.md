@@ -271,6 +271,9 @@ instead of take on faith.
 | --- | --- |
 | `_audit/probe_growth.gd` | Does the hero keep pace with creatures that scale without bound? Walks the real `RunState` to floor 400. |
 | `_audit/probe_frame_cost.gd` | What does a floor cost per frame, and how does it scale with depth? |
+| `_audit/probe_soak.gd` | Does a long walk leak? Revisits floors and compares live object counts. |
+| `_audit/probe_chime_pool.gd` | Do the Dream Chimes stay clear of the wishing pool across generated dragon floors? |
+| `_audit/probe_endless.gd` | Do the deep chapters compose completely? Region fields, story beats, feeling positions, name uniqueness. |
 
 The growth probe is the one that guards the central promise of the game. It
 prints the level, the song-to-creature ratio and the worst ratio on the walk; the
