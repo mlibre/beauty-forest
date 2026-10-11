@@ -81,10 +81,7 @@ func _physics_process(delta: float) -> void:
             if provider.is_valid():
                 target = provider.call(global_position, speed * maxf(0.0, life))
     if is_instance_valid(target) and target.alive:
-        # The aim point and the connect test must agree, or the note converges on
-        # empty air and expires. A Big Feeling renders at 3.5x scale, so it has a
-        # much taller body to reach: aim at the same height we test against.
-        var target_center := target.global_position + Vector3.UP * (0.70 * target.visual_scale)
+        var target_center := _aim_center(target)
         var desired := target_center - global_position
         if desired.length_squared() > 0.001:
             desired = desired.normalized() * speed
@@ -118,11 +115,16 @@ func _physics_process(delta: float) -> void:
         _core.rotation.y += delta * 7.0
         _core.scale = Vector3.ONE * (1.0 + sin(Time.get_ticks_msec() * 0.018) * 0.08)
     if is_instance_valid(target) and target.alive:
-        var target_center := target.global_position + Vector3.UP * (0.70 * target.visual_scale)
-        if global_position.distance_squared_to(target_center) < 0.90 * 0.90:
+        if global_position.distance_squared_to(_aim_center(target)) < 0.90 * 0.90:
             connected_wisp.emit(target, self)
             queue_free()
             return
+
+func _aim_center(wisp: Wisp) -> Vector3:
+    # The aim point and the connect test must agree, or the note converges on
+    # empty air and expires. A Big Feeling renders at 3.5x scale, so it has a
+    # much taller body to reach: aim at the same height we test against.
+    return wisp.global_position + Vector3.UP * (0.70 * wisp.visual_scale)
 
 func _emissive(color: Color, energy: float) -> StandardMaterial3D:
     return CozyMaterials.emissive(color, energy, true)
