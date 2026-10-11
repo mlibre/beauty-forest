@@ -21,6 +21,7 @@ signal resume_requested
 signal restart_requested(continue_deeper: bool)
 signal boon_picked(boon_key: String)
 signal quit_requested
+signal menu_requested
 signal shop_closed
 signal journal_closed
 signal settings_open_requested

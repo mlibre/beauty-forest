@@ -51,6 +51,7 @@ func _connect_ui() -> void:
     ui.restart_requested.connect(_on_restart_requested)
     ui.boon_picked.connect(pick_boon)
     ui.quit_requested.connect(quit_gracefully)
+    ui.menu_requested.connect(_back_to_title)
     ui.shop_closed.connect(_on_shop_closed)
     ui.journal_closed.connect(_on_journal_closed)
     ui.settings_open_requested.connect(_open_settings)
@@ -308,6 +309,16 @@ func _pause_game() -> void:
     _set_world_processing(false)
     player.set_control_enabled(false)
     ui.show_pause(meta)
+
+## The title was a one-visit room: pause offered resume, a fresh walk or the
+## exit, and nothing anywhere returned to the front door -- the style trails,
+## the record line and the menu's own calm were unreachable until the app
+## restarted. The walk folds back into the menu stage the boot built, and the
+## next start begins a fresh walk from there.
+func _back_to_title() -> void:
+    ui.close_panels()
+    _load_floor(1, true)
+    _show_menu()
 
 func _resume_game() -> void:
     if mode != Mode.PAUSED:

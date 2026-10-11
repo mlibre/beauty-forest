@@ -222,6 +222,10 @@ func show_pause(meta: Dictionary) -> void:
     _overlay_content.add_child(_centered_button("♥  Keep wandering", true, func(): resume_requested.emit()))
     _overlay_content.add_child(_centered_button("Make it gentler", false, func(): settings_open_requested.emit()))
     _overlay_content.add_child(_centered_button("Start a fresh walk", false, func(): restart_requested.emit(false)))
+    # The title used to be a one-visit room: nothing anywhere returned to it,
+    # so the style trails and the front door were reachable exactly once per
+    # app launch. This is the way back.
+    _overlay_content.add_child(_centered_button("Rest at the title ♥", false, func(): menu_requested.emit()))
     _overlay_content.add_child(_centered_button("Leave for now ♥", false, func(): quit_requested.emit()))
     _overlay_content.add_child(_spacer(10))
     _overlay_content.add_child(_keys_reference())

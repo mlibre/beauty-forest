@@ -322,4 +322,24 @@ func _run() -> void:
         return
     if not ok(game.player.control_enabled, "playing interaction left the player disabled"):
         return
+
+    # The pause card gained the way back to the title. The menu was a one-visit
+    # room before this: reachable at boot, then gone until the app restarted.
+    game._pause_game()
+    await frames(2)
+    game.ui.menu_requested.emit()
+    await frames(4)
+    if not ok(game.mode == game.Mode.MENU, "the title request left the game in mode %d" % int(game.mode)):
+        return
+    if not ok(game.ui._overlay_card.visible, "returning to the title left the menu card hidden"):
+        return
+    if not ok(not game.player.control_enabled, "returning to the title left the walk's controls live"):
+        return
+    # And the front door still opens: starting from the returned-to menu is the
+    # same fresh walk the boot menu offers.
+    game.ui.start_requested.emit("standard")
+    await frames(4)
+    if not ok(game.mode == game.Mode.PLAYING and game.floor_number == 1,
+            "starting from the returned-to title did not begin a fresh floor-1 walk (mode %d, floor %d)" % [int(game.mode), int(game.floor_number)]):
+        return
     finish(game, "BEAUTY_FOREST_MAIN_FLOW")
