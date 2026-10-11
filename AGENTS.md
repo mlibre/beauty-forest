@@ -9,7 +9,7 @@
 - **Menus must be alive and joyful**: no static menus — animated, playful, breathing like the forest.
 - **Camera**: Do not revert to first-person or distant high-angle views. **No camera shake, ever** — no screen-shake, no mouse- or aim-driven camera drift; the camera glides smoothly and settles rock-steady at its fixed offset from the hero.
 - **Hero**: a visible real-time 3D character model with blend-tree walk/swing animation; the hero may visibly carry a staff as prophetic, cosmetic look — these are never manual attack inputs; combat stays fully automatic
-- **Icons, not instructions**: the walking screen paints **no sentences**. It carries a lantern warmth ring, a sparkle count, the floor depth, charm slots, and a glowing marker in the world; the only text on it is the bare sparkle and floor digits beside their icons. Every term the game invents (Warmth, Soul, Sparkles, Charms, Stanzas, Verses, Song power) must be *shown* before it is ever *named*. Full run state belongs in the pause menu, which the player opened deliberately. **Every screen is a picture first**: a ware is its icon (gold rim = wearing, dim = unaffordable, heart = gift) with its name and price digits, and everything else it would say is a hover; the pause summary is glyph + number rows, never named rows; the menu shows three pictures of its own promise rather than describing it. Say a thing in words only when no picture can carry it — a hover is always better than a painted sentence. The rule is enforced by a test with a per-screen character budget — see `docs/TESTING.md`.
+- **Icons and visuals, not instructions**
 - **Numbers die with the world, not on it**: state the player must feel continuously (warmth, being hurt) is expressed in the 3D scene — the lantern dims and reddens — so the HUD and the world can never disagree.
 
 ## Core principles
@@ -40,12 +40,8 @@ At the end of meaningful work, compare implementation against docs. Update the d
 
 ## How to work
 
-- **Batch independent work.** Commands that don't depend on each other are one
-  call, not five.
-- **Run what exists first.** Find the project's own tests and benchmarks, run
-  them whole, once. Extending an existing test beats adding another; a new one
-  is a guess until proven.
-- **A benchmark is a question.** It earns its place by answering many at once:
-  fast, correct, real.
+- **Batch independent work.** Commands that don't depend on each other are one call, not five.
+- **Run what exists first.** Find the project's own tests and benchmarks, run them whole, once. Extending an existing test beats adding another; a new one is a guess until proven.
+- **A benchmark is a question.** It earns its place by answering many at once: fast, correct, real.
 - **No cosmetic git commands.**
 - **One home per fact. Duplicates die on detection.**
