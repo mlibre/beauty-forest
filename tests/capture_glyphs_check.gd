@@ -24,6 +24,15 @@ func _run() -> void:
 		cases.append([String(verse["key"]), GardenGlyphs.VERSE_PREFIX + String(verse["key"])])
 	for wisp: String in BeautyContent.WISP_TYPES:
 		cases.append([wisp, GardenGlyphs.WISP_PREFIX + wisp])
+	# Tiered wares: every tier the shelf sells must carry its own stamped ink.
+	# Tier III arrived with the Endless Bloom and its pips were never checked --
+	# a worn tier-III charm painting tier-II pips would lie on the hero's chest.
+	for charm: Dictionary in BeautyContent.CHARMS:
+		if String(charm["key"]) == "tea":
+			continue
+		for tier in range(2, BeautyContent.TIER_SCALES.size()):
+			var worn := GardenGlyphs.worn_key(String(charm["key"]), tier)
+			cases.append([worn, worn])
 	# The control: an unknown key MUST still paint something visible.
 	cases.append(["mystery_key", "mystery_key"])
 
