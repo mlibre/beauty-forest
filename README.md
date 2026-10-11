@@ -75,14 +75,6 @@ Press **C** anywhere: high contrast, gentler wisp speeds, a wider rhythm
 window, a quieter forest. Change anything, any time — nothing is a test,
 nothing is graded.
 
-## Good to know
-
-Your saves live in Godot's per-user storage on your own machine, separate
-from the options file, and leaving mid-walk is always safe.
-
-Curious how the forest is built, or want to run its test suites? See
-`docs/TESTING.md`, and `AGENTS.md` for the rules the game plays by.
-
 ## 🇵🇸 In Support of Palestine
 
 This project supports Palestine. If you can, donate to [UNRWA](https://www.unrwa.org).
