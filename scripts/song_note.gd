@@ -1,5 +1,5 @@
 class_name SongNote
-extends Area3D
+extends Node3D
 
 # Deps are pinned by path on purpose: a fresh clone ships no
 # editor-built global-class cache, and bare names would not parse
@@ -30,19 +30,11 @@ func setup(initial_target: Wisp, attack: float, speed_multiplier: float, life_bo
     note_color = color
     _build()
 
-func _ready() -> void:
-    monitoring = true
-    monitorable = false
-    collision_layer = 0
-    collision_mask = 1
-
+## A plain Node3D, not an Area3D: the note flies by math and a manual wall
+## ray, and nothing ever listened for area overlaps -- the monitoring, the
+## mask and the collision shape were bookkeeping with no reader on every
+## airborne note.
 func _build() -> void:
-    var shape := CollisionShape3D.new()
-    var sphere := SphereShape3D.new()
-    sphere.radius = 0.16
-    shape.shape = sphere
-    add_child(shape)
-
     _core = MeshInstance3D.new()
     var core_mesh := SphereMesh.new()
     core_mesh.radius = 0.14
