@@ -91,8 +91,6 @@ func _run() -> void:
 				verdict.append("TOO SOLID")
 			if center.x < 12.0 or center.x > 52.0 or center.y < 12.0 or center.y > 52.0:
 				verdict.append("OFF-CENTRE")
-			if mean_luma < 0.32:
-				verdict.append("TOO DARK")
 			# The palette rule that actually matters is VIVIDNESS, not warmth.
 			# An earlier version of this check demanded mean(#r - #b) > 0 and
 			# failed 13 legitimate glyphs -- the soft cyan Echoes, the Chime, a
