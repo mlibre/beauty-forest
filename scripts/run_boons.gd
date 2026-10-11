@@ -47,10 +47,12 @@ func _apply_level_up_boon() -> void:
     pending_boons += 1
 
 ## Offer the next pending gift whenever the walk is the thing on screen, and
-## the song is not. _refresh_ui runs on the director's 0.1 s throttle, which
-## keeps the draft from opening mid-physics -- soothing a wisp and levelling
-## happens inside the combat tick, and pausing the world there would leave
-## half a frame of combat running under the cards. An active lullaby also
+## the song is not. The director's 0.1 s throttle usually spaces these calls,
+## but a soothe that levels up opens the draft the same tick: _soothe_wisp
+## calls _refresh_ui directly, so the world can pause mid-physics with the
+## cards up. That is survivable by construction -- the only work after the
+## pivot in the same tick is chime gathering and a no-op lullaby beat, neither
+## of which can damage a frozen hero. An active lullaby also
 ## holds the mode machine: bystander wisps keep getting soothed all through a
 ## ceremony, so a level can land mid-song, and seizing the beat ring to deal
 ## cards would freeze the song on its own gold note. The gift waits; the
