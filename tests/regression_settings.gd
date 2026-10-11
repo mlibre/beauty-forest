@@ -27,6 +27,8 @@ func _run() -> void:
         return
     if not await _check_settings_back_button_names_where_it_goes(game):
         return
+    if not await _check_settings_hands_the_nap_and_ending_cards_back(game):
+        return
 
     finish(game, "BEAUTY_FOREST_SETTINGS")
 
@@ -172,4 +174,54 @@ func _check_settings_back_button_names_where_it_goes(game: Node) -> bool:
             return false
         game.ui.settings_closed.emit()
         await frames(3)
+    return true
+
+func _check_settings_hands_the_nap_and_ending_cards_back(game: Node) -> bool:
+    ## The COZY button sits above the overlay scrim, so on a touchscreen it
+    ## answers from the nap and ending cards too -- and leaving settings used
+    ## to run close_panels(), which hides exactly the overlay card those modes
+    ## still live on: a touch player closed the panel into an empty frozen
+    ## world where nothing could bring the nap back. The Back button also
+    ## promised "the menu" from both. Leaving settings now re-raises the card
+    ## it came from, under its own name.
+    game._start_run(2)
+    await frames(4)
+    game.mode = game.Mode.DEAD
+    game.ui.show_death(game.floor_number, game.meta)
+    await frames(2)
+    game.ui.touch_settings_requested.emit()
+    await frames(3)
+    if not ok(game.mode == game.Mode.SETTINGS,
+            "COZY did nothing on the nap card (mode %d)" % game.mode):
+        return false
+    var label := ""
+    for candidate in game.ui._shop_frame.find_children("*", "Button", true, false):
+        if (candidate as Button).text.begins_with("♥  Back to"):
+            label = (candidate as Button).text
+    if not ok(label == "♥  Back to the nap card",
+            "from the nap card the settings Back button says %s" % [label if label != "" else "nothing"]):
+        return false
+    game.ui.close_settings()
+    await frames(3)
+    if not ok(game.mode == game.Mode.DEAD,
+            "leaving settings did not hand back the nap (mode %d)" % game.mode):
+        return false
+    if not ok(game.ui._overlay_card.visible,
+            "leaving settings erased the nap card -- a touch player has no way back to it"):
+        return false
+    game.mode = game.Mode.ENDING
+    game.ui.show_ending(int(game.meta.get("dragons_sung", 0)), game.meta)
+    await frames(2)
+    game.ui.touch_settings_requested.emit()
+    await frames(3)
+    if not ok(game.mode == game.Mode.SETTINGS,
+            "COZY did nothing on the ending card (mode %d)" % game.mode):
+        return false
+    game.ui.close_settings()
+    await frames(3)
+    if not ok(game.mode == game.Mode.ENDING and game.ui._overlay_card.visible,
+            "leaving settings did not hand back the ending card (mode %d, card visible %s)" % [
+                    game.mode, str(game.ui._overlay_card.visible)]):
+        return false
+    print("SETTINGS nap/ending: the card comes back, under its own name")
     return true

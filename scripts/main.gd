@@ -426,6 +426,10 @@ func _open_settings() -> void:
         return_name = "the walk"
     elif return_to == Mode.PAUSED:
         return_name = "the pause card"
+    elif return_to == Mode.DEAD:
+        return_name = "the nap card"
+    elif return_to == Mode.ENDING:
+        return_name = "the ending card"
     ui.show_settings(settings, return_name)
 
 func _on_settings_closed() -> void:
@@ -439,6 +443,17 @@ func _on_settings_closed() -> void:
         # back rather than closing every panel, which would leave the player
         # staring at an empty screen instead of the one they opened from.
         _show_menu()
+    elif previous_mode == Mode.DEAD or previous_mode == Mode.ENDING:
+        # The nap and ending cards live ON the overlay, and the fallback's
+        # close_panels() hides exactly that card. The COZY button sits above
+        # the overlay scrim, so on a touchscreen it answers from both -- and
+        # closing settings there used to leave an empty frozen world nothing
+        # could bring the card back to. Re-raise the card the panel came from.
+        mode = previous_mode
+        if previous_mode == Mode.DEAD:
+            ui.show_death(floor_number, meta)
+        else:
+            ui.show_ending(int(meta.get("dragons_sung", 0)), meta)
     else:
         mode = previous_mode
         _set_world_processing(mode in [Mode.MENU, Mode.PLAYING])
