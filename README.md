@@ -82,3 +82,15 @@ from the options file, and leaving mid-walk is always safe.
 
 Curious how the forest is built, or want to run its test suites? See
 `docs/TESTING.md`, and `AGENTS.md` for the rules the game plays by.
+
+## 🇵🇸 In Support of Palestine
+
+This project supports Palestine. If you can, donate to [UNRWA](https://www.unrwa.org).
+
+The people of Palestine endure daily suffering and loss, too often unseen and
+unhelped. They are asking for support — and we can give our voice, our care,
+and our help. Even a small act can matter. Please do what you can. 🤲
+
+And if you ever doubt what is right and what is wrong, remember: when someone
+kills a baby to loot baby’s belongings, he is the devil — and he stands on the
+wrong side. ✊
