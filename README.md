@@ -33,16 +33,16 @@ or open `project.godot` in Godot and press **F5**.
 
 ## Controls
 
-| Key | What it does |
-| --- | --- |
-| **WASD / arrows / left stick** | wander |
-| **Shift / shoulder button** | a quick dash that nothing can touch |
-| **E / gamepad A** | take the stairwell, start a Big Feeling's song, or catch a GOLD beat |
-| **F** | browse Peddle's cart when the cart is near |
-| **J** | Mote's memory book — fun facts and stickers |
-| **C** | gentler-forest options |
-| **Esc** | pause (and the one place with numbers in it) |
-| **F11** | fullscreen |
+| Key                            | What it does                                                         |
+| ------------------------------ | -------------------------------------------------------------------- |
+| **WASD / arrows / left stick** | wander                                                               |
+| **Shift / shoulder button**    | a quick dash that nothing can touch                                  |
+| **E / gamepad A**              | take the stairwell, start a Big Feeling's song, or catch a GOLD beat |
+| **F**                          | browse Peddle's cart when the cart is near                           |
+| **J**                          | Mote's memory book — fun facts and stickers                          |
+| **C**                          | gentler-forest options                                               |
+| **Esc**                        | pause (and the one place with numbers in it)                         |
+| **F11**                        | fullscreen                                                           |
 
 On a touch screen, an on-screen joystick and five big buttons appear instead.
 
