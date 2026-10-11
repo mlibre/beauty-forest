@@ -9,7 +9,7 @@ description: Use when asked to improve this Godot game's performance, reduce fra
 
 Run a strict **baseline → measure → root-cause → optimize → compare → verify → local commit** loop. Work sequentially in the current context. Do the complete engineering job yourself; do not delegate or fan out.
 
-Hunt measured player-visible costs, not theoretical micro-optimizations. Preserve correctness and the Beauty Forest presentation. Every claimed win needs comparable before/after evidence. Keep commits local and never push.
+Hunt measured player-visible costs, not theoretical micro-optimizations. Preserve correctness and the Beauty Forest presentation. Every claimed win needs comparable before/after evidence.
 
 ## Establish the baseline
 
@@ -50,7 +50,7 @@ Handle one root cause at a time:
 5. **COMPARE** — Rerun the same benchmark and confirm the delta exceeds noise. Keep the optimization only if the benefit is credible and stable.
 6. **VERIFY CORRECTNESS** — Run focused checks, all relevant regressions, import, and the integration smoke. Add a visual/audio/platform check when headless mode cannot prove the path.
 7. **REVIEW** — Inspect the exact diff and confirm that the benchmark improved for the intended reason—not from less work, changed input, a broken feature, or lower quality.
-8. **COMMIT LOCALLY** — Stage only the focused performance change and use `perf(<area>): <metric delta and cause>`. Never stage unrelated user changes. Never push.
+8. **COMMIT LOCALLY** — Stage only the focused performance change and use `perf(<area>): <metric delta and cause>`. Never stage unrelated user changes.
 
 If the first optimization does not beat noise, revert it and re-profile. If correctness fails, the result is not a win.
 

@@ -27,7 +27,7 @@ description: Use when asked to find/fix bugs thoroughly, run a sustained bug-hun
 5. **FIX** — Make the smallest coherent change for the diagnosed cause, matching repository style and the game’s design rules. Do not bundle unrelated cleanup.
 6. **VERIFY** — Run the focused reproduction, relevant regressions, import. Add an interactive or visual check when headless execution cannot prove the behavior. Results from before the final production edit are stale; rerun affected layers afterward.
 7. **REVIEW** — Inspect the exact diff for scope, cause resolution, generated files, valid Godot APIs, and those rules.
-8. **COMMIT** — Stage only the files or hunks belonging to this cause and use `fix(<area>): <plain-language cause>`. Never push.
+8. **COMMIT** — Stage only the files or hunks belonging to this cause and use `fix(<area>): <plain-language cause>`.
 
 If verification is blocked, report the blocker and evidence. Do not weaken a valid assertion to make a test pass. If the failure cannot be reproduced or explained, return it to the queue as unconfirmed.
 
