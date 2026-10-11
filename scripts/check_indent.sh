@@ -12,7 +12,7 @@ cd "$(dirname "$0")/.."
 
 status=0
 
-for f in scripts/*.gd tests/*.gd tests/support/*.gd; do
+for f in scripts/*.gd tests/*.gd tests/support/*.gd _audit/*.gd; do
     [ -e "$f" ] || continue
     tabs=$(grep -cP '^\t' "$f" || true)
     spaces=$(grep -cP '^    ' "$f" || true)
