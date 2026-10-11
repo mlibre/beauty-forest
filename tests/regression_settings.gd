@@ -128,9 +128,9 @@ func _open_settings_from_the_menu(game: Node, way: String) -> bool:
     if way == "the button":
         var cozy: Button = null
         for candidate in game.ui._overlay_content.find_children("*", "Button", true, false):
-            if (candidate as Button).text.contains("gentler"):
+            if (candidate as Button).text.contains("Cozy options"):
                 cozy = candidate as Button
-        if not ok(cozy != null, "the menu offered no way into the gentler-forest panel"):
+        if not ok(cozy != null, "the menu offered no way into the cozy-options panel"):
             return false
         cozy.pressed.emit()
     else:
