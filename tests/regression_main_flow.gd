@@ -131,6 +131,24 @@ func _run() -> void:
     if not ok(game.player.control_enabled, "Escape left the player disabled after closing the shop"):
         return
 
+    # Mote's not-near-the-cart hint used to promise absolute floors
+    # ("2, 4, 7, and 10"), which in the endless chapters is a lie: the cart
+    # parks on those STORY positions of every thirteen-floor stretch, so
+    # floor 15 is a cart floor too and the old line hid it. The hint must
+    # describe the cycle the schedule actually runs on.
+    game.player.global_position += Vector3(6.0, 0.0, 0.0)
+    game._touch_shop()
+    await frames(1)
+    var shop_line := ""
+    if not game.ui._log_label.text.is_empty():
+        shop_line = game.ui._log_label.text.split("\n")[-1]
+    if not ok("every thirteen-floor stretch" in shop_line,
+            "the not-near-cart hint does not describe the story cycle; Mote said: %s" % shop_line):
+        return
+    if not ok(not ("floors 2, 4, 7, and 10" in shop_line),
+            "the not-near-cart hint still names absolute floors; Mote said: %s" % shop_line):
+        return
+
     # A Big Feeling is meant to be soothed by SITTING with it (two gentle
     # rounds of E-on-gold). The automatic lantern must never wear it down
     # instead: that skipped the whole designed moment and still handed out

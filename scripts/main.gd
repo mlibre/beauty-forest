@@ -162,7 +162,7 @@ func _unhandled_input(event: InputEvent) -> void:
         if _near_merchant():
             _open_shop()
         else:
-            ui.add_log("Mote: “Peddle parks the cart on floors 2, 4, 7, and 10. Keep wandering!”")
+            ui.add_log("Mote: “Peddle parks the cart on the 2nd, 4th, 7th, and 10th floor of every thirteen-floor stretch. Keep wandering!”")
         get_viewport().set_input_as_handled()
     elif event.is_action_pressed("bf_journal"):
         _open_journal()
@@ -306,7 +306,7 @@ func _touch_shop() -> void:
     if mode == Mode.PLAYING and _near_merchant():
         _open_shop()
     elif mode == Mode.PLAYING:
-        ui.add_log("Mote: “Peddle parks the cart on floors 2, 4, 7, and 10. Keep wandering!”")
+        ui.add_log("Mote: “Peddle parks the cart on the 2nd, 4th, 7th, and 10th floor of every thirteen-floor stretch. Keep wandering!”")
 
 func _pause_game() -> void:
     if mode != Mode.PLAYING:
