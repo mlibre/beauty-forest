@@ -473,43 +473,4 @@ func _run() -> void:
         return
     game.dragon_exists = false
 
-    # A celebration timer belongs to the hero that earned it. Soothe a wisp,
-    # descend at once, and the deferred "all done being happy" must not reach the
-    # hero that replaced them.
-    game._start_run(1)
-    await frames(4)
-    game.pulse_cooldown = 9999.0
-    game.note_cooldown = 9999.0
-    var celebration_wisp: Wisp = null
-    for candidate: Wisp in game.wisps:
-        if is_instance_valid(candidate) and candidate.alive and not candidate.soothed:
-            celebration_wisp = candidate
-            break
-    if not ok(celebration_wisp != null, "no live wisp was available for the celebration timer regression"):
-        return
-    game._soothe_wisp(celebration_wisp, false)
-    game._load_floor(2, false)
-    await frames(2)
-    game.player.hero.set_happy(true)
-    await game.get_tree().create_timer(1.0).timeout
-    if not ok(game.player.hero._happy, "a stale celebration timer cleared the new hero's celebration"):
-        return
-
-    # A fresh walk from the menu still starts clean.
-    game._start_run(1)
-    await frames(4)
-    if not ok(game.sparkles == 0, "a fresh walk kept stale sparkles"):
-        return
-    if not ok(game.charms_owned.is_empty(), "a fresh walk kept stale charms"):
-        return
-    if not ok(game.level == 1, "a fresh walk kept a stale level"):
-        return
-
-
-
-
-
-
-
-
     finish(game, "BEAUTY_FOREST_MAIN_FLOW")

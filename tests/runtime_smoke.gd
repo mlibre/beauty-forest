@@ -90,8 +90,48 @@ func _run() -> void:
                 game._judge_lullaby_beat()
                 ok(not game._lullaby_active, "the Big Feeling lullaby on floor %d never finished" % floor_number)
 
+    await _check_celebration_and_fresh_walk(game)
+
     # AudioServer drains stopped playbacks asynchronously (see the same note
     # in regression_audio.gd); quitting before it settles leaks
     # AudioStreamPlayback refs at exit.
     await frames(30)
     finish(game, "BEAUTY_FOREST_SMOKE")
+
+## Moved here from regression_main_flow (which crossed the 500-line limit):
+## a celebration timer belongs to the hero that earned it -- soothe a wisp,
+## descend at once, and the deferred "all done being happy" must not reach
+## the hero that replaced them -- and a fresh walk after all of it must
+## still start clean. Both are "does the runtime breathe" questions, which
+## is this suite's charter.
+func _check_celebration_and_fresh_walk(game: Node) -> void:
+    game._start_run(1)
+    await frames(4)
+    game.pulse_cooldown = 9999.0
+    game.note_cooldown = 9999.0
+    var celebration_wisp: Wisp = null
+    for candidate: Wisp in game.wisps:
+        if is_instance_valid(candidate) and candidate.alive and not candidate.soothed:
+            celebration_wisp = candidate
+            break
+    if not ok(celebration_wisp != null, "no live wisp was available for the celebration timer regression"):
+        return
+    game._soothe_wisp(celebration_wisp, false)
+    game._load_floor(2, false)
+    await frames(2)
+    game.player.hero.set_happy(true)
+    await game.get_tree().create_timer(1.0).timeout
+    if not ok(game.player.hero._happy, "a stale celebration timer cleared the new hero's celebration"):
+        return
+    # The soothe may have levelled the hero; the queued gift must not follow
+    # the fresh walk below.
+    while game.pending_boons > 0:
+        if game.mode == game.Mode.DRAFT and not game._draft_offers.is_empty():
+            game.pick_boon(String(game._draft_offers[0].get("key", "")))
+        await frames(2)
+    game._start_run(1)
+    await frames(4)
+    ok(game.sparkles == 0, "a fresh walk kept stale sparkles")
+    ok(game.charms_owned.is_empty(), "a fresh walk kept stale charms")
+    ok(game.level == 1, "a fresh walk kept a stale level")
+    ok(game.pending_boons == 0, "a fresh walk kept a queued gift: %d" % game.pending_boons)
