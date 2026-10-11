@@ -1,6 +1,6 @@
 ---
 name: godot
-description: Practical, version-aware guidance for native Godot 4.7 editor and GDScript projects. Use for designing, implementing, reviewing, debugging, testing, optimizing, or exporting Godot 2D/3D games and apps, including scenes, nodes, resources, UI, input, shaders, audio, physics, assets, networking, and platform integration. Excludes C#/.NET, C++/GDExtension, engine development, and engine compilation.
+description: Practical, version-aware guidance for native Godot 4.7 editor and GDScript projects. Use for designing, implementing, reviewing, debugging, testing, optimizing, or exporting Godot 2D/3D games and apps, including scenes, nodes, resources, UI, input, shaders, audio, physics, assets, networking, and platform integration. Also use when asked to refresh, audit, or update this skill from the official documentation. Excludes C#/.NET, C++/GDExtension, engine development, and engine compilation.
 metadata:
   opencode/autoinvoke: true
 ---
@@ -99,6 +99,14 @@ Read [architecture-editor.md](references/architecture-editor.md) as well when a 
 - Scene-tree and most engine objects are main-thread-bound. Worker threads may touch only APIs documented as thread-safe; join workers before their owners disappear.
 - Treat network and file data as hostile. Enforce size, type, range, ownership, and authorization on the authoritative side. TLS does not replace game authentication/authorization.
 - Export with the editor binary and the exact matching standard template, unless the preset intentionally uses a custom template. Keep credentials out of version control and verify the produced artifact, not only the exit code.
+
+## Refreshing this skill
+
+When asked to refresh, audit, or correct this skill: learn from the official, latest online documentation (persistent guidance stays pinned to `/en/4.7/` while `/en/stable/` may be consulted to identify the current stable branch), then update this skill from what you learned. The contract:
+
+- Keep it **end-user focused**: native editor and GDScript only. Never introduce C#, Mono, or engine-build content.
+- **Remove** anything that is not about Godot itself, and anything incorrect or stale -- documentation must describe reality, verified against the installed editor's `ClassDB` (use `scripts/api_lookup.gd`) before a claim is written down.
+- Keep the goal: simple, comprehensive, practical, robust.
 
 ## Verification ladder
 
