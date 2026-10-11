@@ -212,7 +212,7 @@ const CHARMS := [
     {"key": "boots", "name": "Swift Boots", "description": "Walk 15% swifter this run", "price": 5, "speed": 1.15},
     {"key": "scarf", "name": "Wool Scarf", "description": "+30 max warmth; itchy-nice", "price": 6, "max_hp": 30},
     {"key": "echo", "name": "Echo Chime", "description": "Lantern song recharges 35% faster", "price": 7, "cooldown": 0.65},
-    {"key": "ember", "name": "Ember Mitten", "description": "Song-notes glow 20% warmer", "price": 6, "song_damage": 1.20},
+    {"key": "ember", "name": "Ember Mitten", "description": "Song-notes sing 20% stronger", "price": 6, "song_damage": 1.20},
     {"key": "dandelion", "name": "Dandelion Clock", "description": "Hearts find you from 50% farther", "price": 5, "pickup": 1.50},
     {"key": "moss", "name": "Moss Pillow", "description": "Bumps hurt 15% less", "price": 6, "damage_taken": 0.85},
     {"key": "honey", "name": "Honey Drop", "description": "Each thank-you heart restores +10 warmth", "price": 4, "heart_heal": 10},
@@ -370,7 +370,7 @@ static func charm_blurb(key: String, tier: int) -> String:
     if scaled.has("cooldown"):
         parts.append("Lantern song recharges %d%% faster" % roundi((1.0 - float(scaled["cooldown"])) * 100.0))
     if scaled.has("song_damage"):
-        parts.append("Song-notes glow %d%% warmer" % roundi((float(scaled["song_damage"]) - 1.0) * 100.0))
+        parts.append("Song-notes sing %d%% stronger" % roundi((float(scaled["song_damage"]) - 1.0) * 100.0))
     if scaled.has("max_hp"):
         parts.append("+%d max warmth" % int(scaled["max_hp"]))
     if scaled.has("damage_taken"):
