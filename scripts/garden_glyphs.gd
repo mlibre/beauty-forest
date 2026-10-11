@@ -465,7 +465,3 @@ static func _verse_glyphs() -> Array[String]:
 		keys.append(String(verse["key"]))
 	return keys
 
-# --- primitives ------------------------------------------------------------
-# Thin, antialiased-feeling primitives over a normalized box. Each stamps a
-# disc of radius `w` along the shape so the result is a smooth thick line, not
-# a staircase of hard pixels.
