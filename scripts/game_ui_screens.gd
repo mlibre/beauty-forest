@@ -377,13 +377,7 @@ func show_ending(dragons: int, meta: Dictionary) -> void:
     _focus_first_enabled(_overlay_content)
 
 func show_journal(meta: Dictionary, facts_learned: Array, stickers: Array) -> void:
-    _dismiss_beat_ring()
-    _cancel_story()
-    _reset_touch_joystick()
-    _shop_scrim.visible = true
-    _shop_card.visible = true
-    _fit_layout()
-    _clear_panel()
+    _present_panel()
     _shop_frame.add_child(_label("Mote’s memory book ♥", 30, Color("#ffe49b")))
     _shop_frame.add_child(_label("Fun facts and stickers you collected. Just for smiles — never a test.", 14, Color("#dce9c4")))
     _shop_frame.add_child(_separator())

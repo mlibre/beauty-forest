@@ -158,7 +158,7 @@ func _test_a_failed_save_is_visible_to_the_player() -> void:
     await process_frame
 
     # Block every save the way a full or read-only disk would.
-    _remove_path(BeautyData.save_path() + ".tmp")
+    remove_path(BeautyData.save_path() + ".tmp")
     ok(DirAccess.make_dir_absolute(BeautyData.save_path() + ".tmp") == OK,
         "the blocked staging fixture must be creatable")
 
@@ -184,7 +184,7 @@ func _test_a_failed_save_is_visible_to_the_player() -> void:
     ok(_saw_notice(texts),
         "a save failed while the game announced a sticker, and nothing on screen admitted it [labels=%s]" % str(texts))
 
-    _remove_path(BeautyData.save_path() + ".tmp")
+    remove_path(BeautyData.save_path() + ".tmp")
     game.queue_free()
     await process_frame
 
@@ -215,6 +215,9 @@ func _collect_label_texts(node: Node) -> Array[String]:
     return out
 
 func _test_unreadable_satchel_is_never_overwritten() -> void:
+    # The guard that refuses to write over a still-unreadable satchel is only
+    # reachable when moving the damaged file aside FAILS -- the rare case. Drive
+    # it by planting a directory where the backup will go, so the rename fails.
     # A save failure that preserves the prior save was already covered. The
     # mirror case was not: a READ failure. load_meta() answered "unreadable"
     # and "brand new player" with the same empty dict, so a satchel truncated by
@@ -286,33 +289,6 @@ func _test_unreadable_satchel_is_never_overwritten() -> void:
         "a settings file that would not parse was moved aside instead of being overwritten")
     ok(not bool(reloaded["reduced_motion"]) and float(reloaded["text_scale"]) == 1.0,
         "damaged settings must fall back to readable defaults, not to half-parsed values")
-
-## The guard that refuses to write over a still-unreadable satchel is only
-## reachable when moving the damaged file aside FAILS -- the rare case. Drive
-## it by planting a directory where the backup will go, so the rename fails.
-
-func _restore_file(path: String, existed: bool, contents: PackedByteArray) -> void:
-    if existed:
-        var file := FileAccess.open(path, FileAccess.WRITE)
-        if file != null:
-            file.store_buffer(contents)
-            file.flush()
-    elif FileAccess.file_exists(path):
-        DirAccess.remove_absolute(path)
-
-func _write_json(path: String, value: Dictionary) -> void:
-    var file := FileAccess.open(path, FileAccess.WRITE)
-    if file == null:
-        ok(false, "could not write fixture %s" % path)
-        return
-    file.store_string(JSON.stringify(value, "  "))
-    file.flush()
-
-func _remove_path(path: String) -> void:
-    if DirAccess.dir_exists_absolute(path):
-        DirAccess.remove_absolute(path)
-    elif FileAccess.file_exists(path):
-        DirAccess.remove_absolute(path)
 
 func _test_sticker_tables_agree() -> void:
     # "Century of Kindness" once went missing from the toast-line table, so

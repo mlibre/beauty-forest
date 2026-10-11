@@ -5,6 +5,7 @@ extends Control
 # editor-built global-class cache, and bare names would not parse
 # on first boot. regression_architecture holds this file to it.
 const GardenGlyphs := preload("res://scripts/garden_glyphs.gd")
+const CozyMaterials := preload("res://scripts/cozy_materials.gd")
 
 ## One ware on Peddle's shelf, painted as a picture instead of a sentence.
 ##
@@ -76,7 +77,7 @@ func _draw() -> void:
 		fill = fill.darkened(0.45)
 	if not affordable:
 		fill = Color(0.09, 0.14, 0.11, 0.90)
-	draw_style_box(_plate(fill, rim, 14, 3 if selected else 2), rect)
+	draw_style_box(CozyMaterials.plate(fill, rim, 14, 3 if selected else 2), rect)
 
 	var icon_center := Vector2(size.x * 0.5, ICON_SIDE * 0.5 + 8.0)
 	if selected:
@@ -115,14 +116,6 @@ func _arc(center: Vector2, radius: float, color: Color, width: float) -> void:
 	for step in range(steps):
 		var angle := TAU * float(step) / float(steps)
 		draw_circle(center + Vector2(cos(angle), sin(angle)) * radius, width * 0.5, color)
-
-func _plate(fill: Color, border: Color, radius: int, border_width: int) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_color = border
-	style.set_border_width_all(border_width)
-	style.set_corner_radius_all(radius)
-	return style
 
 func _font() -> Font:
 	return ThemeDB.fallback_font

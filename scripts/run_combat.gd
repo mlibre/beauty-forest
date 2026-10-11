@@ -18,6 +18,19 @@ const NOTE_MELODY: Array[Color] = [
     Color("#fff3b0"), Color("#d8f3c8"), Color("#ffdfc2"), Color("#f6e6b4"),
 ]
 
+func _new_wisp(cell: Vector2, type_key: String, level: int, is_big: bool = false, feeling: Dictionary = {}) -> Wisp:
+    # The one home for how a wisp joins the run: configured, positioned,
+    # registered under `world` and `wisps`. Bosses, Big Feelings and the
+    # menu's wanderers all arrive through here, so none of them can forget
+    # reduced-motion or drift out of the run's own wisp list.
+    var wisp := Wisp.new()
+    wisp.setup(type_key, level, is_big, feeling)
+    wisp.set_reduced_motion(bool(settings.get("reduced_motion", false)))
+    wisp.position = DungeonGenerator.cell_to_world(cell, 0.0)
+    world.add_child(wisp)
+    wisps.append(wisp)
+    return wisp
+
 func _spawn_wisps() -> void:
     var count := mini(6 + floor_number * 2, 40)
     var occupied: Dictionary = {}
@@ -25,14 +38,9 @@ func _spawn_wisps() -> void:
     for index in range(count):
         var cell := DungeonGenerator.random_floor_cell(dungeon, _rng, Vector2(spawn_room["cx"], spawn_room["cy"]), 7.0, occupied)
         occupied[cell] = true
-        var wisp := Wisp.new()
-        wisp.setup(BeautyContent.pick_wisp_type(floor_number), floor_number)
-        wisp.set_reduced_motion(bool(settings.get("reduced_motion", false)))
-        wisp.position = DungeonGenerator.cell_to_world(cell, 0.0)
+        var wisp := _new_wisp(cell, BeautyContent.pick_wisp_type(floor_number), floor_number)
         wisp.set_meta("attack_cooldown", _rng.randf_range(0.2, 1.1))
         wisp.set_meta("said_grumble", false)
-        world.add_child(wisp)
-        wisps.append(wisp)
     var story := BeautyContent.story_floor(floor_number)
     if story % 3 == 0 and story >= 3 and story != 12:
         _spawn_boss()
@@ -43,14 +51,9 @@ func _spawn_wisps() -> void:
 func _spawn_boss() -> void:
     var spawn_room: Dictionary = dungeon["rooms"][0]
     var cell := DungeonGenerator.random_floor_cell(dungeon, _rng, Vector2(spawn_room["cx"], spawn_room["cy"]), 7.0)
-    var wisp := Wisp.new()
-    wisp.setup("Shambler", floor_number, true)
-    wisp.set_reduced_motion(bool(settings.get("reduced_motion", false)))
+    var wisp := _new_wisp(cell, "Shambler", floor_number, true)
     wisp.display_name = "The Very Big Wisp \"Chad\""
-    wisp.position = DungeonGenerator.cell_to_world(cell, 0.0)
     wisp.set_meta("attack_cooldown", 1.0)
-    world.add_child(wisp)
-    wisps.append(wisp)
     ui.add_log("Mote: “Oh my. That wisp ate one too many sandwiches. Sing when its halo turns GOLD!”")
 
 func _spawn_feeling(feeling: Dictionary, story: int) -> void:
@@ -58,13 +61,8 @@ func _spawn_feeling(feeling: Dictionary, story: int) -> void:
     var base_index := posmod(story / 4 - 1, 3)
     var spawn_room: Dictionary = dungeon["rooms"][0]
     var cell := DungeonGenerator.random_floor_cell(dungeon, _rng, Vector2(spawn_room["cx"], spawn_room["cy"]), 7.0)
-    var wisp := Wisp.new()
-    wisp.setup(base_types[base_index], floor_number, true, feeling)
-    wisp.set_reduced_motion(bool(settings.get("reduced_motion", false)))
-    wisp.position = DungeonGenerator.cell_to_world(cell, 0.0)
+    var wisp := _new_wisp(cell, base_types[base_index], floor_number, true, feeling)
     wisp.set_meta("attack_cooldown", 0.8)
-    world.add_child(wisp)
-    wisps.append(wisp)
     ui.add_log("Mote: “A Big Feeling. Not a monster — just one feeling wearing a very big coat.”")
 
 func _refresh_wisp_shields() -> void:

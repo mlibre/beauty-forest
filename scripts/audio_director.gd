@@ -45,7 +45,9 @@ func _on_player_tree_exiting(player: AudioStreamPlayer) -> void:
         player.stop()
         player.stream = null
 
-func _exit_tree() -> void:
+func _silence_voices() -> void:
+    # Hush the ambient loop and every SFX voice without touching state that
+    # belongs to teardown or shutdown specifically.
     _ambient_should_play = false
     _ambient_serial += 1
     _cancel_ambient_tween()
@@ -56,6 +58,9 @@ func _exit_tree() -> void:
         if is_instance_valid(player):
             player.stop()
             player.stream = null
+
+func _exit_tree() -> void:
+    _silence_voices()
     _ambient_player = null
     _sfx_players.clear()
     _next_sfx_voice = 0
@@ -173,16 +178,7 @@ func shutdown() -> void:
     if _shut_down:
         return
     _shut_down = true
-    _ambient_should_play = false
-    _ambient_serial += 1
-    _cancel_ambient_tween()
-    if is_instance_valid(_ambient_player):
-        _ambient_player.stop()
-        _ambient_player.stream = null
-    for player: AudioStreamPlayer in _sfx_players:
-        if is_instance_valid(player):
-            player.stop()
-            player.stream = null
+    _silence_voices()
     _cache.clear()
 
 func _valid_sfx_params(duration: float, volume: float, bright: float) -> bool:

@@ -38,3 +38,13 @@ static func emissive(color: Color, energy: float, additive: bool = false) -> Sta
 	material.emission = color
 	material.emission_energy_multiplier = energy
 	return material
+
+## The Control-panel cousin of emissive(): the plate behind a card, a row or a
+## socket. One home, so every panel in the game builds its box the same way.
+static func plate(fill: Color, border: Color = Color(0, 0, 0, 0), radius: int = 14, border_width: int = 2) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(border_width)
+	style.set_corner_radius_all(radius)
+	return style

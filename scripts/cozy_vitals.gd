@@ -5,6 +5,7 @@ extends Control
 # editor-built global-class cache, and bare names would not parse
 # on first boot. regression_architecture holds this file to it.
 const GardenGlyphs := preload("res://scripts/garden_glyphs.gd")
+const CozyMaterials := preload("res://scripts/cozy_materials.gd")
 
 ## The play-screen readout, drawn as icons instead of sentences.
 ##
@@ -112,7 +113,7 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var backing := Color(0.06, 0.14, 0.09, 0.62) if not high_contrast else Color(0.02, 0.06, 0.04, 0.86)
-	draw_style_box(_plate(backing), Rect2(Vector2.ZERO, size))
+	draw_style_box(CozyMaterials.plate(backing), Rect2(Vector2.ZERO, size))
 	_draw_warmth_ring()
 	_draw_sparkles()
 	_draw_floor()
@@ -162,7 +163,7 @@ func _draw_slots() -> void:
 	for index in slot_capacity:
 		var rect := Rect2(row.position + Vector2(float(index) * (SLOT_SIZE + SLOT_GAP), 0.0), Vector2(SLOT_SIZE, SLOT_SIZE))
 		var filled := index < equipped.size()
-		var style := _plate(Color(0.10, 0.20, 0.13, 0.80) if not filled else Color(0.22, 0.40, 0.24, 0.92),
+		var style := CozyMaterials.plate(Color(0.10, 0.20, 0.13, 0.80) if not filled else Color(0.22, 0.40, 0.24, 0.92),
 			Color("#8abf75") if filled else Color(1, 1, 1, 0.22), 8, 2)
 		draw_style_box(style, rect)
 		if filled:
@@ -178,14 +179,6 @@ func _arc(center: Vector2, radius: float, from_angle: float, to_angle: float, co
 	for step in range(steps + 1):
 		var angle: float = lerpf(from_angle, to_angle, float(step) / float(steps))
 		draw_circle(center + Vector2(cos(angle), sin(angle)) * radius, thickness * 0.5, color)
-
-func _plate(fill: Color, border: Color = Color(0, 0, 0, 0), radius: int = 14, border_width: int = 2) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_color = border
-	style.set_border_width_all(border_width)
-	style.set_corner_radius_all(radius)
-	return style
 
 func _font() -> Font:
 	return ThemeDB.fallback_font

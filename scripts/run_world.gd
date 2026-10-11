@@ -149,14 +149,9 @@ func _spawn_menu_wisps() -> void:
     for index in range(5):
         var cell := DungeonGenerator.random_floor_cell(dungeon, _rng, Vector2(spawn_room["cx"], spawn_room["cy"]), 6.0, occupied)
         occupied[cell] = true
-        var wisp := Wisp.new()
-        wisp.setup(BeautyContent.pick_wisp_type(1), 1)
-        wisp.set_reduced_motion(bool(settings.get("reduced_motion", false)))
-        wisp.position = DungeonGenerator.cell_to_world(cell, 0.0)
+        var wisp := _new_wisp(cell, BeautyContent.pick_wisp_type(1), 1)
         wisp.set_meta("attack_cooldown", _rng.randf_range(0.2, 1.1))
         wisp.set_meta("said_grumble", false)
-        world.add_child(wisp)
-        wisps.append(wisp)
 
 func _farthest_non_dragon_room(dragon_room: Dictionary) -> Dictionary:
     var spawn_room: Dictionary = dungeon["rooms"][0]

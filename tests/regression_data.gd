@@ -41,10 +41,10 @@ func _run() -> void:
     _test_save_failures_preserve_data()
     _test_profile_isolation()
     _test_unscoped_script_runs_are_isolated_too()
-    _restore_file(BeautyData.save_path(), had_save, original_save)
-    _restore_file(BeautyData.settings_path(), had_settings, original_settings)
-    _remove_path(BeautyData.save_path() + ".tmp")
-    _remove_path(BeautyData.settings_path() + ".tmp")
+    restore_file(BeautyData.save_path(), had_save, original_save)
+    restore_file(BeautyData.settings_path(), had_settings, original_settings)
+    remove_path(BeautyData.save_path() + ".tmp")
+    remove_path(BeautyData.settings_path() + ".tmp")
     # finish() tears the throwaway profile down (TestProfile.end()) itself.
     finish(null, "BEAUTY_FOREST_DATA_REGRESSION")
 
@@ -85,7 +85,7 @@ func _test_meta_recovery() -> void:
         "stickers": mixed_stickers,
         "facts_learned": mixed_facts,
     }
-    _write_json(BeautyData.save_path(), malformed)
+    write_json(BeautyData.save_path(), malformed)
     var loaded: Dictionary = BeautyData.load_meta()
     ok(int(loaded.get("runs", -1)) == 0, "a boolean must not become a visit count")
     ok(int(loaded.get("best_floor", -1)) == 0, "a malformed floor must fall back to zero")
@@ -109,7 +109,7 @@ func _test_meta_recovery() -> void:
         ok(String(stickers[0]) == "sticker_02", "the oldest sticker outside the bound must be discarded")
         ok(String(stickers[-1]) == "sticker_41", "the newest sticker must survive bounded history")
 
-    _write_json(BeautyData.save_path(), {
+    write_json(BeautyData.save_path(), {
         "runs": null,
         "best_floor": {},
         "wisps_soothed": [],
@@ -228,7 +228,7 @@ func _test_save_failures_preserve_data() -> void:
     var stable_meta := BeautyData.default_meta()
     stable_meta["runs"] = 23
     ok(BeautyData.save_meta(stable_meta), "the stable meta save fixture must succeed")
-    _remove_path(BeautyData.save_path() + ".tmp")
+    remove_path(BeautyData.save_path() + ".tmp")
     ok(DirAccess.make_dir_absolute(BeautyData.save_path() + ".tmp") == OK, "the blocked meta staging fixture must be creatable")
     ok(not BeautyData.save_meta({"runs": 999}), "a blocked meta staging path must report failure")
     ok(int(BeautyData.load_meta().get("runs", -1)) == 23, "a failed meta save must preserve the prior save")
@@ -236,12 +236,12 @@ func _test_save_failures_preserve_data() -> void:
     var stable_settings := BeautyData.default_settings()
     stable_settings["text_scale"] = 1.25
     ok(BeautyData.save_settings(stable_settings), "the stable settings fixture must succeed")
-    _remove_path(BeautyData.settings_path() + ".tmp")
+    remove_path(BeautyData.settings_path() + ".tmp")
     ok(DirAccess.make_dir_absolute(BeautyData.settings_path() + ".tmp") == OK, "the blocked settings staging fixture must be creatable")
     ok(not BeautyData.save_settings({"text_scale": 2.0}), "a blocked settings staging path must report failure")
     ok(is_equal_approx(float(BeautyData.load_settings().get("text_scale", 0.0)), 1.25), "a failed settings save must preserve prior settings")
-    _remove_path(BeautyData.save_path() + ".tmp")
-    _remove_path(BeautyData.settings_path() + ".tmp")
+    remove_path(BeautyData.save_path() + ".tmp")
+    remove_path(BeautyData.settings_path() + ".tmp")
 
 func _test_profile_isolation() -> void:
     ## The whole point of the redirect: a test run must not touch the player's
@@ -315,25 +315,3 @@ func _test_unscoped_script_runs_are_isolated_too() -> void:
     ok(BeautyData.save_path() == BeautyData._profile_save_path,
         "an explicitly named test profile must still win over the script-run fallback")
 
-func _restore_file(path: String, existed: bool, contents: PackedByteArray) -> void:
-    if existed:
-        var file := FileAccess.open(path, FileAccess.WRITE)
-        if file != null:
-            file.store_buffer(contents)
-            file.flush()
-    elif FileAccess.file_exists(path):
-        DirAccess.remove_absolute(path)
-
-func _write_json(path: String, value: Dictionary) -> void:
-    var file := FileAccess.open(path, FileAccess.WRITE)
-    if file == null:
-        ok(false, "could not write fixture %s" % path)
-        return
-    file.store_string(JSON.stringify(value, "  "))
-    file.flush()
-
-func _remove_path(path: String) -> void:
-    if DirAccess.dir_exists_absolute(path):
-        DirAccess.remove_absolute(path)
-    elif FileAccess.file_exists(path):
-        DirAccess.remove_absolute(path)

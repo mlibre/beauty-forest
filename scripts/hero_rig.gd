@@ -207,13 +207,17 @@ func _build_character() -> void:
     _lantern_light.shadow_enabled = false
     crown.add_child(_lantern_light)
 
-func _build_arm(node_name: String, pivot_position: Vector3, arm_material: Material, sleeve_material: Material) -> Node3D:
+func _attach_pivot(node_name: String, pivot_position: Vector3) -> Node3D:
     var pivot := Node3D.new()
     pivot.name = node_name
     pivot.position = pivot_position
     var hips := get_node_or_null("Model/Hips")
     if hips:
         hips.add_child(pivot)
+    return pivot
+
+func _build_arm(node_name: String, pivot_position: Vector3, arm_material: Material, sleeve_material: Material) -> Node3D:
+    var pivot := _attach_pivot(node_name, pivot_position)
     var sleeve := MeshInstance3D.new()
     var sleeve_mesh := CapsuleMesh.new()
     sleeve_mesh.radius = 0.115
@@ -232,12 +236,7 @@ func _build_arm(node_name: String, pivot_position: Vector3, arm_material: Materi
     return pivot
 
 func _build_leg(node_name: String, pivot_position: Vector3, trouser_material: Material, boot_material: Material) -> void:
-    var pivot := Node3D.new()
-    pivot.name = node_name
-    pivot.position = pivot_position
-    var hips := get_node_or_null("Model/Hips")
-    if hips:
-        hips.add_child(pivot)
+    var pivot := _attach_pivot(node_name, pivot_position)
     var leg := MeshInstance3D.new()
     var leg_mesh := CapsuleMesh.new()
     leg_mesh.radius = 0.13

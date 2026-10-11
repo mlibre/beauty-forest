@@ -98,14 +98,20 @@ func _add_action(action: StringName, keys: Array, axis: int = -1, axis_value: fl
         joy.button_index = int(button)
         InputMap.action_add_event(action, joy)
 
+func _advance_pause_state() -> void:
+    # The one state machine both the Escape key and the touch pause button run,
+    # so the two can never disagree about what PAUSE means: pause from the walk,
+    # close any modal, resume from the card.
+    if mode == Mode.PLAYING:
+        _pause_game()
+    elif mode in [Mode.SHOP, Mode.JOURNAL, Mode.SETTINGS]:
+        _close_modal()
+    elif mode == Mode.PAUSED:
+        _resume_game()
+
 func _unhandled_input(event: InputEvent) -> void:
     if event.is_action_pressed("bf_pause"):
-        if mode == Mode.PLAYING:
-            _pause_game()
-        elif mode in [Mode.SHOP, Mode.JOURNAL, Mode.SETTINGS]:
-            _close_modal()
-        elif mode == Mode.PAUSED:
-            _resume_game()
+        _advance_pause_state()
         get_viewport().set_input_as_handled()
         return
     if event is InputEventKey and event.pressed and event.keycode == KEY_F11:
@@ -292,16 +298,9 @@ func _touch_dash() -> void:
     player.trigger_dash(direction)
 
 func _touch_pause() -> void:
-    # The same state machine the Escape key runs, so the touch button and the
-    # key can never disagree about what PAUSE means: pause from the walk, close
-    # any modal, resume from the card. Calling _pause_game()/_close_modal()
-    # directly rather than re-implementing it is the point.
-    if mode == Mode.PLAYING:
-        _pause_game()
-    elif mode in [Mode.SHOP, Mode.JOURNAL, Mode.SETTINGS]:
-        _close_modal()
-    elif mode == Mode.PAUSED:
-        _resume_game()
+    # The very state machine the Escape key runs -- one home, in
+    # _advance_pause_state(), so the touch button and the key cannot drift.
+    _advance_pause_state()
 
 func _touch_shop() -> void:
     if mode == Mode.PLAYING and _near_merchant():

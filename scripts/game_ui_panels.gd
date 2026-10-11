@@ -172,7 +172,10 @@ func _owns(owned: Array, key: String, tier: int) -> bool:
 func _wearing(equipped: Array, key: String, tier: int) -> bool:
     return BeautyData.wearing(equipped, key, tier)
 
-func show_shop(state: Dictionary) -> void:
+func _present_panel() -> void:
+    # Every panel over the walk opens the same way: the transient effects go,
+    # the card rises, it lays itself out empty. One home, so a panel can never
+    # forget a step and stack a fresh shelf over a stale story.
     _dismiss_beat_ring()
     _cancel_story()
     _reset_touch_joystick()
@@ -180,6 +183,14 @@ func show_shop(state: Dictionary) -> void:
     _shop_card.visible = true
     _fit_layout()
     _clear_panel()
+
+func _retire_panel() -> void:
+    # The mirror of _present_panel: the card and its scrim leave together.
+    _shop_scrim.visible = false
+    _shop_card.visible = false
+
+func show_shop(state: Dictionary) -> void:
+    _present_panel()
     var sparkles := int(state.get("sparkles", 0))
     var heading := HBoxContainer.new()
     heading.add_theme_constant_override("separation", 10)
@@ -304,14 +315,8 @@ func show_shop(state: Dictionary) -> void:
 ## from the menu, from the pause card and from Peddle's cart, so a hardcoded
 ## "the walk" was a promise this button could not keep in two of the three.
 func show_settings(settings: Dictionary, return_name: String = "the walk") -> void:
-    _dismiss_beat_ring()
     _settings = settings.duplicate(true)
-    _cancel_story()
-    _reset_touch_joystick()
-    _shop_scrim.visible = true
-    _shop_card.visible = true
-    _fit_layout()
-    _clear_panel()
+    _present_panel()
     _shop_frame.add_child(_label("Make it yours ♥", 30, Color("#ffe49b")))
     _shop_frame.add_child(_label("Cozy choices. Change anything, anytime. Leaving is always okay.", 14, Color("#dce9c4")))
     _shop_frame.add_child(_separator())
@@ -373,23 +378,34 @@ func show_settings(settings: Dictionary, return_name: String = "the walk") -> vo
 ## The director knows exactly which screen it will return the player to, and
 ## passes that name in, so this label and the real route cannot disagree the way
 ## a hardcoded "the walk" did -- from the menu there is no walk to go back to.
-func _slider_row(title: String, key: String, minimum: float, maximum: float, step: float, format: String, display_scale: float = 1.0) -> HBoxContainer:
+## The scaffolding every settings row shares: title at 180px, the slider
+## stretching to fill, the amber value at 70px right-aligned. Callers wire
+## their own range, initial value and connection.
+func _slider_parts(title: String) -> Array:
     var row := HBoxContainer.new()
     row.add_theme_constant_override("separation", 12)
     var label := _label(title, 15, Color("#e8efd0"))
     label.custom_minimum_size = Vector2(180, 0)
     row.add_child(label)
     var slider := HSlider.new()
+    slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    row.add_child(slider)
+    var value_label := _label("", 14, Color("#ffe69a"))
+    value_label.custom_minimum_size = Vector2(70, 0)
+    value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+    row.add_child(value_label)
+    return [row, slider, value_label]
+
+func _slider_row(title: String, key: String, minimum: float, maximum: float, step: float, format: String, display_scale: float = 1.0) -> HBoxContainer:
+    var parts := _slider_parts(title)
+    var row: HBoxContainer = parts[0]
+    var slider: HSlider = parts[1]
+    var value_label: Label = parts[2]
     slider.min_value = minimum
     slider.max_value = maximum
     slider.step = step
     slider.value = float(_settings.get(key, minimum))
-    slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    row.add_child(slider)
-    var value_label := _label(format % (float(_settings.get(key, minimum)) * display_scale), 14, Color("#ffe69a"))
-    value_label.custom_minimum_size = Vector2(70, 0)
-    value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-    row.add_child(value_label)
+    value_label.text = format % (float(_settings.get(key, minimum)) * display_scale)
     slider.value_changed.connect(func(value):
         _settings[key] = value
         if format == "%d%%":
@@ -407,22 +423,14 @@ func _inverted_slider_row(title: String, key: String, minimum: float, maximum: f
     ## what the label says. HSlider refuses an inverted range outright -- it
     ## clamps min_value to max_value and then never emits value_changed again --
     ## so the mapping has to happen here.
-    var row := HBoxContainer.new()
-    row.add_theme_constant_override("separation", 12)
-    var label := _label(title, 15, Color("#e8efd0"))
-    label.custom_minimum_size = Vector2(180, 0)
-    row.add_child(label)
-    var slider := HSlider.new()
+    var parts := _slider_parts(title)
+    var row: HBoxContainer = parts[0]
+    var slider: HSlider = parts[1]
+    var value_label: Label = parts[2]
     slider.min_value = 0.0
     slider.max_value = 1.0
     slider.step = 0.0
-    slider.value = 0.0
-    slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    row.add_child(slider)
-    var value_label := _label(format % (float(_settings.get(key, maximum)) * display_scale), 14, Color("#ffe69a"))
-    value_label.custom_minimum_size = Vector2(70, 0)
-    value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-    row.add_child(value_label)
+    value_label.text = format % (float(_settings.get(key, maximum)) * display_scale)
 
     var span: float = maximum - minimum
     var to_stored := func(t: float) -> float:
@@ -443,18 +451,15 @@ func _inverted_slider_row(title: String, key: String, minimum: float, maximum: f
     return row
 
 func close_shop() -> void:
-    _shop_scrim.visible = false
-    _shop_card.visible = false
+    _retire_panel()
     shop_closed.emit()
 
 func close_journal() -> void:
-    _shop_scrim.visible = false
-    _shop_card.visible = false
+    _retire_panel()
     journal_closed.emit()
 
 func close_settings() -> void:
-    _shop_scrim.visible = false
-    _shop_card.visible = false
+    _retire_panel()
     settings_closed.emit()
 
 ## Hide every scrim this class owns, plus the menu's. Raising one scrim from

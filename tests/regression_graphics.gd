@@ -149,20 +149,7 @@ func _check_no_particle_writes_a_color_it_cannot_draw() -> void:
         "expected the mote and burst emitters, found %d" % emitters.size())
     var mismatched: Array[String] = []
     for emitter in emitters:
-        var mesh := emitter.draw_pass_1 as Mesh
-        if mesh == null:
-            continue
-        var material := mesh.material as StandardMaterial3D
-        if material == null:
-            continue
-        var process := emitter.process_material as ParticleProcessMaterial
-        if process == null:
-            continue
-        var draws_vertex_color: bool = material.vertex_color_use_as_albedo
-        var writes_process_color: bool = process.color != default_color
-        if writes_process_color != draws_vertex_color:
-            mismatched.append("amount=%d draws_vertex=%s writes_process_color=%s" % [
-                int(emitter.amount), str(draws_vertex_color), str(writes_process_color)])
+        _particle_color_mismatch(emitter, default_color, mismatched)
     if mismatched.size() > 0:
         print("GRAPHICS_PARTICLE_COLOR_MISMATCH %s" % str(mismatched))
     ok(mismatched.is_empty(),
@@ -214,21 +201,8 @@ func _check_no_particle_writes_a_color_it_cannot_draw() -> void:
         if not node is GPUParticles3D:
             continue
         var emitter := node as GPUParticles3D
-        var mesh := emitter.draw_pass_1 as Mesh
-        if mesh == null:
-            continue
-        var material := mesh.material as StandardMaterial3D
-        if material == null:
-            continue
-        var process := emitter.process_material as ParticleProcessMaterial
-        if process == null:
-            continue
-        floor_checked += 1
-        var draws_vertex_color: bool = material.vertex_color_use_as_albedo
-        var writes_process_color: bool = process.color != default_color
-        if writes_process_color != draws_vertex_color:
-            floor_mismatched.append("amount=%d draws_vertex=%s writes_process_color=%s" % [
-                int(emitter.amount), str(draws_vertex_color), str(writes_process_color)])
+        if _particle_color_mismatch(emitter, default_color, floor_mismatched):
+            floor_checked += 1
     ok(floor_checked >= 2,
         "expected the floor's mote and leaf emitters, found %d" % floor_checked)
     if floor_mismatched.size() > 0:
@@ -239,3 +213,24 @@ func _check_no_particle_writes_a_color_it_cannot_draw() -> void:
 
     world.queue_free()
     await frames(1)
+
+## The particle-color class rule, stated once: a process material that writes a
+## per-particle color needs a draw material set to read it. Appends a line to
+## `mismatches` when an emitter breaks the rule; returns whether the emitter
+## was checkable at all (a caller counting checked emitters uses the boolean).
+func _particle_color_mismatch(emitter: GPUParticles3D, default_color: Color, mismatches: Array[String]) -> bool:
+    var mesh := emitter.draw_pass_1 as Mesh
+    if mesh == null:
+        return false
+    var material := mesh.material as StandardMaterial3D
+    if material == null:
+        return false
+    var process := emitter.process_material as ParticleProcessMaterial
+    if process == null:
+        return false
+    var draws_vertex_color: bool = material.vertex_color_use_as_albedo
+    var writes_process_color: bool = process.color != default_color
+    if writes_process_color != draws_vertex_color:
+        mismatches.append("amount=%d draws_vertex=%s writes_process_color=%s" % [
+            int(emitter.amount), str(draws_vertex_color), str(writes_process_color)])
+    return true

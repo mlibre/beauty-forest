@@ -1,6 +1,11 @@
 class_name CozyMinimap
 extends Control
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const CozyMaterials := preload("res://scripts/cozy_materials.gd")
+
 const MAP_MARGIN := 9.0
 ## Half a pixel of the grove texture is blitted past its rect on every side to
 ## keep neighbouring cells from showing a seam at non-integer scales.
@@ -37,7 +42,7 @@ func set_markers(value: Array[Dictionary]) -> void:
 
 func _draw() -> void:
     var background := Color("#15281e") if high_contrast else Color(0.10, 0.20, 0.14, 0.84)
-    draw_style_box(_style(background, Color("#ffe7a0"), 12, 2), Rect2(Vector2.ZERO, size))
+    draw_style_box(CozyMaterials.plate(background, Color("#ffe7a0"), 12, 2), Rect2(Vector2.ZERO, size))
     if dungeon.is_empty():
         return
     var width := int(dungeon["width"])
@@ -92,10 +97,3 @@ func _map_layout(width: int, height: int) -> Dictionary:
     var origin := map_area.position + (map_area.size - map_size) * 0.5
     return {"scale": scale, "map_size": map_size, "origin": origin}
 
-func _style(fill: Color, border: Color, radius: int, border_width: int) -> StyleBoxFlat:
-    var style := StyleBoxFlat.new()
-    style.bg_color = fill
-    style.border_color = border
-    style.set_border_width_all(border_width)
-    style.set_corner_radius_all(radius)
-    return style

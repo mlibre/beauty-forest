@@ -1,6 +1,11 @@
 class_name CozyVFX
 extends RefCounted
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const CozyMaterials := preload("res://scripts/cozy_materials.gd")
+
 ## Lightweight procedural GPU particles and impact rings. Every effect is
 ## warm, readable, and disposable; no effect is allowed to move the camera.
 
@@ -36,15 +41,7 @@ static func burst(parent: Node, world_position: Vector3, color: Color, amount: i
     mesh.height = 0.09
     mesh.radial_segments = 6
     mesh.rings = 3
-    var material := StandardMaterial3D.new()
-    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-    material.albedo_color = color
-    material.emission_enabled = true
-    material.emission = Color(color.r, color.g, color.b)
-    material.emission_energy_multiplier = 2.8
-    mesh.material = material
+    mesh.material = CozyMaterials.emissive(color, 2.8, true)
     particles.draw_pass_1 = mesh
 
     parent.add_child(particles)
@@ -79,14 +76,7 @@ static func ring(parent: Node, world_position: Vector3, color: Color, final_radi
     mesh.outer_radius = final_radius
     mesh.rings = 40
     mesh.ring_segments = 8
-    var material := StandardMaterial3D.new()
-    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-    material.albedo_color = color
-    material.emission_enabled = true
-    material.emission = color
-    material.emission_energy_multiplier = 2.2
+    var material := CozyMaterials.emissive(color, 2.2, true)
     material.cull_mode = BaseMaterial3D.CULL_DISABLED
     mesh.material = material
 

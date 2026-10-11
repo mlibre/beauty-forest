@@ -304,6 +304,34 @@ func newest_line_mentioning(log: Label, needle: String) -> String:
                         return haystack[i]
         return fallback
 
+## Restore a file to the state a fixture found it in: put the old bytes back,
+## or delete a file the fixture created. Both data suites once carried this
+## trio, and a fix to one was silently missing from the other.
+func restore_file(path: String, existed: bool, contents: PackedByteArray) -> void:
+        if existed:
+                var file := FileAccess.open(path, FileAccess.WRITE)
+                if file != null:
+                        file.store_buffer(contents)
+                        file.flush()
+        elif FileAccess.file_exists(path):
+                DirAccess.remove_absolute(path)
+
+## Write a JSON fixture file.
+func write_json(path: String, value: Dictionary) -> void:
+        var file := FileAccess.open(path, FileAccess.WRITE)
+        if file == null:
+                ok(false, "could not write fixture %s" % path)
+                return
+        file.store_string(JSON.stringify(value, "  "))
+        file.flush()
+
+## Remove a path whether it is a file or a directory.
+func remove_path(path: String) -> void:
+        if DirAccess.dir_exists_absolute(path):
+                DirAccess.remove_absolute(path)
+        elif FileAccess.file_exists(path):
+                DirAccess.remove_absolute(path)
+
 ## Finish a suite: the OK line, the profile teardown and the teardown of the
 ## scene under test. Order matters -- TestProfile.end() must come before quit()
 ## or the throwaway directory is left behind.
