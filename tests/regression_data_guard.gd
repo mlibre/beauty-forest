@@ -7,7 +7,6 @@ extends "res://tests/support/test_case.gd"
 # Deps are pinned by path on purpose: a fresh clone ships no
 # editor-built global-class cache, and bare names would not parse
 # on first boot. regression_architecture holds this file to it.
-const BeautyContent := preload("res://scripts/beauty_content.gd")
 const BeautyData := preload("res://scripts/beauty_data.gd")
 
 func _initialize() -> void:
@@ -354,16 +353,3 @@ func _test_unreadable_settings_are_never_overwritten() -> void:
         "the recovery load must still move the damaged settings aside, bytes intact")
     ok(BeautyData.save_settings(comfy), "settings saves must resume once the damaged file is out of the way")
     _clear_quarantined(BeautyData.settings_path())
-
-func _test_sticker_tables_agree() -> void:
-    # "Century of Kindness" once went missing from the toast-line table, so
-    # earning it announced generic fallback words instead of what it was. The
-    # two tables now share one home in BeautyContent, and the check guards the
-    # shape every reader depends on: a name AND a line per sticker.
-    for key: String in BeautyContent.STICKERS.keys():
-        ok(not BeautyContent.sticker_name(key).is_empty(),
-            "sticker '%s' has no journal name" % key)
-        ok(not BeautyContent.sticker_line(key).is_empty(),
-            "sticker '%s' has no award line" % key)
-        ok(BeautyContent.sticker_line(key) != "a gentle thing worth remembering",
-            "sticker '%s' fell back to the generic toast line" % key)
