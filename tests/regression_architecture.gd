@@ -38,6 +38,9 @@ var _files: Array[String] = []
 func _run() -> void:
         _collect("res://scripts")
         _collect("res://tests")
+        # The audit probes are user-facing tools the docs tell people to run;
+        # they parse under the same cold-boot rules and were invisible here.
+        _collect("res://_audit")
         ok(_files.size() > 40, "script census found only %d files" % _files.size())
         # Pass one: inventory every class_name before any checking, so a file
         # checked early still knows about classes declared later in the walk.

@@ -8,6 +8,10 @@ extends SceneTree
 # checks that the shipped GDScript agrees, because a model can be right about a
 # curve the code does not actually implement.
 
+# Pinned by path: a cold boot has no class cache, and a bare RunBoons would
+# not parse -- the same rule regression_architecture holds every file to.
+const RunBoons := preload("res://scripts/run_boons.gd")
+
 func _initialize() -> void:
 	var packed: PackedScene = load("res://scenes/main.tscn")
 	var game: Node = packed.instantiate()

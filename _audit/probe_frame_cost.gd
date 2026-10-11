@@ -9,6 +9,11 @@ extends SceneTree
 ## once (hence its "(all)" label). At floor 40 that reads ~800us, i.e. under a
 ## millisecond against a 16667us frame, so the walk has ~95% of its frame left.
 
+# Pinned by path: a cold boot has no class cache, and a bare Wisp type
+# annotation would not parse -- the same rule regression_architecture holds
+# every file to.
+const Wisp := preload("res://scripts/wisp.gd")
+
 func _initialize() -> void:
 	call_deferred("_run")
 
