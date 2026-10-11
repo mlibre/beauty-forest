@@ -37,6 +37,8 @@ func _run() -> void:
         return
     if not await _check_the_walk_continues_past_a_finale(game):
         return
+    if not await _check_the_socket_row_stays_on_screen(game):
+        return
 
     finish(game, "BEAUTY_FOREST_GROWTH")
 
@@ -276,6 +278,35 @@ func _check_endless_floors_build(game: Node) -> bool:
             feeling_wisps += 1
     if not ok(feeling_wisps == 1, "endless floor 17 hosts %d Big Feelings" % feeling_wisps):
         return false
+    return true
+
+func _check_the_socket_row_stays_on_screen(game: Node) -> bool:
+    ## Capacity opens one socket per floor forever, and the vitals strip used
+    ## to paint one empty outline per open socket: a floor-60 walk drew a
+    ## 60-socket ruler that ran off the right edge of the screen. "Room to
+    ## grow" is a message, not an inventory readout -- deep walks must bound
+    ## the empty outlines while never hiding a worn ware.
+    game._start_run(1)
+    await frames(6)
+    game.charms_equipped.append({"key": "ember", "tier": 1})
+    game.floor_number = 60
+    game._refresh_ui()
+    await frames(2)
+    var vitals: Control = game.ui._vitals
+    var expected_worn: int = game.charms_equipped.size() + game.stanzas_equipped.size()
+    if not ok(vitals.slot_capacity >= expected_worn,
+            "a deep walk hid a worn ware from the strip: %d sockets for %d worn" % [vitals.slot_capacity, expected_worn]):
+        return false
+    if not ok(vitals.slot_capacity < game.loadout_capacity(),
+            "the strip painted every open socket at depth %d (%d sockets) -- the ruler is back" % [game.floor_number, vitals.slot_capacity]):
+        return false
+    var width := float(vitals.custom_minimum_size.x)
+    if not ok(width < 560.0,
+            "the deep-walk socket plate is %.0f px wide -- wider than a portrait phone" % width):
+        return false
+    game.floor_number = 1
+    game._refresh_ui()
+    await frames(2)
     return true
 
 func _check_the_walk_continues_past_a_finale(game: Node) -> bool:

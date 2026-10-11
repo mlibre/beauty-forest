@@ -17,6 +17,13 @@ const RING_THICKNESS := 7.0
 const RING_START := -PI * 0.5
 const SLOT_SIZE := 30.0
 const SLOT_GAP := 5.0
+## How many empty outlines the strip will paint. Capacity opens a socket per
+## floor forever; painting every open one made a deep walk draw a ruler that
+## ran off the right edge of the screen. Twelve keeps the whole first
+## campaign pixel-identical to the unbounded row; past that the message
+## "room to grow" is carried by the bounded row, and the pause card names
+## the exact depth. Worn wares are never hidden.
+const MAX_EMPTY_SOCKETS := 12
 const SLOT_ORIGIN := Vector2(14.0, 76.0)
 const PLATE_PAD := 14.0
 const MIN_PLATE := Vector2(150.0, 78.0)
@@ -66,7 +73,9 @@ func set_values(state: Dictionary) -> void:
 	for key: String in equipped:
 		if key.begins_with(GardenGlyphs.STANZA_PREFIX):
 			worn_songs += 1
-	slot_capacity = maxi(maxi(int(state.get("capacity", 1)) + worn_songs, equipped.size()), 1)
+	var room := maxi(0, int(state.get("capacity", 1)) + worn_songs - equipped.size())
+	slot_capacity = equipped.size() + mini(room, MAX_EMPTY_SOCKETS)
+	slot_capacity = maxi(slot_capacity, 1)
 	_resize_plate()
 	queue_redraw()
 
