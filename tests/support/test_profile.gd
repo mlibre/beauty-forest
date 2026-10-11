@@ -44,7 +44,10 @@ static func _sweep_stale(max_age_usec: int = 3600 * 1000000) -> void:
 			var file := entry.get_file()
 			var split := file.rfind("_")
 			var stamp := int(file.substr(split + 1)) if split >= 0 else 0
-			if dir.current_is_dir() and stamp > 0 and now - stamp > max_age_usec:
+			# abs() because the stamp is a per-boot monotonic reading: a directory
+			# left over from a PREVIOUS session has a stamp in this session's
+			# future, and a signed difference would keep it alive forever.
+			if dir.current_is_dir() and stamp > 0 and abs(now - stamp) > max_age_usec:
 				_remove_recursive(path)
 		entry = dir.get_next()
 	dir.list_dir_end()

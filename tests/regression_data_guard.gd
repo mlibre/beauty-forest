@@ -19,6 +19,40 @@ func _run() -> void:
     await _test_a_failed_save_is_visible_to_the_player()
     await _test_unreadable_satchel_is_never_overwritten()
     await _test_unreadable_settings_are_never_overwritten()
+    await _sweep_removes_even_pre_reboot_leftovers()
+func _sweep_removes_even_pre_reboot_leftovers() -> void:
+    ## The stale-profile sweep keyed staleness on `now - stamp > max_age` with
+    ## Time.get_ticks_usec(), which resets every boot: a directory created late
+    ## in a long session looks, after a reboot, like a stamp in the FUTURE, so
+    ## its age went negative and the sweep kept it forever. Age must be read
+    ## as a distance, not a direction.
+    var root := "user://test_profiles"
+    DirAccess.make_dir_recursive_absolute(root)
+    # A fresh headless process is well under a second old, so no real stamp
+    # can be genuinely old yet: the past case uses the smallest honest stamp
+    # (1 microsecond) against a one-MILLISECOND budget, and the future case
+    # stamps two hours ahead -- exactly what a leftover from a previous
+    # session looks like after Time.get_ticks_usec() resets at boot.
+    var now := Time.get_ticks_usec()
+    var past := "%s/guardpast_1" % root
+    var future := "%s/guardfuture_%d" % [root, now + 2 * 3600 * 1000000]
+    for path in [past, future]:
+        DirAccess.make_dir_recursive_absolute(path)
+        var marker := FileAccess.open(path + "/keep.json", FileAccess.WRITE)
+        if marker:
+            marker.store_string("{}")
+            marker.close()
+    TestProfile._sweep_stale(1000)
+    # The one-millisecond budget sweeps THIS suite's own throwaway profile
+    # too (it is seconds old); re-establish it so finish() below still pairs
+    # its teardown with a live directory.
+    TestProfile.begin("data_guard")
+    for pair in [["a pre-reboot leftover", future], ["an old-stamp leftover", past]]:
+        if not ok(not FileAccess.file_exists("%s/keep.json" % pair[1]) and not DirAccess.dir_exists_absolute(pair[1]),
+                "the sweep kept %s alive (%s)" % [pair[0], pair[1]]):
+            TestProfile._remove_recursive(future)
+            TestProfile._remove_recursive(past)
+            return
     finish(null, "BEAUTY_FOREST_DATA_GUARD")
 
 func _test_the_save_guard_refuses_a_damaged_satchel() -> void:
