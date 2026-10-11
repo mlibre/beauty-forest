@@ -216,6 +216,11 @@ func _centered_label(text: String, size: int, color: Color) -> Label:
     var label := _label(text, size, color)
     label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    if size >= 24:
+        # Big headings sit over a bright, sunlit 3D forest; without a warm-dark
+        # outline they wash out against the sky and the gold lantern light.
+        label.add_theme_color_override("font_outline_color", Color(0.14, 0.10, 0.05, 0.85))
+        label.add_theme_constant_override("outline_size", maxi(4, size / 6))
     return label
 
 func _centered_button(text: String, primary: bool, callback: Callable) -> CenterContainer:

@@ -169,7 +169,7 @@ func _unhandled_input(event: InputEvent) -> void:
         if _near_merchant():
             _open_shop()
         else:
-            ui.add_log("Mote: “Peddle parks the cart on the 2nd, 4th, 7th, and 10th floor of every thirteen-floor stretch. Keep wandering!”")
+            ui.show_toast("Peddle parks on floors 2 · 4 · 7 · 10 of every thirteen-floor stretch.", 3.4)
         get_viewport().set_input_as_handled()
     elif event.is_action_pressed("bf_journal"):
         _open_journal()
@@ -188,6 +188,13 @@ func _process(delta: float) -> void:
         if _mote_line_timer <= 0.0:
             _mote_line = String(BeautyContent.random_choice(BeautyLore.MOTE_LINES))
             _mote_line_timer = _rng.randf_range(24.0, 36.0)
+            # Mote's idle chatter was picked on this timer for a whole
+            # generation of walks and then delivered nowhere: the only reader
+            # of _mote_line was the descend announcement, so her thirty lines
+            # of personality never reached a single player. She speaks on the
+            # story card now -- the same transient moment the floor vignettes
+            # use, never a permanent sentence over the walk.
+            ui.show_story("Mote ✦", _mote_line, 3.4)
         if play_seconds >= _next_petal_shower:
             _next_petal_shower = play_seconds + _rng.randf_range(34.0, 58.0)
             CozyVFX.burst(world, player.global_position + Vector3(0, 3.2, 0), Color(region["flower"]), 42, 1.25, 2.4)
@@ -271,6 +278,8 @@ func _start_run(start_floor: int, keep_progress: bool = false) -> void:
         pending_boons = 0
         _draft_offers = []
         boon_effects = {}
+        fresh_facts.clear()
+        _lantern_taught = false
         play_seconds = 0.0
         hp_max = 100.0 + (15.0 if selected_style == "gentle" else 0.0)
         level_hp_bonus = 0.0
@@ -313,7 +322,7 @@ func _touch_shop() -> void:
     if mode == Mode.PLAYING and _near_merchant():
         _open_shop()
     elif mode == Mode.PLAYING:
-        ui.add_log("Mote: “Peddle parks the cart on the 2nd, 4th, 7th, and 10th floor of every thirteen-floor stretch. Keep wandering!”")
+        ui.show_toast("Peddle parks on floors 2 · 4 · 7 · 10 of every thirteen-floor stretch.", 3.4)
 
 func _pause_game() -> void:
     if mode != Mode.PLAYING:

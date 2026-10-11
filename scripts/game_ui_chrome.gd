@@ -70,6 +70,11 @@ func _build_interface() -> void:
     _toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _toast_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
     _toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    # The toast is the one voice that speaks over a walk; it crosses sunbeams,
+    # gold light and pale blossoms, so it wears the same warm-dark outline as
+    # the big headings.
+    _toast_label.add_theme_color_override("font_outline_color", Color(0.14, 0.10, 0.05, 0.85))
+    _toast_label.add_theme_constant_override("outline_size", 4)
     _toast_label.modulate.a = 0.0
     _hud.add_child(_toast_label)
 

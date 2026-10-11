@@ -155,10 +155,12 @@ func show_menu(meta: Dictionary) -> void:
     _focus_control(start_button)
 
 ## The level-up draft: Mote offers three gifts as three big glyph cards.
-## A card is a picture first -- the glyph says what it is, one word says the
-## shape of the gift, and the exact figure rides on the hover, where a player
-## who wants it can find it. The walk waits; nothing here hurries.
-func show_draft(offers: Array, level: int) -> void:
+## A card is a picture AND its meaning at once: the glyph, the gift's name,
+## and one line saying exactly what it does, all on the face. The figure used
+## to live on a desktop-only hover, which made the whole choice unreadable on
+## a phone; now nothing important needs a hover. The walk waits; nothing here
+## hurries.
+func show_draft(offers: Array, level: int, fact: String = "") -> void:
     _dismiss_beat_ring()
     _cancel_story()
     _reset_touch_joystick()
@@ -167,30 +169,40 @@ func show_draft(offers: Array, level: int) -> void:
     set_text_chrome_visible(true)
     _show_overlay()
     _overlay_content.add_child(_centered_label("Level %d — Mote offers three gifts" % level, 34, Color("#ffe6a0")))
+    if not fact.is_empty():
+        _overlay_content.add_child(_centered_label("Mote learned: “%s”" % fact, 15, Color("#cbdcb7")))
     _overlay_content.add_child(_spacer(8))
     var cards := HBoxContainer.new()
     cards.alignment = BoxContainer.ALIGNMENT_CENTER
     cards.add_theme_constant_override("separation", 16)
     for index in range(offers.size()):
         var offer: Dictionary = offers[index]
+        var column := VBoxContainer.new()
+        column.add_theme_constant_override("separation", 4)
         var card := _button(String(offer.get("word", "a gift")), index == 0)
-        card.custom_minimum_size = Vector2(176, 128)
+        card.custom_minimum_size = Vector2(176, 118)
         card.icon = GardenGlyphs.get_glyph(String(offer.get("glyph", GardenGlyphs.HEART)))
         card.expand_icon = true
         card.add_theme_constant_override("icon_max_width", 56)
-        card.tooltip_text = "%s  ·  press %d" % [String(offer.get("hint", "")), index + 1]
+        card.tooltip_text = "%s  ·  press %d" % [String(offer.get("sub", "")), index + 1]
         var pick := func(): boon_picked.emit(String(offer.get("key", "")))
         card.pressed.connect(pick)
-        cards.add_child(card)
+        column.add_child(card)
+        var effect_label := _label(String(offer.get("sub", "")), 14, Color("#d8e6c0"))
+        effect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        effect_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        effect_label.custom_minimum_size = Vector2(176, 0)
+        column.add_child(effect_label)
+        cards.add_child(column)
         # Each gift arrives a breath after the last, so the draft reads as
         # Mote dealing three cards rather than three things popping at once.
         if not _reduced_motion:
-            card.modulate.a = 0.0
-            var arrive := card.create_tween()
-            arrive.tween_property(card, "modulate:a", 1.0, 0.24).set_delay(0.08 + index * 0.07) \
+            column.modulate.a = 0.0
+            var arrive := column.create_tween()
+            arrive.tween_property(column, "modulate:a", 1.0, 0.24).set_delay(0.08 + index * 0.07) \
                 .set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
     _overlay_content.add_child(cards)
-    _overlay_content.add_child(_centered_label("The forest waits. Pick whichever feels right.", 15, Color("#cbdcb7")))
+    _overlay_content.add_child(_centered_label("The forest waits — tap a card, or press 1 · 2 · 3.", 15, Color("#cbdcb7")))
     _fit_layout()
     _focus_first_enabled(_overlay_content)
 
@@ -232,21 +244,25 @@ func show_pause(meta: Dictionary) -> void:
 ## window, so the pause card grew to 533px and hung 26px off the left edge. The
 ## rows autowrap and the responsive pass clamps them to the card instead.
 func _walker_summary() -> Control:
+    # Every row NAMES its figure now. The glyphs carry the shape, but a glyph
+    # alone taught the vocabulary only to players who already knew it: "warmth"
+    # and "song" are this game's own nouns for health and damage, and the pause
+    # card is the one place a player reads on purpose, so the words live here.
     var rows: Array = [
-    		[GardenGlyphs.LANTERN, "%d / %d" % [_walker_hp, _walker_hp_max]],
-    		[GardenGlyphs.SOUL, "%d  ·  %d / %d" % [_walker_level, _walker_xp, _walker_xp_next]],
-    		[GardenGlyphs.CHIME, "%d" % _walker_song],
-    		# Sparkles live here now because this is their only home. They used to
-    		# be spoken only by the corner card this block replaced, and deleting
-    		# that card without adding the row took the player's spending money off
-    		# every screen that could show it.
-    		[GardenGlyphs.SPARKLE, "%d" % _walker_sparkles],
-    	]
+                [GardenGlyphs.LANTERN, "Warmth %d / %d" % [_walker_hp, _walker_hp_max]],
+                [GardenGlyphs.SOUL, "Level %d  ·  %d / %d soul to next" % [_walker_level, _walker_xp, _walker_xp_next]],
+                [GardenGlyphs.CHIME, "Song power %d" % _walker_song],
+                # Sparkles live here now because this is their only home. They used to
+                # be spoken only by the corner card this block replaced, and deleting
+                # that card without adding the row took the player's spending money off
+                # every screen that could show it.
+                [GardenGlyphs.SPARKLE, "Sparkles %d" % _walker_sparkles],
+        ]
     # Depth: a stair glyph and the floor, because the floor's name is the only
     # part no picture carries. The forecast that used to sit in the corner card
     # as a sentence nothing ever updated lives here instead, once.
     if not _walker_region.is_empty():
-        rows.append([GardenGlyphs.STAIRS, "%d  ·  %s" % [_walker_floor, _walker_region]])
+        rows.append([GardenGlyphs.STAIRS, "Floor %d  ·  %s" % [_walker_floor, _walker_region]])
         if not _walker_forecast.is_empty():
             rows.append([GardenGlyphs.MOTE, _walker_forecast])
     if not _walker_objective.is_empty():

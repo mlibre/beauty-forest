@@ -10,27 +10,32 @@ extends "res://scripts/run_shop.gd"
 ## What the next level-up offers. `effect` entries use the charm schema and
 ## fold into the run's charm_effects (multipliers compound, additions add),
 ## so a boon stacks with wares exactly the way a second ware would.
+## Every gift's "sub" is the line the card shows on its face. The old cards
+## were one cozy word -- "Warmer" -- with the actual figure on a desktop hover,
+## so a touch player picked between three unexplained words and "warmth" stayed
+## vocabulary you had to guess at. Now the word says the shape of the gift and
+## the sub says exactly what it does, in the game's own nouns.
 const BOON_POOL := [
-    {"key": "warmth", "glyph": GardenGlyphs.HEART, "word": "Warmer",
-        "weight": 30, "hint": "+20 max warmth, filled now"},
-    {"key": "song", "glyph": GardenGlyphs.CHIME, "word": "Brighter",
-        "weight": 30, "hint": "+4 song power"},
-    {"key": "both", "glyph": GardenGlyphs.SOUL, "word": "Both",
-        "weight": 22, "hint": "+10 warmth and +2 song"},
-    {"key": "swift", "glyph": "boots", "word": "Swifter",
-        "weight": 16, "min_floor": 3, "hint": "walk 6% swifter this run",
+    {"key": "warmth", "glyph": GardenGlyphs.HEART, "word": "More Warmth",
+        "weight": 30, "sub": "+20 lantern warmth, fills now"},
+    {"key": "song", "glyph": GardenGlyphs.CHIME, "word": "Stronger Song",
+        "weight": 30, "sub": "+4 song power, soothes faster"},
+    {"key": "both", "glyph": GardenGlyphs.SOUL, "word": "A Bit of Both",
+        "weight": 22, "sub": "+10 warmth and +2 song"},
+    {"key": "swift", "glyph": "boots", "word": "Swifter Steps",
+        "weight": 16, "min_floor": 3, "sub": "walk 6% swifter this run",
         "effect": {"speed": 1.06}},
-    {"key": "lantern", "glyph": "ember", "word": "Farther",
-        "weight": 16, "min_floor": 3, "hint": "song-notes fly 8% farther",
+    {"key": "lantern", "glyph": "ember", "word": "Farther Notes",
+        "weight": 16, "min_floor": 3, "sub": "song-notes fly 8% farther",
         "effect": {"note_range": 1.08}},
-    {"key": "kind", "glyph": "honey", "word": "Kindlier",
-        "weight": 14, "min_floor": 5, "hint": "each heart restores +4 warmth",
+    {"key": "kind", "glyph": "honey", "word": "Kindlier Hearts",
+        "weight": 14, "min_floor": 5, "sub": "each heart heals +4 more warmth",
         "effect": {"heart_heal": 4}},
-    {"key": "gleaner", "glyph": "dandelion", "word": "Nearer",
-        "weight": 14, "min_floor": 5, "hint": "hearts find you from 8% farther",
+    {"key": "gleaner", "glyph": "dandelion", "word": "Nearer Hearts",
+        "weight": 14, "min_floor": 5, "sub": "hearts find you from 8% farther",
         "effect": {"pickup": 1.08}},
-    {"key": "ward", "glyph": "moss", "word": "Softer",
-        "weight": 14, "min_floor": 5, "hint": "bumps hurt 5% less",
+    {"key": "ward", "glyph": "moss", "word": "Softer Bumps",
+        "weight": 14, "min_floor": 5, "sub": "bumps hurt 5% less",
         "effect": {"damage_taken": 0.95}},
 ]
 const BOON_MULTIPLIER_FIELDS := ["speed", "note_range", "pickup", "damage_taken"]
@@ -75,7 +80,12 @@ func _open_draft() -> void:
     mode = Mode.DRAFT
     _set_world_processing(false)
     player.set_control_enabled(false)
-    ui.show_draft(_draft_offers, level)
+    # The level's freshly learned fact rides its own card: the draft is the one
+    # moment the player is already sitting still and reading.
+    var fact := ""
+    if not fresh_facts.is_empty():
+        fact = String(fresh_facts.pop_front())
+    ui.show_draft(_draft_offers, level, fact)
 
 ## Three distinct gifts, weighted, from everything this depth has unlocked.
 func _roll_offers() -> Array:
@@ -146,7 +156,7 @@ func _apply_boon(boon: Dictionary) -> void:
                 elif field in BOON_ADDITION_FIELDS:
                     boon_effects[field] = float(boon_effects.get(field, 0.0)) + float(effect[field])
             _recalculate_loadout(false)
-    ui.add_log("Mote: “%s — a lovely pick.”" % String(boon.get("hint", "A gift from the forest")))
+    ui.add_log("Mote: “%s — a lovely pick.”" % String(boon.get("sub", "A gift from the forest")))
 
 func _grant_warmth_boon() -> void:
     level_hp_bonus += 20.0

@@ -118,15 +118,16 @@ func _run() -> void:
         var settings_seen := _report("SETTINGS", ui._shop_content)
 
         # The level-up draft is a screen the player sees every level of every run,
-        # so it gets a budget like every other one. Its text is one heading, three
-        # one-word cards and one closing line; the exact figures live on hovers,
-        # which the census does not count (a hover is read on purpose).
+        # so it gets a budget like every other one. Its text is one heading, one
+        # freshly learned fact, three cards that now carry their effect ON THE
+        # FACE (the old figure lived on a desktop-only hover, which is to say it
+        # lived nowhere for a touch player) and one closing line.
         ui.close_panels()
         ui.show_draft([
-                {"key": "warmth", "glyph": "heart", "word": "Warmer", "hint": "+20 max warmth, filled now"},
-                {"key": "song", "glyph": "chime", "word": "Brighter", "hint": "+4 song power"},
-                {"key": "both", "glyph": "soul", "word": "Both", "hint": "+10 warmth and +2 song"},
-        ], 7)
+                {"key": "warmth", "glyph": "heart", "word": "More Warmth", "sub": "+20 lantern warmth, fills now"},
+                {"key": "song", "glyph": "chime", "word": "Stronger Song", "sub": "+4 song power, soothes faster"},
+                {"key": "both", "glyph": "soul", "word": "A Bit of Both", "sub": "+10 warmth and +2 song"},
+        ], 7, "A group of jellyfish called themselves a parliament.")
         await _frames(4)
         var draft_seen := _report("DRAFT", ui._root)
 
@@ -244,11 +245,12 @@ const BUDGETS := {
         "ENDING": 240,
         "JOURNAL": 380,
         "SETTINGS": 320,
-        # DRAFT's own words are one heading, three one-word cards and one closing
-        # line (~95 chars); like the other _root screens the count includes the
-        # log strip beneath, which carries the run's accrued Mote lines and the
-        # floor's random forecast -- the same variance PAUSE's headroom absorbs.
-        "DRAFT": 420,
+        # DRAFT's own words are one heading, one fact line, three cards that
+        # name themselves AND their effect, and one closing line (~250 chars);
+        # like the other _root screens the count includes the log strip beneath,
+        # which carries the run's accrued Mote lines and the floor's random
+        # forecast -- the same variance PAUSE's headroom absorbs.
+        "DRAFT": 520,
 }
 
 ## Fails loudly if the walk screen is not actually drawn: a census over a hidden

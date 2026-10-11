@@ -54,7 +54,10 @@ func _spawn_boss() -> void:
     var wisp := _new_wisp(cell, "Shambler", floor_number, true)
     wisp.display_name = "The Very Big Wisp \"Chad\""
     wisp.set_meta("attack_cooldown", 1.0)
-    ui.add_log("Mote: “Oh my. That wisp ate one too many sandwiches. Sing when its halo turns GOLD!”")
+    # The one instruction the dragon fight runs on, delivered where it can be
+    # read: it used to land in the hidden log while the halo the sentence
+    # describes was already on screen.
+    ui.add_cue("Sing when its halo turns GOLD!")
 
 func _spawn_feeling(feeling: Dictionary, story: int) -> void:
     var base_types := ["Shambler", "Crawler", "Warden"]
@@ -63,7 +66,9 @@ func _spawn_feeling(feeling: Dictionary, story: int) -> void:
     var cell := DungeonGenerator.random_floor_cell(dungeon, _rng, Vector2(spawn_room["cx"], spawn_room["cy"]), 7.0)
     var wisp := _new_wisp(cell, base_types[base_index], floor_number, true, feeling)
     wisp.set_meta("attack_cooldown", 0.8)
-    ui.add_log("Mote: “A Big Feeling. Not a monster — just one feeling wearing a very big coat.”")
+    # A Big Feeling's entrance is a story beat, not a log line: the card names
+    # it gently the moment it appears, the same way floor vignettes do.
+    ui.show_story("A Big Feeling", "Not a monster — just one feeling wearing a very big coat.", 3.6)
 
 func _refresh_wisp_shields() -> void:
     for wisp: Wisp in wisps:
@@ -178,7 +183,7 @@ func _do_pulse(target: Wisp, radius: float) -> void:
             # here quietly skipped that whole designed moment and still paid
             # out the "sat with a Big Feeling" sticker.
             if randf() < 0.15:
-                ui.add_log("Mote: “The lantern hums gentle around the Big Feeling. It needs your voice, not a push.”")
+                ui.add_cue("sing with it — press E nearby")
             continue
         if wisp.global_position.distance_to(origin) > radius:
             continue
@@ -403,6 +408,12 @@ func _damage_player(amount: int, source: String) -> void:
     # not carry the sentence that used to dress it up.
     ui.add_cue("−%d warmth" % taken)
     ui.add_log("%s nicks you for %d. The lantern hums protectively." % [source, taken])
+    # The first bump gets one quiet lesson, because the lantern dims in the
+    # world but the word "warmth" is only ever spoken on screens. Once per
+    # fresh walk; never again.
+    if not _lantern_taught:
+        _lantern_taught = true
+        ui.show_story("Your lantern dims", "Warmth is its light — hearts and stairwells refill it.", 4.2)
     _refresh_ui()
     if hp <= 0.0:
         _nap()

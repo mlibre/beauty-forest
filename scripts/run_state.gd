@@ -21,7 +21,8 @@ const Wisp := preload("res://scripts/wisp.gd")
 ## Run state, player profile progression and the HUD feed for one walk: the
 ## numbers that make a run and the world marker that says where to go next.
 ## The director wires this up in main.gd; Peddle's cart extends this in
-## RunShop, combat in RunCombat and floor construction in RunWorld.
+## RunShop, the level-up draft in RunBoons, combat in RunCombat and floor
+## construction in RunWorld.
 
 enum Mode { MENU, PLAYING, PAUSED, DRAFT, SHOP, JOURNAL, SETTINGS, DEAD, ENDING }
 
@@ -80,6 +81,14 @@ var charm_effects: Dictionary = {}
 var stanza_effects: Dictionary = {}
 var verse_effects: Dictionary = {}
 var hit_this_floor := false
+## The one-time lantern lesson: the first bump shows a short story card naming
+## warmth for what it is, because the lantern dims in the world but the WORD
+## "warmth" is only ever spoken on screens. Cleared on a fresh walk.
+var _lantern_taught := false
+## Facts learned since the last draft card. Mote used to write every fact into
+## the hidden log strip, so the Learning promise landed where nobody reads;
+## now each fresh fact rides its next level-up card and is spoken out loud.
+var fresh_facts: Array = []
 var play_seconds := 0.0
 var pulse_cooldown := 0.0
 var note_cooldown := 0.0
@@ -217,6 +226,7 @@ func _learn_fact(reason: String, counts_toward_finder: bool = false) -> void:
     var fact: String = available[learned.size() % available.size()]
     learned.append(fact)
     meta["facts_learned"] = learned
+    fresh_facts.append(fact)
     # `facts` is the number of facts in the book, which is what every screen
     # that shows it means: the pause card and the ending tally both print it
     # beside "Fun facts", while the memory book lists facts_learned. They

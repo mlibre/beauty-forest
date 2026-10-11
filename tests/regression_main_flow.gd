@@ -137,13 +137,16 @@ func _run() -> void:
     # floor 15 is a cart floor too and the old line hid it. The hint must
     # describe the cycle the schedule actually runs on.
     game.player.global_position += Vector3(6.0, 0.0, 0.0)
+    # The hint moved from the hidden log strip to the toast, the one voice a
+    # walk actually hears. Clear any queued toast first so the hint is the one
+    # thing on the label when it is read.
+    game.ui.clear_toast()
     game._touch_shop()
-    await frames(1)
-    # The whole strip is the witness, not its last line: a wisp that wanders
-    # into grumble range the same frame lands its line after the hint and
-    # scrolls it off the 4-line tail -- the last-line read flaked on exactly
-    # that race (the log named a Crawler grumble where the hint should be).
-    var shop_strip: String = game.ui._log_label.text
+    await frames(2)
+    # The toast label is the witness, and the hint must be ON it: a toast that
+    # is still queued behind an earlier one would leave the old message up and
+    # the assertion would judge the wrong words.
+    var shop_strip: String = game.ui._toast_label.text
     if not ok("every thirteen-floor stretch" in shop_strip,
             "the not-near-cart hint does not describe the story cycle; Mote's strip said: %s" % shop_strip):
         return
