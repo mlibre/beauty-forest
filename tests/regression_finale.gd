@@ -137,8 +137,20 @@ func _run() -> void:
     game.player.set_control_enabled(true)
 
     # A finale delay belongs to active gameplay, not to modal wall-clock time.
+    # The countdown is parked high so the epilogue state survives the frames
+    # this check needs; the flow below re-arms its own short countdown.
     game.ending_pending = true
+    game.ending_countdown = 30.0
+    # The epilogue keeps Mode.PLAYING while the ending counts down, and Mote's
+    # idle chatter ran on the same PLAYING branch -- a random personality card
+    # could pop straight over the quietest moment in the game.
+    game._mote_line_timer = 0.01
+    await frames(3)
+    var epilogue_was_quiet: bool = not game.ui._story_card.visible
     game.ending_countdown = 0.01
+    if not ok(epilogue_was_quiet,
+            "Mote's idle chatter popped a story card over the finale epilogue"):
+        return
     game._pause_game()
     var paused_countdown: float = game.ending_countdown
     await frames(6)

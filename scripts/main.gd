@@ -186,15 +186,19 @@ func _process(delta: float) -> void:
         invulnerable_time = maxf(0.0, invulnerable_time - delta)
         _mote_line_timer -= delta
         if _mote_line_timer <= 0.0:
-            _mote_line = String(BeautyContent.random_choice(BeautyLore.MOTE_LINES))
             _mote_line_timer = _rng.randf_range(24.0, 36.0)
             # Mote's idle chatter was picked on this timer for a whole
             # generation of walks and then delivered nowhere: the only reader
             # of _mote_line was the descend announcement, so her thirty lines
             # of personality never reached a single player. She speaks on the
             # story card now -- the same transient moment the floor vignettes
-            # use, never a permanent sentence over the walk.
-            ui.show_story("Mote ✦", _mote_line, 3.4)
+            # use, never a permanent sentence over the walk. The finale
+            # epilogue also keeps Mode.PLAYING while its ending counts down;
+            # that is the one moment the walk stays quiet, so the timer
+            # re-arms and says nothing there.
+            if not ending_pending:
+                _mote_line = String(BeautyContent.random_choice(BeautyLore.MOTE_LINES))
+                ui.show_story("Mote ✦", _mote_line, 3.4)
         if play_seconds >= _next_petal_shower:
             _next_petal_shower = play_seconds + _rng.randf_range(34.0, 58.0)
             CozyVFX.burst(world, player.global_position + Vector3(0, 3.2, 0), Color(region["flower"]), 42, 1.25, 2.4)
