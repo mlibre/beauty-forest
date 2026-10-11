@@ -153,6 +153,13 @@ func _unhandled_input(event: InputEvent) -> void:
         _start_run(floor_number + 1, true)
         get_viewport().set_input_as_handled()
         return
+    if mode == Mode.PAUSED and event.is_action_pressed("bf_settings"):
+        # The pause card's own keys line promises "Cozy options: C", and the
+        # card also carries the button -- but the key answered only on the walk
+        # and the title. On the very screen that advertises it, it was dead.
+        _open_settings()
+        get_viewport().set_input_as_handled()
+        return
     if mode != Mode.PLAYING:
         return
     if event.is_action_pressed("bf_interact"):

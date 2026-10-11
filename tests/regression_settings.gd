@@ -27,6 +27,29 @@ func _run() -> void:
         return
     if not await _check_settings_back_button_names_where_it_goes(game):
         return
+
+    # The pause card's own keys line promises "Cozy options: C" -- painted on
+    # the very card where the key answered nothing. The key must open the
+    # panel from the pause card exactly like its button does, and closing it
+    # must hand the pause card back.
+    game._start_run(2)
+    await frames(4)
+    game._pause_game()
+    await frames(3)
+    var pause_key := InputEventKey.new()
+    pause_key.pressed = true
+    pause_key.physical_keycode = KEY_C
+    game._unhandled_input(pause_key)
+    await frames(3)
+    if not ok(game.mode == game.Mode.SETTINGS,
+            "the C key did nothing from the pause card its own keys line advertises it on (mode %d)" % game.mode):
+        return
+    game.ui.settings_closed.emit()
+    await frames(3)
+    if not ok(game.mode == game.Mode.PAUSED,
+            "leaving settings opened from the pause card did not hand the pause card back (mode %d)" % game.mode):
+        return
+
     if not await _check_settings_hands_the_nap_and_ending_cards_back(game):
         return
 
