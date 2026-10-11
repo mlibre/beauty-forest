@@ -1,6 +1,11 @@
 class_name CozyWaypoint
 extends Node3D
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const GardenGlyphs := preload("res://scripts/garden_glyphs.gd")
+
 ## A diegetic "go here" marker, floating in the world over the thing the player
 ## should walk to.
 ##

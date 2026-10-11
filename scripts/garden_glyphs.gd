@@ -1,6 +1,5 @@
 class_name GardenGlyphs
-extends GardenInk
-
+extends "res://scripts/garden_ink.gd"
 ## The game's icon language: one procedurally drawn glyph per concept, so the
 ## HUD can name a thing without a sentence.
 ##
@@ -9,6 +8,11 @@ extends GardenInk
 ## draw loop. Glyphs are keyed by the game's own data (`charm["key"]`,
 ## `stanza["key"]`) plus a handful of HUD words, so adding a charm without a
 ## glyph is a visible miss rather than a blank square.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyContent := preload("res://scripts/beauty_content.gd")
 
 const CACHE_SIZE := 64
 

@@ -1,6 +1,5 @@
 class_name RunShop
-extends RunState
-
+extends "res://scripts/run_state.gd"
 ## Peddle's cart and the loadout: what the hero owns, what each thing is worth,
 ## and which settings the run obeys.
 ##

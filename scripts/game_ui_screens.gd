@@ -1,6 +1,5 @@
 class_name GameUIScreens
-extends GameUIPanels
-
+extends "res://scripts/game_ui_panels.gd"
 ## The animated, joyful screens: menu, pause, nap, ending, the memory book --
 ## the ones that open into the overlay card. The full-screen panels (Peddle's
 ## cart, the gentler-forest options) live one file down, in GameUIPanels.

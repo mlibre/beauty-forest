@@ -1,5 +1,4 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## Floor-level encounters: where Snoozle sleeps, whether a homing song-note
 ## reaches a Very Big Wisp, and whether the forest's ambience comes back after a
 ## dragon is tucked in.
@@ -10,6 +9,12 @@ extends TestCase
 ##
 ## The bodies moved verbatim from regression_main_flow.gd; only the helper names
 ## changed, to the ones on TestCase.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const SongNote := preload("res://scripts/song_note.gd")
+const Wisp := preload("res://scripts/wisp.gd")
 
 func _initialize() -> void:
     suite_name = "BEAUTY_FOREST_ENCOUNTERS"

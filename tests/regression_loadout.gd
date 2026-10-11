@@ -1,5 +1,4 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## Loadout and shop behaviour: what happens when a charm or verse is bought, and
 ## what the cart claims about things nobody owns.
 ##
@@ -13,6 +12,12 @@ extends TestCase
 ## because there is no longer a fixed number of sockets to fill. What replaced
 ## them is the same question asked of a world without a ceiling: does the
 ## loadout keep GROWING, at every depth, with nothing left behind?
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyContent := preload("res://scripts/beauty_content.gd")
+const CozyVitals := preload("res://scripts/cozy_vitals.gd")
 
 func _initialize() -> void:
 	suite_name = "BEAUTY_FOREST_LOADOUT"

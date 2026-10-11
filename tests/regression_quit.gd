@@ -1,5 +1,10 @@
 extends SceneTree
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const TestProfile := preload("res://tests/support/test_profile.gd")
+
 ## Verifies the production shutdown path: a window close request must hush
 ## the audio (blocking new voices), then quit only after the AudioServer can
 ## release its stopped playbacks. Quitting mid-playback leaks

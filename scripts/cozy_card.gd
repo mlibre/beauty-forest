@@ -1,6 +1,11 @@
 class_name CozyCard
 extends Control
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const GardenGlyphs := preload("res://scripts/garden_glyphs.gd")
+
 ## One ware on Peddle's shelf, painted as a picture instead of a sentence.
 ##
 ## A card used to be a row of words: an icon, the name, a status line ("in

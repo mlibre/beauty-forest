@@ -1,6 +1,16 @@
 class_name GameUIState
 extends CanvasLayer
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyContent := preload("res://scripts/beauty_content.gd")
+const BeautyData := preload("res://scripts/beauty_data.gd")
+const CozyMinimap := preload("res://scripts/cozy_minimap.gd")
+const CozyVitals := preload("res://scripts/cozy_vitals.gd")
+const GardenGlyphs := preload("res://scripts/garden_glyphs.gd")
+const TouchJoystick := preload("res://scripts/touch_joystick.gd")
+
 ## Signals, widget state and the factories every screen shares. The interface is
 ## assembled in GameUIChrome, positioned in GameUILayout, filled in
 ## GameUIScreens and driven by GameUI, which extend this chain.

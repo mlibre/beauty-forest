@@ -1,6 +1,5 @@
 class_name GameUIPanels
-extends GameUILayout
-
+extends "res://scripts/game_ui_layout.gd"
 ## The three full-screen panels -- Peddle's cart, the gentler-forest options and
 ## the closers that put them away -- plus the row builders they share.
 ##
@@ -14,6 +13,11 @@ extends GameUILayout
 ## price) and keeps only its own name and price digits as words. That is the
 ## single biggest text win in the game -- the cart used to paint ~100 labels
 ## and now paints one name per ware.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const CozyCard := preload("res://scripts/cozy_card.gd")
 
 func _clear_panel() -> void:
     ## Empty the shared modal panel (cart, memory book, gentler-forest options).

@@ -1,5 +1,4 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## Behavioral regression for the hero rig's animation graph and the minimap.
 ##
 ## The blend graph used to be "active" with an auto-created `output` node that
@@ -8,6 +7,13 @@ extends TestCase
 ## idle bob and no lantern swing. Checking `parameters/.../blend_amount` (as
 ## the old coverage did) cannot see that, so these checks sample the actual
 ## bone transforms the AnimationPlayer writes.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const CozyMinimap := preload("res://scripts/cozy_minimap.gd")
+const DungeonGenerator := preload("res://scripts/dungeon_generator.gd")
+const HeroRig := preload("res://scripts/hero_rig.gd")
 
 func _initialize() -> void:
         suite_name = "BEAUTY_FOREST_RIG"

@@ -1,5 +1,4 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## Each screen's overlay must dim the world by the amount that screen asks for --
 ## enough that its panel reads clearly, not so much that the forest turns to murk.
 ##

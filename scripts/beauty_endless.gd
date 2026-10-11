@@ -15,6 +15,12 @@ extends RefCounted
 ## chapter is always the same forest (saves, waymarks and word of mouth stay
 ## true), and no two chapters ever read alike.
 
+## The campaign's floor count lives here, not in BeautyContent: the content
+## tables ask this module endless questions (region, feeling, story), so every
+## dependency between the two must point one way -- content -> endless. A const
+## borrowed back the other way would be a cycle no loader can resolve.
+const CAMPAIGN_LENGTH := 13
+
 const CHAPTER_LENGTH := 13
 
 ## Ambient moods the music already knows. Every composed region borrows one,
@@ -95,15 +101,15 @@ const DEEP_WISP_ROTATIONS := [
 ]
 
 static func is_endless(floor_number: int) -> bool:
-    return floor_number > BeautyContent.CAMPAIGN_LENGTH
+    return floor_number > CAMPAIGN_LENGTH
 
 ## The endless chapter a floor belongs to: 1 = floors 14–26, 2 = 27–39, forever.
 static func chapter_for_floor(floor_number: int) -> int:
-    return (floor_number - BeautyContent.CAMPAIGN_LENGTH - 1) / CHAPTER_LENGTH + 1
+    return (floor_number - CAMPAIGN_LENGTH - 1) / CHAPTER_LENGTH + 1
 
 ## The campaign-relative story position (1..13) inside its chapter.
 static func story_in_chapter(floor_number: int) -> int:
-    return (floor_number - BeautyContent.CAMPAIGN_LENGTH - 1) % CHAPTER_LENGTH + 1
+    return (floor_number - CAMPAIGN_LENGTH - 1) % CHAPTER_LENGTH + 1
 
 ## A chapter's composed region. Deterministic per chapter: chapter 7 is always
 ## the same forest, or saves and stories could not agree about it.
@@ -121,7 +127,7 @@ static func region(chapter: int) -> Dictionary:
         var base := Color(String(palette[field]))
         var rotated := base.lerp(Color("#fff2c4"), shift * 0.4)
         colors[field] = "#" + rotated.to_html(false)
-    var first_floor := BeautyContent.CAMPAIGN_LENGTH + (chapter - 1) * CHAPTER_LENGTH + 1
+    var first_floor := CAMPAIGN_LENGTH + (chapter - 1) * CHAPTER_LENGTH + 1
     var composed := {
         "key": "endless-%d" % chapter,
         "ambient": AMBIENT_MOODS[chapter % AMBIENT_MOODS.size()],

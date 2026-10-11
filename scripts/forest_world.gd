@@ -1,6 +1,5 @@
 class_name ForestWorld
-extends WorldLandmarks
-
+extends "res://scripts/world_landmarks.gd"
 ## Floor lifecycle and per-frame ambience: builds a complete bright forest
 ## floor from the inherited scenery (WorldScenery) and landmarks
 ## (WorldLandmarks), then owns the Dream Chimes, the sleeping dragon family and

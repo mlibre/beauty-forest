@@ -1,5 +1,4 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## Every way to reach the pause card, and the way back out.
 ##
 ## Split out of regression_main_flow.gd, which is about run-state transitions.

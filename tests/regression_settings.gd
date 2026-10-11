@@ -1,5 +1,4 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## The gentler-forest panel is reachable from everywhere a player might want to
 ## change how the forest feels, and it hands them back to the screen they opened
 ## it from.

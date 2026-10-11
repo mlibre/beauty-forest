@@ -1,6 +1,5 @@
 class_name RunCeremonies
-extends RunCombat
-
+extends "res://scripts/run_combat.gd"
 ## The two song ceremonies: gathering the five Dream Chimes that open Snoozle's
 ## tuck-in, and sitting with a Big Feeling across two gentle rounds. Gold-window
 ## judging, rest beats and the win/reset transitions live here.

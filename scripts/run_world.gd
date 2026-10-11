@@ -1,6 +1,5 @@
 class_name RunWorld
-extends RunCeremonies
-
+extends "res://scripts/run_ceremonies.gd"
 ## Floor construction and traversal: teardown/rebuild of the forest world, the
 ## player and Mote, objective placement, stairs, interaction and the camera.
 ## Combat and lullaby state it resets live in RunCombat.

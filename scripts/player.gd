@@ -1,6 +1,11 @@
 class_name Player
 extends CharacterBody3D
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const HeroRig := preload("res://scripts/hero_rig.gd")
+
 signal footstep(world_position: Vector3)
 signal dashed(world_position: Vector3, direction: Vector3)
 

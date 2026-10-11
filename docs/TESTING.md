@@ -34,6 +34,52 @@ The one standalone suite is `regression_quit.gd`: it asserts that the process
 exits by itself through the production quit path, and a harness `finish()` would
 quit first and preempt the graceful quit it is testing.
 
+Note that `finish()` always prints its `_OK (N checks)` line, even on a failed
+run — the `BEAUTY_FOREST_*_FAILED` errors above it and the exit code are the
+truth. Trust the exit code when piping output through `tail`.
+
+## The cold-boot invariant
+
+A fresh clone ships no `.godot/` (it is gitignored), and a plain `godot .` never
+builds the global-class cache — only the editor does. Every bare global class
+name (`extends RunWorld`, `BeautyData.x`) therefore fails to *parse* on a
+player's first boot, and it fails at `main.gd:1`, naming a file that is fine.
+That is how the game once shipped a boot that only broke on machines that had
+never opened the editor.
+
+Two suites hold the line:
+
+```bash
+godot --headless --path . --script res://tests/regression_architecture.gd
+godot --headless --path . --script res://tests/regression_cold_boot.gd
+```
+
+- `regression_architecture.gd` reads every script under `scripts/` and `tests/`
+  and enforces the rules that make parsing cache-independent: `extends` names an
+  engine class or quotes a res:// path; a bare class reference in real code
+  (comments and string literals stripped, multi-line verses included) must sit
+  under a `const <Name> := preload("res://...")` in its own file or in a chain
+  ancestor — inherited consts are members, so a child may use them; and every
+  preload const must point at the file that actually declares the class it is
+  named after. It runs in under a second.
+- `regression_cold_boot.gd` replays the player's exact situation once per run:
+  it copies the project into a throwaway `user://coldboot_copy` (no `.godot`,
+  no tests, no VCS noise), launches a second headless engine process against
+  the copy, and requires it to reach `main.gd`'s `BEAUTY_FOREST_BOOT_OK`
+  marker with zero parse errors and quit by itself.
+
+The dependency direction between the two content modules is load-bearing too:
+`beauty_content.gd` may ask `BeautyEndless` questions, never the reverse — a
+const borrowed back the other way is a cycle no loader can resolve. That is why
+`CAMPAIGN_LENGTH` lives in `BeautyEndless`, with `BeautyContent` re-exporting
+it for existing readers.
+
+When you add a script, keep the invariant by hand: quote your `extends` path,
+and pin every external class the file uses under one dependency block of
+preload consts. `tools/cache_free_sweep.py` does the same mechanically across
+the tree (dry-run by default, `--apply` to write), and both suites will reject
+the bare reference either way.
+
 ## Indentation
 
 GDScript in this project is one indentation style per *file*, and a file that

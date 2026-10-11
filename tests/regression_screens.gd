@@ -1,5 +1,4 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## What the screens SAY about a run, as opposed to what the run does.
 ##
 ## The pause menu's stat cards, the sentence naming what the glowing waypoint
@@ -12,6 +11,12 @@ extends TestCase
 ##
 ## The bodies moved verbatim from regression_main_flow.gd; only the helper names
 ## changed, to the ones on TestCase.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyData := preload("res://scripts/beauty_data.gd")
+const BeautyLore := preload("res://scripts/beauty_lore.gd")
 
 func _initialize() -> void:
     suite_name = "BEAUTY_FOREST_SCREENS"

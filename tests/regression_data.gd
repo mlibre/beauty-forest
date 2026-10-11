@@ -1,9 +1,15 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## The satchel's integrity: what the player profile saves, reads back, and
 ## refuses. The save-guard quarantine work lives beside it in
 ## regression_data_guard.gd; the loadout arithmetic lives in
 ## regression_data_rules.gd. One suite per question, none over 500 lines.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyContent := preload("res://scripts/beauty_content.gd")
+const BeautyData := preload("res://scripts/beauty_data.gd")
+const BeautyLore := preload("res://scripts/beauty_lore.gd")
 
 var had_save := false
 var had_settings := false
@@ -115,7 +121,6 @@ func _test_meta_recovery() -> void:
     loaded = BeautyData.load_meta()
     ok(loaded == BeautyData.default_meta(), "null and container meta values must recover to defaults")
 
-
 func _test_settings_recovery() -> void:
     var config := ConfigFile.new()
     config.set_value("cozy", "reduced_motion", "false")
@@ -135,7 +140,6 @@ func _test_settings_recovery() -> void:
     ok(is_equal_approx(float(loaded.get("damage_taken", 0.0)), float(defaults["damage_taken"])), "a null damage setting must use its default")
     ok(is_equal_approx(float(loaded.get("rhythm_window", 0.0)), float(defaults["rhythm_window"])), "a non-finite rhythm setting must use its default")
     ok(is_equal_approx(float(loaded.get("volume", 0.0)), float(defaults["volume"])), "a container volume setting must use its default")
-
 
 func _test_save_round_trips() -> void:
     var facts: Array[String] = []
@@ -188,7 +192,6 @@ func _test_save_round_trips() -> void:
     ok(not FileAccess.file_exists(BeautyData.save_path() + ".tmp"), "a committed meta save must not leave its staging file")
     ok(not FileAccess.file_exists(BeautyData.settings_path() + ".tmp"), "committed settings must not leave their staging file")
 
-
 func _test_missing_collection_keys_keep_the_satchel() -> void:
     # An older build (or a hand-edited file) simply has no `stickers` or
     # `facts_learned` key. The guard used to test the defaulted value, which is
@@ -221,7 +224,6 @@ func _test_missing_collection_keys_keep_the_satchel() -> void:
     ok(int(reread.get("best_floor", -1)) == 9, "a keyless satchel must keep its best floor across a round trip")
     ok(BeautyData.save_meta(rich), "restoring the populated satchel must succeed")
 
-
 func _test_save_failures_preserve_data() -> void:
     var stable_meta := BeautyData.default_meta()
     stable_meta["runs"] = 23
@@ -241,8 +243,6 @@ func _test_save_failures_preserve_data() -> void:
     _remove_path(BeautyData.save_path() + ".tmp")
     _remove_path(BeautyData.settings_path() + ".tmp")
 
-
-
 func _test_profile_isolation() -> void:
     ## The whole point of the redirect: a test run must not touch the player's
     ## real profile. It demonstrably did (dragons_sung reached 143), so assert
@@ -261,7 +261,6 @@ func _test_profile_isolation() -> void:
     var stable := BeautyData.default_meta()
     stable["runs"] = 5
     ok(BeautyData.save_meta(stable), "restoring a clean isolated meta must succeed")
-
 
 func _test_unscoped_script_runs_are_isolated_too() -> void:
     ## The redirect above only protects suites that remember to call
@@ -315,7 +314,6 @@ func _test_unscoped_script_runs_are_isolated_too() -> void:
     BeautyData.use_test_profile(named)
     ok(BeautyData.save_path() == BeautyData._profile_save_path,
         "an explicitly named test profile must still win over the script-run fallback")
-
 
 func _restore_file(path: String, existed: bool, contents: PackedByteArray) -> void:
     if existed:

@@ -1,5 +1,4 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## The game must LOOK bright, not merely render without errors.
 ##
 ## The endless-bug-hunt rule that "renders without errors is not proof of correct

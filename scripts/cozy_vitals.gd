@@ -1,6 +1,11 @@
 class_name CozyVitals
 extends Control
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const GardenGlyphs := preload("res://scripts/garden_glyphs.gd")
+
 ## The play-screen readout, drawn as icons instead of sentences.
 ##
 ## Three things are load-bearing and get the whole strip: how warm the lantern

@@ -1,4 +1,4 @@
-extends RunWorld
+extends "res://scripts/run_world.gd"
 
 ## Beauty Forest — native Godot game director.
 ## Owns run state, mode transitions, input, and all system wiring. Progression,
@@ -37,6 +37,10 @@ func _ready() -> void:
     _load_floor(1, true)
     ui.set_selected_style(selected_style)
     _show_menu()
+    # Boot marker: proves the whole script graph parsed and _ready finished.
+    # regression_cold_boot boots a cache-less copy of this project and waits
+    # for exactly this line, so a broken parse can never pass as a quiet boot.
+    print("BEAUTY_FOREST_BOOT_OK")
 
 func _connect_ui() -> void:
     ui.start_requested.connect(_on_start_requested)

@@ -1,5 +1,4 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## Layout regression for the code-built GameUI at real window sizes.
 ##
 ## Three real defects are pinned here:
@@ -17,6 +16,12 @@ extends TestCase
 ##     parked the grove map in the bottom-right corner *under* the SING/DASH/
 ##     CART/BOOK/COZY cluster and the log under the joystick, so on a
 ##     touchscreen both readouts were painted over by opaque buttons.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyData := preload("res://scripts/beauty_data.gd")
+const GameUI := preload("res://scripts/game_ui.gd")
 
 var _ui: GameUI
 var _root_rect := Rect2()
@@ -346,6 +351,5 @@ func _run() -> void:
 	var unaffordable := _find_shop_button("scarf")
 	if unaffordable != null:
 		ok(unaffordable.disabled, "an unowned charm was offered with 0 sparkles")
-
 
 	finish(game, suite_name)

@@ -1,6 +1,23 @@
 class_name RunState
 extends Node3D
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const AudioDirector := preload("res://scripts/audio_director.gd")
+const BeautyContent := preload("res://scripts/beauty_content.gd")
+const BeautyData := preload("res://scripts/beauty_data.gd")
+const BeautyLore := preload("res://scripts/beauty_lore.gd")
+const CozyVFX := preload("res://scripts/cozy_vfx.gd")
+const CozyWaypoint := preload("res://scripts/cozy_waypoint.gd")
+const ForestWorld := preload("res://scripts/forest_world.gd")
+const GameUI := preload("res://scripts/game_ui.gd")
+const GardenGlyphs := preload("res://scripts/garden_glyphs.gd")
+const HeroRig := preload("res://scripts/hero_rig.gd")
+const Player := preload("res://scripts/player.gd")
+const SongNote := preload("res://scripts/song_note.gd")
+const Wisp := preload("res://scripts/wisp.gd")
+
 ## Run state, player profile progression and the HUD feed for one walk: the
 ## numbers that make a run and the world marker that says where to go next.
 ## The director wires this up in main.gd; Peddle's cart extends this in

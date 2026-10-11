@@ -1,11 +1,19 @@
 class_name BeautyContent
 extends RefCounted
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyEndless := preload("res://scripts/beauty_endless.gd")
+
 ## Canonical game content: styles, wisp types, regions, floors, wares, stanzas,
 ## counter-melodies, facts and story beats. Behaviour-free data plus the small
 ## queries that read it. Persistence and loadout math live in BeautyData.
 
-const CAMPAIGN_LENGTH := 13
+## Re-exported from BeautyEndless, where the source of truth now lives: the
+## content tables depend on the endless module, never the reverse. Every
+## existing BeautyContent.CAMPAIGN_LENGTH reader keeps working unchanged.
+const CAMPAIGN_LENGTH := BeautyEndless.CAMPAIGN_LENGTH
 
 ## How many wares the hero can wear, and how that number grows.
 ##

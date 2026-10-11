@@ -1,10 +1,18 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## The infinite-growth regression: everything that promises "nothing in this
 ## game has a ceiling" gets a check here. The endless chapters must compose
 ## deterministically and never repeat the campaign; charm tiers must keep
 ## deepening truthfully; the level-up draft must offer real choices, apply
 ## them, and never leak across a fresh walk.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyContent := preload("res://scripts/beauty_content.gd")
+const BeautyData := preload("res://scripts/beauty_data.gd")
+const BeautyEndless := preload("res://scripts/beauty_endless.gd")
+const RunBoons := preload("res://scripts/run_boons.gd")
+const Wisp := preload("res://scripts/wisp.gd")
 
 func _initialize() -> void:
     suite_name = "BEAUTY_FOREST_GROWTH"

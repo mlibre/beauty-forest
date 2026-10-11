@@ -1,9 +1,14 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## Regression for thank-you heart pickups:
 ##  - a single pickup must never heal the hero twice (queue_free is deferred,
 ##    so overlapping Area3D reports used to emit a second heart_collected)
 ##  - a heart that times out must say so instead of vanishing silently
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const HeartPickup := preload("res://scripts/heart_pickup.gd")
+const Player := preload("res://scripts/player.gd")
 
 func _initialize() -> void:
 	suite_name = "BEAUTY_FOREST_HEART"

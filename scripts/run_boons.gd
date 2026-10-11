@@ -1,6 +1,5 @@
 class_name RunBoons
-extends RunShop
-
+extends "res://scripts/run_shop.gd"
 ## The level-up draft: every level earned offers three gifts, and the walker
 ## chooses. Levelling used to hand out a random perk, which made the game's
 ## one real growth moment a slot machine -- the numbers went up either way,

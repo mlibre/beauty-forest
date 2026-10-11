@@ -1,6 +1,11 @@
 class_name TestProfile
 extends RefCounted
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyData := preload("res://scripts/beauty_data.gd")
+
 ## Keeps automated runs out of the player's real profile.
 ##
 ## Every suite that instantiates the main scene used to load and SAVE the real

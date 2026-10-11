@@ -1,6 +1,12 @@
 class_name HeartPickup
 extends Area3D
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const CozyVFX := preload("res://scripts/cozy_vfx.gd")
+const Player := preload("res://scripts/player.gd")
+
 signal heart_collected(pickup: HeartPickup)
 signal heart_expired(pickup: HeartPickup)
 

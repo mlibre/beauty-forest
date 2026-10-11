@@ -1,9 +1,14 @@
 class_name WorldLandmarks
-extends WorldScenery
-
+extends "res://scripts/world_scenery.gd"
 ## Objective landmarks built into every floor: the stairwell, Peddle's cart, the
 ## wishing pool and the forest sign. Placement rules (farthest room, pool never
 ## on the stair) are resolved in _build_clearings.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyContent := preload("res://scripts/beauty_content.gd")
+const BeautyLore := preload("res://scripts/beauty_lore.gd")
 
 func _build_clearings() -> void:
     var rooms: Array = dungeon["rooms"]

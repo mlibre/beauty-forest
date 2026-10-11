@@ -1,7 +1,12 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## Headless integration smoke test. Exercises menu boot, a live floor,
 ## progression/soothe rewards, shops/journal, and both dragon chamber types.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyContent := preload("res://scripts/beauty_content.gd")
+const Wisp := preload("res://scripts/wisp.gd")
 
 func _initialize() -> void:
     suite_name = "BEAUTY_FOREST_SMOKE"

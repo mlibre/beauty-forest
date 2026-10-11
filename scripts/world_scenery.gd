@@ -1,6 +1,13 @@
 class_name WorldScenery
 extends Node3D
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const CozyMaterials := preload("res://scripts/cozy_materials.gd")
+const CozyVFX := preload("res://scripts/cozy_vfx.gd")
+const DungeonGenerator := preload("res://scripts/dungeon_generator.gd")
+
 ## Scenery half of a forest floor: sky and lights, ground collision, instanced
 ## grove and decor, sunbeams and ambient life, plus the material factories and
 ## map-cell helpers those builders share. Landmarks and per-floor runtime live

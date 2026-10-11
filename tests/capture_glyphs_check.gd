@@ -1,5 +1,11 @@
 extends SceneTree
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyContent := preload("res://scripts/beauty_content.gd")
+const GardenGlyphs := preload("res://scripts/garden_glyphs.gd")
+
 ## Every glyph the game can ask for, checked numerically: each one must be
 ## actually drawn (not the unknown-key placeholder), centred, bright and warm.
 ## Dev tool, not shipped.

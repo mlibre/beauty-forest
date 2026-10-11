@@ -1,11 +1,19 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## Regression coverage for central run-state transitions. In particular, an
 ## automatic song-note already in flight must not grant combat rewards while
 ## the game is paused or behind another modal.
 ##
 ## Loadout and shop behaviour lives in regression_loadout.gd; this suite is
 ## about what the run state and the screens do with it.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyContent := preload("res://scripts/beauty_content.gd")
+const ForestWorld := preload("res://scripts/forest_world.gd")
+const HeartPickup := preload("res://scripts/heart_pickup.gd")
+const SongNote := preload("res://scripts/song_note.gd")
+const Wisp := preload("res://scripts/wisp.gd")
 
 func _initialize() -> void:
     suite_name = "BEAUTY_FOREST_MAIN_FLOW"

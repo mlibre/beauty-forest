@@ -1,9 +1,14 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## When saving goes wrong: damaged satchels quarantined instead of
 ## overwritten, failed saves visible to the player, and an unreadable file
 ## never costing the player their data. The happy-path persistence suite
 ## lives in regression_data.gd.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyContent := preload("res://scripts/beauty_content.gd")
+const BeautyData := preload("res://scripts/beauty_data.gd")
 
 func _initialize() -> void:
     suite_name = "BEAUTY_FOREST_DATA_GUARD"
@@ -139,9 +144,6 @@ func _find_quarantined(base_path: String) -> String:
             return directory.path_join(child)
     return ""
 
-
-
-
 func _test_a_failed_save_is_visible_to_the_player() -> void:
     # A save failure that preserves the prior save was covered; whether the
     # PLAYER finds out was not. Nine call sites discard save_meta()'s bool and
@@ -211,7 +213,6 @@ func _collect_label_texts(node: Node) -> Array[String]:
     for child in node.get_children():
         out.append_array(_collect_label_texts(child))
     return out
-
 
 func _test_unreadable_satchel_is_never_overwritten() -> void:
     # A save failure that preserves the prior save was already covered. The

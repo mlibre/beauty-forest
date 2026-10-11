@@ -1,8 +1,13 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## The loadout arithmetic: every verse and every charm applies (the old caps
 ## were the level-curve bug one level up), a malformed entry is ignored, and
 ## weighted picks honor their own odds.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyContent := preload("res://scripts/beauty_content.gd")
+const BeautyData := preload("res://scripts/beauty_data.gd")
 
 func _initialize() -> void:
     suite_name = "BEAUTY_FOREST_DATA_RULES"
@@ -60,7 +65,6 @@ func _test_loadout_is_uncapped() -> void:
         "a charm key with no ware behind it must change nothing")
     ok(is_equal_approx(float(junk_effect.get("max_hp", -1.0)), 30.0),
         "a charm key with no ware behind it must not add warmth")
-
 
 func _test_weighted_pick_boundaries() -> void:
     # A weighted pick must honor weight/total odds exactly: roll r belongs to

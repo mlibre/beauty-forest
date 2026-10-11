@@ -1,6 +1,12 @@
 class_name Wisp
 extends CharacterBody3D
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyContent := preload("res://scripts/beauty_content.gd")
+const CozyMaterials := preload("res://scripts/cozy_materials.gd")
+
 var type_key := "Shambler"
 var type_data: Dictionary = {}
 var display_name := "Lost Wisp"

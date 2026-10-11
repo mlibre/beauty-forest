@@ -1,6 +1,11 @@
 class_name BeautyData
 extends RefCounted
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyContent := preload("res://scripts/beauty_content.gd")
+
 ## Player profile persistence (satchel + gentler-forest settings) and the
 ## loadout math that turns equipped wares into multipliers. Content tables live
 ## in BeautyContent.

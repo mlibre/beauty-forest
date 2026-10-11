@@ -1,7 +1,13 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## Focused regressions for ForestWorld lifecycle, accessibility, objective layout,
 ## and camera-facing generated visuals.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const CozyWaypoint := preload("res://scripts/cozy_waypoint.gd")
+const DungeonGenerator := preload("res://scripts/dungeon_generator.gd")
+const ForestWorld := preload("res://scripts/forest_world.gd")
 
 func _initialize() -> void:
     suite_name = "BEAUTY_FOREST_WORLD_REGRESSION"

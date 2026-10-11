@@ -1,9 +1,14 @@
 class_name RunCombat
-extends RunBoons
-
+extends "res://scripts/run_boons.gd"
 ## Automatic lantern combat, wisp spawning and rewards, thank-you hearts, and
 ## player damage. The song ceremonies that share this state extend it in
 ## RunCeremonies; progression helpers live in RunState.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const DungeonGenerator := preload("res://scripts/dungeon_generator.gd")
+const HeartPickup := preload("res://scripts/heart_pickup.gd")
 
 ## One soft hue per step of the lantern's round, mirroring the pentatonic arc
 ## AudioDirector.play_soothe sings. A volley of notes reads as a little rainbow

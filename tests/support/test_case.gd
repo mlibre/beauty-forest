@@ -1,6 +1,13 @@
 class_name TestCase
 extends SceneTree
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const CozyCard := preload("res://scripts/cozy_card.gd")
+const GardenGlyphs := preload("res://scripts/garden_glyphs.gd")
+const TestProfile := preload("res://tests/support/test_profile.gd")
+
 ## Shared scaffolding for the multi-step regression suites.
 ##
 ## A suite is a SceneTree that boots the main scene, drives the game, and has to
@@ -46,7 +53,6 @@ var _watching := false
 ## healthy run -- only on one that has already failed and stopped progressing.
 const STALL_FRAMES := 600
 
-
 ## Assert, then give the caller its condition back.
 ##
 ## Returning the condition rather than forcing every call site into an early
@@ -65,7 +71,6 @@ func ok(condition: bool, message: String) -> bool:
 	_watch_stalls()
 	return false
 
-
 ## Watch for a suite that has already failed and then stopped progressing.
 ##
 ## `ok()` does not quit, so a guard (`if not ok(...): return false`) can unwind
@@ -81,7 +86,6 @@ func _watch_stalls() -> void:
 		return
 	_watching = true
 	_await_stall_watchdog()
-
 
 func _await_stall_watchdog() -> void:
 	var seen := failures
@@ -99,11 +103,9 @@ func _await_stall_watchdog() -> void:
 	push_error("%s_FAILED: stalled after %d checks (%d failed)" % [suite_name, checks_run, failures])
 	quit(1)
 
-
 ## Fail without a condition -- for a path that has no boolean to test.
 func fail(message: String) -> bool:
 	return ok(false, message)
-
 
 ## Leave the suite early because a guard failed, cleanly.
 ##
@@ -124,13 +126,11 @@ func stop(game: Node, ok_token: String) -> void:
 		game.free()
 	quit(1)
 
-
 ## Wait `count` frames. Godot lays out and settles over several frames, so a
 ## check that reads a control's size has to let it move first.
 func frames(count: int) -> void:
 	for _frame in range(count):
 		await process_frame
-
 
 ## Every string a control subtree paints: Label text and Button text alike.
 ##
@@ -151,13 +151,11 @@ func texts_in(node: Node) -> Array[String]:
 		out.append_array(texts_in(child))
 	return out
 
-
 func has_text(node: Node, needle: String) -> bool:
 	for text in texts_in(node):
 		if text.contains(needle):
 			return true
 	return false
-
 
 ## The joined words of the visible Labels under `node`, as ONE string.
 ##
@@ -166,7 +164,6 @@ func has_text(node: Node, needle: String) -> bool:
 ## no longer exists.
 func block_text(node: Node) -> String:
 	return "\n".join(texts_in(node))
-
 
 ## The glyph keys a control draws as icons, read from its TextureRect children.
 ##
@@ -180,7 +177,6 @@ func glyph_keys_in(node: Node) -> Array[String]:
 		out.append_array(glyph_keys_in(child))
 	return out
 
-
 func buttons_in(node: Node) -> Array[Node]:
 	var out: Array[Node] = []
 	for child in node.get_children():
@@ -188,7 +184,6 @@ func buttons_in(node: Node) -> Array[Node]:
 			out.append(child)
 		out.append_array(buttons_in(child))
 	return out
-
 
 ## Everything a shop row says, joined.
 ##
@@ -202,7 +197,6 @@ func row_text(button: Button) -> String:
 		parts.append((label as Label).text.strip_edges())
 	return "\n".join(parts)
 
-
 ## Every ware card in a subtree, in shelf order.
 ##
 ## Peddle's cart paints its wares rather than labelling them, so a card cannot
@@ -213,7 +207,6 @@ func ware_cards(node: Node) -> Array[CozyCard]:
 	for child in node.find_children("*", "CozyCard", true, false):
 		found.append(child as CozyCard)
 	return found
-
 
 ## The card for one ware, by its data key, or null.
 ##
@@ -226,7 +219,6 @@ func find_ware(node: Node, key: String) -> CozyCard:
 			return card
 	return null
 
-
 ## The free wares -- every verse and every counter-melody.
 ##
 ## Nobody buys these, so their cards carry `free_item` instead of a price, and a
@@ -238,11 +230,9 @@ func free_item_cards(node: Node) -> Array[CozyCard]:
 			found.append(card)
 	return found
 
-
 ## The Button wrapping one ware card, which is what a press actually hits.
 func ware_button(card: CozyCard) -> Button:
 	return card.get_parent() as Button
-
 
 ## Whether a loadout list (owned or worn) holds `key` at `tier`.
 ##
@@ -255,7 +245,6 @@ func wears(list: Array, key: String, tier: int = 1) -> bool:
 				and int((entry as Dictionary).get("tier", 1)) == tier:
 			return true
 	return false
-
 
 ## A loadout list built from plain keys, for fixtures that only care WHICH wares
 ## are present. Every entry lands at tier 1 unless a tier is given.
@@ -274,7 +263,6 @@ func loadout(keys: Array) -> Array[Dictionary]:
 			out.append((entry as Dictionary).duplicate())
 	return out
 
-
 ## The glyph keys a loadout list would paint, in order. Tier 1 is the ware's
 ## own key; deeper tiers carry a tier prefix, so a suite can tell the two copies
 ## of a charm apart.
@@ -286,7 +274,6 @@ func worn_keys(list: Array) -> Array:
 				int((entry as Dictionary).get("tier", 1))))
 	return out
 
-
 ## The first Button in a subtree whose painted text contains `needle`.
 func button_with_text(node: Node, needle: String) -> Button:
 	for candidate in buttons_in(node):
@@ -294,7 +281,6 @@ func button_with_text(node: Node, needle: String) -> Button:
 		if row_text(button).contains(needle):
 			return button
 	return null
-
 
 ## The newest log line mentioning `needle`, searching from the bottom.
 ##
@@ -310,7 +296,6 @@ func newest_line_mentioning(log: Label, needle: String) -> String:
 		if haystack[i].to_lower().contains(needle.to_lower()):
 			return haystack[i]
 	return fallback
-
 
 ## Finish a suite: the OK line, the profile teardown and the teardown of the
 ## scene under test. Order matters -- TestProfile.end() must come before quit()

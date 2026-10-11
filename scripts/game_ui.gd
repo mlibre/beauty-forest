@@ -1,6 +1,5 @@
 class_name GameUI
-extends GameUIScreens
-
+extends "res://scripts/game_ui_screens.gd"
 ## Beauty Forest's code-built interface. Owns the public surface the game
 ## director drives: HUD values, map, toasts, log lines, story cards, the lullaby
 ## beat ring and settings application. The base class chain assembles the

@@ -1,6 +1,5 @@
 class_name GameUILayout
-extends GameUIChrome
-
+extends "res://scripts/game_ui_chrome.gd"
 ## Shared modal-panel metrics. The overlay card uses 34px side margins and the
 ## shop card 26px; 68 is the wider of the two, so a row clamped for one panel
 ## still fits the other.

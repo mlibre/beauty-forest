@@ -1,6 +1,14 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## Focused checks for the procedural VFX sprites and minimap safe area.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyContent := preload("res://scripts/beauty_content.gd")
+const CozyMinimap := preload("res://scripts/cozy_minimap.gd")
+const CozyVFX := preload("res://scripts/cozy_vfx.gd")
+const DungeonGenerator := preload("res://scripts/dungeon_generator.gd")
+const WorldScenery := preload("res://scripts/world_scenery.gd")
 
 func _initialize() -> void:
     suite_name = "BEAUTY_FOREST_GRAPHICS"

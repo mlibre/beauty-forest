@@ -1,5 +1,4 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## What the gentler-forest options actually DO, and whether they say so.
 ##
 ## Split out of regression_ui.gd, which measures where things land on screen.
@@ -11,6 +10,12 @@ extends TestCase
 ## This suite writes settings, so it runs under a throwaway profile -- without
 ## one, the 200% text check in the layout suite would leave the PLAYER at 200%
 ## for good.
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const BeautyData := preload("res://scripts/beauty_data.gd")
+const GameUI := preload("res://scripts/game_ui.gd")
 
 var _ui: GameUI
 
@@ -126,7 +131,6 @@ func _relative_luminance(c: Color) -> float:
 		return v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4)
 	return 0.2126 * channel.call(c.r) + 0.7152 * channel.call(c.g) + 0.0722 * channel.call(c.b)
 
-
 ## "Bump softness" is the only slider in the panel whose rightward drag made the
 ## game harder: the stored value is a damage multiplier, so seeking gentler
 ## bumps meant dragging right and landing on ×3.00 -- four times the damage being
@@ -201,7 +205,6 @@ func _find_row(title: String) -> HBoxContainer:
 			if label != null and label.text == title:
 				return candidate
 	return null
-
 
 ## Every accessibility toggle has to describe what it actually changes. The
 ## High Contrast label used to say "pockets and journal", which stopped being

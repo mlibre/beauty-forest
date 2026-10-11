@@ -1,7 +1,11 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 ## Focused audio regression checks. Run with:
 ## godot --headless --path . --script tests/regression_audio.gd
+
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const AudioDirector := preload("res://scripts/audio_director.gd")
 
 var _exit_stream_states: Array[bool] = []
 var _watched_players: Array[AudioStreamPlayer] = []
@@ -130,7 +134,6 @@ func _run() -> void:
         "the ambient bed is no longer eight seconds long")
     fresh.stop_ambient()
     fresh.queue_free()
-
 
     # Randomized launch pitch must not create a new cached PCM stream per note.
     director.set_muted(false)

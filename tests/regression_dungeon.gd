@@ -1,5 +1,4 @@
-extends TestCase
-
+extends "res://tests/support/test_case.gd"
 const D := preload("res://scripts/dungeon_generator.gd")
 
 func _initialize() -> void:
