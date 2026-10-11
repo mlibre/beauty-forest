@@ -112,8 +112,7 @@ func _run() -> void:
         var journal_seen := _report("JOURNAL", ui._shop_content)
 
         ui.close_panels()
-        ui.show_settings({"high_contrast": false, "reduced_motion": false, "compact_hud": false,
-                "text_scale": 1.0, "damage_taken": 1.0, "rhythm_window": 1.0, "wisp_speed": 1.0,
+        ui.show_settings({"high_contrast": false, "reduced_motion": false,                 "text_scale": 1.0, "damage_taken": 1.0, "rhythm_window": 1.0, "wisp_speed": 1.0,
                 "volume": 0.8, "muted": false})
         await _frames(4)
         var settings_seen := _report("SETTINGS", ui._shop_content)
@@ -265,7 +264,7 @@ func _walking_screen_is_live(ui: GameUI) -> void:
                 printerr("CENSUS_PARTIAL: the vitals strip is not on the walk screen; its text was not measured")
 
 func _settings() -> Dictionary:
-        return {"high_contrast": false, "reduced_motion": false, "compact_hud": false, "text_scale": 1.0}
+        return {"high_contrast": false, "reduced_motion": false, "text_scale": 1.0}
 
 ## A loadout of charms at their first tier. A charm is `{"key", "tier"}` rather
 ## than a bare key because a charm can be worn at more than one tier, and a flag
