@@ -312,3 +312,9 @@ func _update_mote(delta: float) -> void:
         mote_light.light_energy = 0.45 + _mote_joy * 0.55
     if not bool(settings.get("reduced_motion", false)):
         mote.scale = Vector3.ONE * (1.0 + sin(_mote_seed * 2.0) * 0.035 + _mote_joy * 0.12)
+    else:
+        # Reduced motion holds the mote STILL, and still means its rest shape:
+        # without this reset the scale stayed frozen at whatever the wobble
+        # sine held when the setting landed -- the one companion visibly left
+        # mid-wobble (or mid-joy) forever.
+        mote.scale = Vector3.ONE

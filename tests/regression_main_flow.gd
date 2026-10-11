@@ -149,6 +149,26 @@ func _run() -> void:
             "the not-near-cart hint still names absolute floors; Mote said: %s" % shop_line):
         return
 
+    # Turning on reduced motion snaps the world, the wisps and the hero to
+    # their calm state; the mote's scale branch had no rest-state reset, so
+    # it stayed frozen at whatever the wobble sine held at that instant --
+    # the one companion visibly left mid-motion (or mid-joy) forever.
+    game.settings["reduced_motion"] = false
+    game._mote_seed = TAU / 8.0
+    game._mote_joy = 0.0
+    game._update_mote(0.016)
+    var wobbling: float = game.mote.scale.x
+    if not ok(wobbling > 1.0,
+            "fixture expected a mid-wobble mote scale, got %f" % wobbling):
+        return
+    game.settings["reduced_motion"] = true
+    game._update_mote(0.016)
+    if not ok(game.mote.scale.is_equal_approx(Vector3.ONE),
+            "reduced motion left the mote frozen at scale %f instead of its rest shape" % game.mote.scale.x):
+        return
+    game.settings["reduced_motion"] = false
+    game._update_mote(0.016)
+
     # A Big Feeling is meant to be soothed by SITTING with it (two gentle
     # rounds of E-on-gold). The automatic lantern must never wear it down
     # instead: that skipped the whole designed moment and still handed out
