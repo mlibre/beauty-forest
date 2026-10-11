@@ -259,6 +259,12 @@ func _check_objective_props_do_not_stack_on_generated_floors() -> void:
                 var chime_to_stair := Vector2(chime.global_position.x - stair.x, chime.global_position.z - stair.z).length()
                 ok(chime_to_stair > 2.0,
                     "floor %d put a dream chime %.2f m from the stairwell" % [real_floor, chime_to_stair])
+                var pool := probe.get_node_or_null("WishingPool") as Node3D
+                if pool != null:
+                    var chime_to_pool := Vector2(chime.global_position.x - pool.position.x,
+                        chime.global_position.z - pool.position.z).length()
+                    ok(chime_to_pool > 2.0,
+                        "floor %d put a dream chime %.2f m from the wishing pool" % [real_floor, chime_to_pool])
     root.remove_child(probe)
     probe.free()
 
@@ -283,7 +289,7 @@ func _check_objective_props_do_not_stack(world: ForestWorld, dungeon: Dictionary
 
 func _check_chimes_avoid_the_landmark_props(world: ForestWorld) -> void:
     ## Chimes are spread inside one clearing, so a chime could settle on the
-    ## stairwell's 1.0 m glow disc or on Peddle's cart.
+    ## stairwell's 1.0 m glow disc, on Peddle's cart, or on the wishing pool.
     for chime: Node3D in world.chimes:
         var stair_distance := Vector2(chime.global_position.x - world.stair_position.x,
             chime.global_position.z - world.stair_position.z).length()
@@ -293,6 +299,12 @@ func _check_chimes_avoid_the_landmark_props(world: ForestWorld) -> void:
             chime.global_position.z - world.merchant_position.z).length()
         ok(merchant_distance > 2.0,
             "a dream chime settled %.2f m from Peddle's cart" % merchant_distance)
+        var pool := world.get_node_or_null("WishingPool") as Node3D
+        if pool != null:
+            var pool_distance := Vector2(chime.global_position.x - pool.position.x,
+                chime.global_position.z - pool.position.z).length()
+            ok(pool_distance > 2.0,
+                "a dream chime settled %.2f m from the wishing pool, on top of its rim" % pool_distance)
 
 func _synthetic_dungeon() -> Dictionary:
     var size := 48

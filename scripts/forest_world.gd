@@ -31,6 +31,7 @@ func _teardown_floor() -> void:
     stair_position = Vector3.ZERO
     merchant_position = Vector3.ZERO
     dragon_position = Vector3.ZERO
+    pool_position = Vector3.ZERO
     dragon_visual = null
     merchant_visual = null
     _dragon_body = null
@@ -373,8 +374,10 @@ func build_dream_chimes(room: Dictionary) -> Array[Node3D]:
     chimes.clear()
     var occupied := {}
     # Seed the spread with the cells the landmark props already own, so a chime
-    # cannot settle on top of the stairwell's glow disc or Peddle's canopy.
-    for landmark: Vector3 in [stair_position, merchant_position, dragon_position]:
+    # cannot settle on top of the stairwell's glow disc, Peddle's canopy or the
+    # wishing pool's rim. The pool joined late -- probed at 1.02-1.92m across
+    # generated dragon floors while rim plus ring need 1.80m.
+    for landmark: Vector3 in [stair_position, merchant_position, dragon_position, pool_position]:
         _reserve_landmark(occupied, landmark)
     for chime_index in range(5):
         var cell := _spread_cell(room, occupied, 2.8, chime_index)

@@ -19,6 +19,7 @@ var floor_number := 1
 var stair_position := Vector3.ZERO
 var merchant_position := Vector3.ZERO
 var dragon_position := Vector3.ZERO
+var pool_position := Vector3.ZERO
 var dragon_visual: Node3D
 var merchant_visual: Node3D
 var chimes: Array[Node3D] = []

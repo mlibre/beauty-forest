@@ -38,7 +38,7 @@ func _build_clearings() -> void:
             if candidate != farthest_room:
                 pool_room = candidate
                 break
-    var pool_position := Vector3(pool_room["cx"] - 1.5, 0.02, pool_room["cy"] - 1.3)
+    pool_position = Vector3(pool_room["cx"] - 1.5, 0.02, pool_room["cy"] - 1.3)
     if pool_room == farthest_room:
         pool_position = Vector3(pool_room["cx"] + 2.0, 0.02, pool_room["cy"] + 2.0)
     _build_wishing_pool(pool_position)
