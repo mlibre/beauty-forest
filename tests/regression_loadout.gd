@@ -38,6 +38,8 @@ func _run() -> void:
 		return
 	if not await _check_a_full_loadout_is_never_emptied(game):
 		return
+	if not await _check_a_full_lantern_sells_honest_words(game):
+		return
 	if not await _check_free_items_do_not_claim_to_be_owned(game):
 		return
 	if not await _check_stanza_cards_paint_song_glyphs(game):
@@ -250,6 +252,59 @@ func _check_a_full_loadout_is_never_emptied(game: Node) -> bool:
 			"toggling wear lost ownership: %s" % str(game.charms_owned)):
 		return false
 	print("LOADOUT all %d bought wares stay worn through a toggle" % after_buys.size())
+	return true
+
+func _check_a_full_lantern_sells_honest_words(game: Node) -> bool:
+	## Buying while the CURRENT floor's lantern is full used to charge the hero,
+	## drop the ware it had just sold (the truncation keeps the first N worn),
+	## and log "%s is on" about a charm the effects table never saw. The equip
+	## shelf refuses the same overfill with honest words; the buy shelf now
+	## sells the same truth: charged, owned, wrapped for later -- worn the
+	## moment a deeper floor opens the room.
+	game._start_run(1)
+	await frames(6)
+	game.sparkles = 99999
+	for key in ["boots", "scarf", "echo"]:
+		game._on_buy_requested(key)
+	await frames(2)
+	if not ok(game.charms_equipped.size() == game.loadout_capacity(),
+			"fixture: three buys should fill the floor-1 lantern (%d worn of %d sockets)" % [
+					game.charms_equipped.size(), game.loadout_capacity()]):
+		return false
+	var purse: int = game.sparkles
+	var owned_before: int = game.charms_owned.size()
+	game._on_buy_requested("socks")
+	await frames(2)
+	# The sale itself must stay honest: charged the real price, ware on the shelf.
+	if not ok(game.sparkles == purse - BeautyContent.charm_price("socks", 1),
+			"a full-lantern sale should still charge the real price: %d -> %d (price %d)" % [
+					purse, game.sparkles, BeautyContent.charm_price("socks", 1)]):
+		return false
+	if not ok(game.charms_owned.size() == owned_before + 1,
+			"the paid-for ware must still reach the shelf: %s" % str(game.charms_owned)):
+		return false
+	# The worn loadout may not read overfull -- the strip cannot draw sockets
+	# it does not have -- and nothing already worn may be evicted.
+	if not ok(game.charms_equipped.size() == game.loadout_capacity(),
+			"the worn loadout must stay exactly at capacity: %d worn of %d sockets" % [
+					game.charms_equipped.size(), game.loadout_capacity()]):
+		return false
+	var worn := worn_keys(game.charms_equipped)
+	if not ok(worn.has("boots") and worn.has("scarf") and worn.has("echo"),
+			"the sale disturbed the wares already worn: %s" % str(worn)):
+		return false
+	# The words are the defect: "is on" about a ware the effects table never
+	# saw. A full lantern sells it as wrapped for later.
+	var line := newest_line_mentioning(game.ui._log_label, "Wool Socks")
+	if not ok(line.contains("wrapped for later"),
+			"buying with a full lantern claimed the ware was worn: %s" % line):
+		return false
+	print("LOADOUT full-lantern sale: charged %d, owned, wrapped for later (%d worn of %d sockets)" % [
+			purse - game.sparkles, game.charms_equipped.size(), game.loadout_capacity()])
+	# Restore the depth the later fixtures assume: their loadouts count on
+	# the wider floor-13 lantern.
+	game._start_run(BeautyContent.CAMPAIGN_LENGTH, true)
+	await frames(6)
 	return true
 
 ## Verses and Mote's counter-melodies are free gifts that nobody owns, and the

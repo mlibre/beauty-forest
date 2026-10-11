@@ -61,7 +61,6 @@ func _on_buy_requested(key: String) -> void:
         return
     sparkles -= price
     charms_owned.append({"key": key, "tier": tier})
-    charms_equipped.append({"key": key, "tier": tier})
     if key == "scarf":
         # Max warmth is owned by _recalculate_loadout below, which rebuilds it
         # from the worn loadout. Bumping it here did nothing (the recompute
@@ -70,13 +69,15 @@ func _on_buy_requested(key: String) -> void:
         hp = minf(hp_max, hp + 30.0)
     audio.play_chord([392.0, 523.25, 659.25], 0.62, 0.09)
     var label := BeautyContent.charm_label(key, tier)
-    if charms_equipped.size() > loadout_capacity():
-        # Capacity grows with depth, so this can only happen if a walk kept its
-        # loadout and then went somewhere shallower. Say what happened rather
-        # than quietly carrying a ware the HUD cannot show.
-        charms_equipped.resize(loadout_capacity())
-        ui.add_log("Peddle: “%s is on, but that is the most this lantern can carry right now.”" % label)
+    if charms_equipped.size() >= loadout_capacity():
+        # The lantern is full at this depth, and the equip shelf refuses the
+        # same overfill. Appending anyway used to end in a resize that dropped
+        # the very ware this purchase paid for while the log claimed it was
+        # on, so sell it owned-but-unworn and say so: a deeper floor opens
+        # the room, and the shelf keeps the sale.
+        ui.add_log("Peddle: “%s is wrapped for later — this lantern is full right now. Wander deeper and there will be room.”" % label)
     else:
+        charms_equipped.append({"key": key, "tier": tier})
         ui.add_log("Peddle: “One %s, wrapped in a leaf. It suits you.”" % label)
     _award_sticker("shopper")
     _recalculate_loadout(false)
