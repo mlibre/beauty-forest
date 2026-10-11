@@ -252,30 +252,13 @@ func _build_leg(node_name: String, pivot_position: Vector3, trouser_material: Ma
     pivot.add_child(boot)
 
 func _toot(color: Color) -> StandardMaterial3D:
-    var material := StandardMaterial3D.new()
-    material.albedo_color = color
-    material.roughness = 0.78
-    material.metallic = 0.0
-    return material
+    return CozyMaterials.pbr(color, 0.78)
 
 func _toon(color: Color, glow: float, roughness: float) -> ShaderMaterial:
-    var material := ShaderMaterial.new()
-    material.shader = load("res://shaders/soft_toon.gdshader")
-    material.set_shader_parameter("base_color", color)
-    material.set_shader_parameter("rim_color", Color("#ffe8a8"))
-    material.set_shader_parameter("rim_strength", 0.26)
-    material.set_shader_parameter("glow", glow)
-    material.set_shader_parameter("roughness_value", roughness)
-    return material
+    return CozyMaterials.toon(color, glow, roughness, 0.26)
 
 func _emissive(color: Color, energy: float) -> StandardMaterial3D:
-    var material := StandardMaterial3D.new()
-    material.albedo_color = color
-    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-    material.emission_enabled = true
-    material.emission = color
-    material.emission_energy_multiplier = energy
-    return material
+    return CozyMaterials.emissive(color, energy)
 
 func _build_animations() -> void:
     var player := AnimationPlayer.new()

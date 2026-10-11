@@ -160,25 +160,13 @@ func _ware_tooltip(item: Dictionary, card: CozyCard, sparkles: int, slots_full: 
 
 ## The next tier of `key` the hero does not own yet, or 0 when it owns them all.
 func _next_tier(owned: Array, key: String) -> int:
-    var best := 0
-    for entry: Variant in owned:
-        if entry is Dictionary and String((entry as Dictionary).get("key", "")) == key:
-            best = maxi(best, int((entry as Dictionary).get("tier", 1)))
-    return best + 1 if best < BeautyContent.TIER_SCALES.size() - 1 else 0
+    return BeautyData.next_tier(owned, key)
 
 func _owns(owned: Array, key: String, tier: int) -> bool:
-    for entry: Variant in owned:
-        if entry is Dictionary and String((entry as Dictionary).get("key", "")) == key \
-                and int((entry as Dictionary).get("tier", 1)) == tier:
-            return true
-    return false
+    return BeautyData.owns(owned, key, tier)
 
 func _wearing(equipped: Array, key: String, tier: int) -> bool:
-    for entry: Variant in equipped:
-        if entry is Dictionary and String((entry as Dictionary).get("key", "")) == key \
-                and int((entry as Dictionary).get("tier", 1)) == tier:
-            return true
-    return false
+    return BeautyData.wearing(equipped, key, tier)
 
 func show_shop(state: Dictionary) -> void:
     _dismiss_beat_ring()

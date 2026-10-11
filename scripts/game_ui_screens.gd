@@ -360,7 +360,7 @@ func show_journal(meta: Dictionary, facts_learned: Array, stickers: Array) -> vo
         list.add_child(_label("First Nap is waiting somewhere ahead. It is not a prize cup; it is simply a little proof you wandered kindly.", 16, Color("#eee8c8")))
     else:
         for sticker in stickers:
-            list.add_child(_label("✦ " + String(BeautyContent.STICKERS.get(sticker, sticker)), 16, Color("#ffe8a2")))
+            list.add_child(_label("✦ " + BeautyContent.sticker_name(sticker), 16, Color("#ffe8a2")))
     list.add_child(_section_label("YOUR KINDNESS SO FAR ♥"))
     list.add_child(_label("Walks: %d    Deepest floor: %d    Wisps hugged home: %d    Dragons tucked in: %d" % [int(meta.get("runs", 0)), int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0)), int(meta.get("dragons_sung", 0))], 16, Color("#dce9c4")))
     _shop_frame.add_child(_centered_button("♥  Close my book", true, func(): close_journal()))

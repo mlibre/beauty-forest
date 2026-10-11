@@ -12,21 +12,6 @@ const CAMERA_OFFSET := Vector3(6.4, 8.8, 6.4)
 const CHIME_TONES: Array[float] = [523.25, 587.33, 659.25, 783.99, 880.0]
 const LULLABY_STEP := 0.80
 const CHIME_GATHER_RADIUS := 4.0
-## The award-toast line for each sticker. Keys mirror BeautyContent.STICKERS,
-## which holds the name the journal shows; both tables must stay in step.
-const STICKER_DESCRIPTIONS := {
-    "first_nap": "dozed off and got tucked in by wisps",
-    "dragon_friend": "sang Snoozle to sleep",
-    "big_hug": "soothed a Very Big Wisp",
-    "pacifist": "cleared a floor untouched",
-    "shopper": "bought something cozy",
-    "fact_finder": "learned ten facts from Mote",
-    "feeling_friend": "sat with a Big Feeling",
-    "curious": "listened to a curious wisp",
-    "long_lullaby": "sang a distant wisp all the way home",
-    "kindling": "wandered down to floor six",
-    "century": "guided a hundred lost wisps home",
-}
 const CHIME_GATHER_SPEED := 2.4
 const START_POSITIONS := Vector3(-0.7, 1.45, 0.4)
 const QUIT_DRAIN_SECONDS := 0.5
@@ -272,11 +257,8 @@ func _award_sticker(key: String) -> void:
         # failure used to reach only the console, so the next launch would forget
         # the sticker the toast just announced. Say so, once, gently.
         ui.add_log("Mote: “Oh — I couldn't be saved just now. This sticker may not stay.”")
-    ui.show_toast("Sticker earned: %s — %s" % [String(BeautyContent.STICKERS.get(key, key)), _sticker_description(key)])
+    ui.show_toast("Sticker earned: %s — %s" % [BeautyContent.sticker_name(key), BeautyContent.sticker_line(key)])
     audio.play_tone(783.99, 0.42, 0.055, 1)
-
-func _sticker_description(key: String) -> String:
-    return STICKER_DESCRIPTIONS.get(key, "a gentle thing worth remembering")
 
 func _refresh_ui() -> void:
     if ui == null or player == null or not is_instance_valid(player):

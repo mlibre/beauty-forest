@@ -231,7 +231,7 @@ func _add_type_prop(base_color: Color) -> void:
                 pom.position = Vector3(side * 0.16 * visual_scale, 1.34 * visual_scale, 0)
                 _visual.add_child(pom)
 
-func tick_behavior(delta: float, player_position: Vector3, aggro_range: float, speed_multiplier: float, kindling_speed: float) -> void:
+func tick_behavior(delta: float, player_position: Vector3, aggro_range: float, speed_multiplier: float, kindness_speed: float) -> void:
     if not alive:
         velocity = Vector3.ZERO
         return
@@ -264,7 +264,7 @@ func tick_behavior(delta: float, player_position: Vector3, aggro_range: float, s
             if not _orbit_approach:
                 direction = -direction
             direction = direction.rotated(Vector3.UP, sin(_seed + Time.get_ticks_msec() * 0.002) * 0.18)
-        velocity = direction * move_speed * speed_multiplier * kindling_speed * _slow_multiplier
+        velocity = direction * move_speed * speed_multiplier * kindness_speed * _slow_multiplier
         if direction.length_squared() > 0.01:
             look_at(global_position + direction, Vector3.UP)
     else:
@@ -335,29 +335,13 @@ func take_damage(amount: float) -> void:
         alive = false
 
 func _toon(color: Color, glow: float, roughness: float) -> ShaderMaterial:
-    var material := ShaderMaterial.new()
-    material.shader = load("res://shaders/soft_toon.gdshader")
-    material.set_shader_parameter("base_color", color)
-    material.set_shader_parameter("rim_color", Color("#ffe9ac"))
-    material.set_shader_parameter("rim_strength", 0.38)
-    material.set_shader_parameter("glow", glow)
-    material.set_shader_parameter("roughness_value", roughness)
-    return material
+    return CozyMaterials.toon(color, glow, roughness, 0.38)
 
 func _toot(color: Color) -> StandardMaterial3D:
-    var material := StandardMaterial3D.new()
-    material.albedo_color = color
-    material.roughness = 0.82
-    return material
+    return CozyMaterials.pbr(color, 0.82)
 
 func _emissive(color: Color, energy: float) -> StandardMaterial3D:
-    var material := StandardMaterial3D.new()
-    material.albedo_color = color
-    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-    material.emission_enabled = true
-    material.emission = color
-    material.emission_energy_multiplier = energy
-    return material
+    return CozyMaterials.emissive(color, energy)
 
 func _sphere(radius: float, color: Color) -> MeshInstance3D:
     var visual := MeshInstance3D.new()

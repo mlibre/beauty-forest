@@ -335,12 +335,29 @@ const SIGNS := [
     "Wisps guided home today: too many to count, happily.",
 ]
 
+## Every sticker the journal can pin: the name it shows and the award line the
+## toast speaks. One home -- these tables used to live apart and could drift.
 const STICKERS := {
-    "first_nap": "First Nap", "dragon_friend": "Dragon Friend", "big_hug": "Big Hug",
-    "pacifist": "Not A Single Bump", "shopper": "Peddle’s Favorite", "long_lullaby": "Long-Distance Lullaby",
-    "century": "Century of Kindness", "fact_finder": "Curious Mind", "feeling_friend": "Feeling Friend",
-    "curious": "Curious Companion", "kindling": "Kindling Light",
+    "first_nap": {"name": "First Nap", "line": "dozed off and got tucked in by wisps"},
+    "dragon_friend": {"name": "Dragon Friend", "line": "sang Snoozle to sleep"},
+    "big_hug": {"name": "Big Hug", "line": "soothed a Very Big Wisp"},
+    "pacifist": {"name": "Not A Single Bump", "line": "cleared a floor untouched"},
+    "shopper": {"name": "Peddle’s Favorite", "line": "bought something cozy"},
+    "fact_finder": {"name": "Curious Mind", "line": "learned ten facts from Mote"},
+    "feeling_friend": {"name": "Feeling Friend", "line": "sat with a Big Feeling"},
+    "curious": {"name": "Curious Companion", "line": "listened to a curious wisp"},
+    "long_lullaby": {"name": "Long-Distance Lullaby", "line": "sang a distant wisp all the way home"},
+    "kindling": {"name": "Kindling Light", "line": "wandered down to floor six"},
+    "century": {"name": "Century of Kindness", "line": "guided a hundred lost wisps home"},
 }
+
+## The journal's name for a sticker, or the key itself when unknown.
+static func sticker_name(key: String) -> String:
+    return String(STICKERS.get(key, {}).get("name", key))
+
+## The award-toast line for a sticker, or a gentle fallback.
+static func sticker_line(key: String) -> String:
+    return String(STICKERS.get(key, {}).get("line", "a gentle thing worth remembering"))
 
 ## The charm behind `key`, or an empty dict if the key is not a charm.
 ##

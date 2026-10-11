@@ -681,13 +681,14 @@ func check(condition: bool, message: String) -> void:
         failures.append(message)
 
 func _test_sticker_tables_agree() -> void:
-    # Two parallel tables describe the same stickers: BeautyContent.STICKERS
-    # holds the name shown in the journal, and RunState._sticker_description()
-    # holds the line shown in the award toast. "Century of Kindness" was
-    # missing from the second, so earning it announced the generic fallback
-    # text instead of what it actually was. Keep them in step.
+    # "Century of Kindness" once went missing from the toast-line table, so
+    # earning it announced generic fallback words instead of what it was. The
+    # two tables now share one home in BeautyContent, and the check guards the
+    # shape every reader depends on: a name AND a line per sticker.
     for key: String in BeautyContent.STICKERS.keys():
-        check(RunState.STICKER_DESCRIPTIONS.has(key),
-            "sticker '%s' has a name but no description" % key)
-    for key: String in RunState.STICKER_DESCRIPTIONS.keys():
-        check(BeautyContent.STICKERS.has(key), "sticker '%s' is described but has no name" % key)
+        check(not BeautyContent.sticker_name(key).is_empty(),
+            "sticker '%s' has no journal name" % key)
+        check(not BeautyContent.sticker_line(key).is_empty(),
+            "sticker '%s' has no award line" % key)
+        check(BeautyContent.sticker_line(key) != "a gentle thing worth remembering",
+            "sticker '%s' fell back to the generic toast line" % key)

@@ -15,25 +15,15 @@ extends RunState
 ## "which of your three charms should I throw away for this one?" -- is gone,
 ## because on a deep walk the honest answer is "wear them all".
 
-## The next tier of `key` the hero could own, or 0 when it owns both copies.
+## The next tier of `key` the hero could own, or 0 when it owns every copy.
 func _next_tier(key: String) -> int:
-    var best := 0
-    for owned: Dictionary in charms_owned:
-        if String(owned.get("key", "")) == key:
-            best = maxi(best, int(owned.get("tier", 1)))
-    return best + 1 if best < BeautyContent.TIER_SCALES.size() - 1 else 0
+    return BeautyData.next_tier(charms_owned, key)
 
 func _owns(key: String, tier: int) -> bool:
-    for owned: Dictionary in charms_owned:
-        if String(owned.get("key", "")) == key and int(owned.get("tier", 1)) == tier:
-            return true
-    return false
+    return BeautyData.owns(charms_owned, key, tier)
 
 func _wearing(key: String, tier: int) -> bool:
-    for worn: Dictionary in charms_equipped:
-        if String(worn.get("key", "")) == key and int(worn.get("tier", 1)) == tier:
-            return true
-    return false
+    return BeautyData.wearing(charms_equipped, key, tier)
 
 func _shop_state() -> Dictionary:
     var current_mote: Dictionary = {}

@@ -118,12 +118,4 @@ func _physics_process(delta: float) -> void:
             return
 
 func _emissive(color: Color, energy: float) -> StandardMaterial3D:
-    var material := StandardMaterial3D.new()
-    material.albedo_color = color
-    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-    material.emission_enabled = true
-    material.emission = color
-    material.emission_energy_multiplier = energy
-    return material
+    return CozyMaterials.emissive(color, energy, true)

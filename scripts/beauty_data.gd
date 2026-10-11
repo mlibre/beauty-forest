@@ -357,6 +357,27 @@ static func stanza_effects(equipped: Dictionary) -> Dictionary:
                 effects[effect_key] = float(effects[effect_key]) * float(stanza[effect_key])
     return effects
 
+## Loadout queries shared by Peddle's cart and the shop shelf UI, so both
+## answer "what does the hero own or wear" from the same arithmetic.
+
+## The next tier of `key` the hero does not own yet, or 0 when it owns them all.
+static func next_tier(owned: Array, key: String) -> int:
+    var best := 0
+    for entry: Variant in owned:
+        if entry is Dictionary and String((entry as Dictionary).get("key", "")) == key:
+            best = maxi(best, int((entry as Dictionary).get("tier", 1)))
+    return best + 1 if best < BeautyContent.TIER_SCALES.size() - 1 else 0
+
+static func owns(owned: Array, key: String, tier: int) -> bool:
+    for entry: Variant in owned:
+        if entry is Dictionary and String((entry as Dictionary).get("key", "")) == key \
+                and int((entry as Dictionary).get("tier", 1)) == tier:
+            return true
+    return false
+
+static func wearing(equipped: Array, key: String, tier: int) -> bool:
+    return owns(equipped, key, tier)
+
 static func _dictionary_flag(flags: Dictionary, key: String) -> bool:
     var value: Variant = flags.get(key, false)
     if typeof(value) != TYPE_BOOL:

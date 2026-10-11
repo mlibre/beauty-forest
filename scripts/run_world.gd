@@ -194,8 +194,7 @@ func _relocate_stair_from(room: Dictionary) -> void:
         (stair as Node3D).position = world.stair_position
 
 func _point_in_room(point: Vector3, room: Dictionary) -> bool:
-    return point.x >= float(room["x"]) and point.x < float(room["x"]) + float(room["w"]) \
-        and point.z >= float(room["y"]) and point.z < float(room["y"]) + float(room["h"])
+    return DungeonGenerator.point_in_room(room, point.x, point.z)
 
 func _nearest_chime() -> Node3D:
     if not dragon_exists or world == null:

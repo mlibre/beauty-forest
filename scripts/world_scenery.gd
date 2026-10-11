@@ -354,32 +354,13 @@ func _foliage_material(base: Color, tip: Color) -> ShaderMaterial:
     return material
 
 func _pbr(color: Color, roughness: float, metallic: float = 0.0) -> StandardMaterial3D:
-    var material := StandardMaterial3D.new()
-    material.albedo_color = color
-    material.roughness = roughness
-    material.metallic = metallic
-    return material
+    return CozyMaterials.pbr(color, roughness, metallic)
 
 func _emissive(color: Color, energy: float) -> StandardMaterial3D:
-    var material := StandardMaterial3D.new()
-    material.albedo_color = color
-    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-    material.emission_enabled = true
-    material.emission = color
-    material.emission_energy_multiplier = energy
-    return material
+    return CozyMaterials.emissive(color, energy, true)
 
 func _toon(color: Color, glow: float, roughness: float) -> ShaderMaterial:
-    var material := ShaderMaterial.new()
-    material.shader = load("res://shaders/soft_toon.gdshader")
-    material.set_shader_parameter("base_color", color)
-    material.set_shader_parameter("rim_color", Color("#ffe9a8"))
-    material.set_shader_parameter("rim_strength", 0.30)
-    material.set_shader_parameter("glow", glow)
-    material.set_shader_parameter("roughness_value", roughness)
-    return material
+    return CozyMaterials.toon(color, glow, roughness)
 
 func _add_multimesh(node_name: String, mesh: Mesh, material: Material, transforms: Array[Transform3D], colors: Array[Color]) -> MultiMeshInstance3D:
     if transforms.is_empty():
@@ -401,11 +382,7 @@ func _add_multimesh(node_name: String, mesh: Mesh, material: Material, transform
     return instance
 
 func _point_inside_room(x: int, z: int, margin: int) -> bool:
-    for room: Dictionary in dungeon["rooms"]:
-        if x >= int(room["x"]) - margin and x < int(room["x"]) + int(room["w"]) + margin \
-                and z >= int(room["y"]) - margin and z < int(room["y"]) + int(room["h"]) + margin:
-            return true
-    return false
+    return DungeonGenerator.point_in_any_room(dungeon["rooms"], float(x), float(z), float(margin))
 
 func _random_floor_cell() -> Vector2i:
     return DungeonGenerator.random_floor_cell(dungeon, _rng, Vector2(-1000, -1000), 0.0)

@@ -116,12 +116,21 @@ static func generate(floor_number: int) -> Dictionary:
         "floor": safe_floor,
     }
 
-static func _point_in_any_room(rooms: Array[Dictionary], x: int, y: int, margin: int = 0) -> bool:
+## Is a grid point inside a room, with an optional margin? The one containment
+## answer for the generator, the scenery spread and the stair relocation, so
+## the three can never disagree about where a room ends.
+static func point_in_room(room: Dictionary, x: float, y: float, margin: float = 0.0) -> bool:
+    return x >= float(room["x"]) - margin and x < float(room["x"]) + float(room["w"]) + margin \
+        and y >= float(room["y"]) - margin and y < float(room["y"]) + float(room["h"]) + margin
+
+static func point_in_any_room(rooms: Array, x: float, y: float, margin: float = 0.0) -> bool:
     for room: Dictionary in rooms:
-        if x >= int(room["x"]) - margin and x < int(room["x"]) + int(room["w"]) + margin \
-                and y >= int(room["y"]) - margin and y < int(room["y"]) + int(room["h"]) + margin:
+        if point_in_room(room, x, y, margin):
             return true
     return false
+
+static func _point_in_any_room(rooms: Array[Dictionary], x: int, y: int, margin: int = 0) -> bool:
+    return point_in_any_room(rooms, float(x), float(y), float(margin))
 
 static func _carve_corridor(grid: PackedInt32Array, width: int, height: int, from_room: Dictionary, to_room: Dictionary, radius: int, rng: RandomNumberGenerator) -> void:
     var from := Vector2(from_room["cx"], from_room["cy"])
