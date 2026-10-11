@@ -295,7 +295,7 @@ func _walker_summary() -> Control:
 func _keys_reference() -> Control:
     var box := VBoxContainer.new()
     box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    var keys := _label("Wander: WASD / arrows / stick  ·  Dash: Shift  ·  Hug, sing & descend: E  ·  Cart: F  ·  Memories: J  ·  Cozy options: C  ·  Pause: Esc", 13, Color("#cbdcb7"))
+    var keys := _label("Wander: WASD / arrows / stick  ·  Dash: Shift  ·  Hug, sing, wish & descend: E  ·  Cart: F  ·  Memories: J  ·  Cozy options: C  ·  Pause: Esc", 13, Color("#cbdcb7"))
     keys.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     box.add_child(keys)
     return box
