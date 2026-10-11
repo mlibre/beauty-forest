@@ -50,23 +50,7 @@ static func burst(parent: Node, world_position: Vector3, color: Color, amount: i
     parent.add_child(particles)
     particles.global_position = world_position
     particles.emitting = true
-    particles.finished.connect(particles.queue_free, CONNECT_ONE_SHOT)
-    # Some Forward+ driver/Godot combinations do not deliver the one-shot
-    # `finished` signal even after emitting flips false. Keep a bounded fallback
-    # so invisible emitter nodes and their GPU resources cannot accumulate.
-    # Capture the instance id, not the emitter node: the floor teardown may
-    # free the world (and the emitter with it) before this timer fires, and a
-    # freed Object capture makes the engine log "Lambda capture at index 0
-    # was freed" *before* any is_instance_valid guard in the body can run.
-    var cleanup_delay := particles.lifetime * (1.0 + particles.explosiveness) + 0.1
-    var emitter_id := particles.get_instance_id()
-    parent.get_tree().create_timer(cleanup_delay).timeout.connect(
-        func() -> void:
-            var emitter := instance_from_id(emitter_id)
-            if emitter != null and is_instance_valid(emitter):
-                emitter.queue_free(),
-        CONNECT_ONE_SHOT
-    )
+    _dispose_after_lifecycle(parent, particles)
     return particles
 
 static func heart_burst(parent: Node, world_position: Vector3) -> void:
@@ -121,6 +105,87 @@ static func ring(parent: Node, world_position: Vector3, color: Color, final_radi
 static func trail_tick(parent: Node, world_position: Vector3, color: Color) -> void:
     burst(parent, world_position, color, 3, 0.35, 0.36)
 
+static func trail(world: Node, from: Vector3, to: Vector3, color: Color, motes: int = 7, reduced_motion: bool = false) -> void:
+    ## A quick fading streak between two points -- the hero's dash, drawn as a
+    ## handful of soft glints sweeping down the path and dissolving at the far
+    ## end. With reduced_motion it degrades to one soft pulse at the arrival
+    ## point: no travel, no scatter.
+    if world == null or not world.is_inside_tree():
+        return
+    if reduced_motion:
+        _soft_pulse(world, to, color)
+        return
+    var count := clampi(motes, 2, 16)
+    var travel := 0.26
+    for index in range(count):
+        var t := float(index) / float(count - 1)
+        # The formation starts spread along most of the path and sweeps into
+        # the arrival point; the tail is smaller and lags a touch, so the
+        # streak tapers like a comet rather than a marching column.
+        var head := from.lerp(to, t * 0.7)
+        var mote := _soft_mote(world, head, Color(color.r, color.g, color.b, 0.85), 0.10 + 0.05 * t)
+        var material := (mote.mesh as QuadMesh).material as StandardMaterial3D
+        var delay := t * 0.06
+        var tween := mote.create_tween()
+        tween.set_parallel(true)
+        tween.tween_property(mote, "global_position", to, travel).set_delay(delay).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+        tween.tween_property(material, "albedo_color", Color(color.r, color.g, color.b, 0.0), travel).set_delay(delay).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+        tween.chain().tween_callback(mote.queue_free)
+
+static func sparkle_crown(world: Node, at: Vector3, color: Color, sparks: int = 9, reduced_motion: bool = false) -> void:
+    ## A small crown of sparkles that springs up around a point, hangs for a
+    ## breath, and fades -- the level-up draft's quiet fanfare. With
+    ## reduced_motion it degrades to a single soft pulse.
+    if world == null or not world.is_inside_tree():
+        return
+    if reduced_motion:
+        _soft_pulse(world, at + Vector3.UP * 0.35, color)
+        return
+    var particles := GPUParticles3D.new()
+    particles.amount = clampi(sparks, 3, 24)
+    particles.lifetime = 0.85
+    particles.one_shot = true
+    particles.explosiveness = 0.92
+    particles.randomness = 0.35
+    particles.visibility_aabb = AABB(Vector3(-1.6, -0.4, -1.6), Vector3(3.2, 3.0, 3.2))
+
+    var process := ParticleProcessMaterial.new()
+    # Sparks are born on a small ring around the point and rise from it, so
+    # the fanfare reads as a crown rather than a fountain from one spot.
+    process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_RING
+    process.emission_ring_axis = Vector3.UP
+    process.emission_ring_radius = 0.42
+    process.emission_ring_inner_radius = 0.26
+    process.emission_ring_height = 0.05
+    process.direction = Vector3.UP
+    process.spread = 14.0
+    process.initial_velocity_min = 1.0
+    process.initial_velocity_max = 1.6
+    process.gravity = Vector3(0.0, -1.5, 0.0)
+    process.damping_min = 0.8
+    process.damping_max = 1.6
+    process.scale_min = 0.55
+    process.scale_max = 1.05
+    # A swell-then-shrink scale curve: no spark ever pops into or out of
+    # existence at full size.
+    var curve := Curve.new()
+    curve.add_point(Vector2(0.0, 0.25))
+    curve.add_point(Vector2(0.30, 1.0))
+    curve.add_point(Vector2(1.0, 0.0))
+    var curve_texture := CurveTexture.new()
+    curve_texture.curve = curve
+    process.scale_curve = curve_texture
+    # No process.color: the draw material below is unshaded with a fixed
+    # albedo, so a process-material color would never reach the screen (the
+    # same rule every emitter in this file follows).
+    particles.process_material = process
+
+    particles.draw_pass_1 = _soft_mote_mesh(0.09, color, 2.4)
+    world.add_child(particles)
+    particles.global_position = at + Vector3.UP * 0.55
+    particles.emitting = true
+    _dispose_after_lifecycle(world, particles)
+
 static func spawn_ambient_motes(parent: Node, region: Dictionary, amount: int = 100) -> GPUParticles3D:
     var particles := GPUParticles3D.new()
     particles.amount = amount
@@ -161,6 +226,65 @@ static func spawn_ambient_motes(parent: Node, region: Dictionary, amount: int = 
     parent.add_child(particles)
     particles.position = Vector3.ZERO
     return particles
+
+static func _dispose_after_lifecycle(parent: Node, emitter: GPUParticles3D) -> void:
+    ## Frees a one-shot emitter when its show is over. Some Forward+
+    ## driver/Godot combinations do not deliver the one-shot `finished` signal
+    ## even after emitting flips false. Keep a bounded fallback so invisible
+    ## emitter nodes and their GPU resources cannot accumulate. Capture the
+    ## instance id, not the emitter node: the floor teardown may free the
+    ## world (and the emitter with it) before this timer fires, and a freed
+    ## Object capture makes the engine log "Lambda capture at index 0 was
+    ## freed" *before* any is_instance_valid guard in the body can run.
+    emitter.finished.connect(emitter.queue_free, CONNECT_ONE_SHOT)
+    var cleanup_delay := emitter.lifetime * (1.0 + emitter.explosiveness) + 0.1
+    var emitter_id := emitter.get_instance_id()
+    parent.get_tree().create_timer(cleanup_delay).timeout.connect(
+        func() -> void:
+            var emitter_node := instance_from_id(emitter_id)
+            if emitter_node != null and is_instance_valid(emitter_node):
+                emitter_node.queue_free(),
+        CONNECT_ONE_SHOT
+    )
+
+static func _soft_mote_mesh(size: float, color: Color, energy: float = 2.2) -> QuadMesh:
+    ## One billboarded soft-edged glint quad: the shared atom of the trail,
+    ## crown, and pulse effects. Never a raw square -- the radial gradient
+    ## fades it to nothing at the edges.
+    var quad := QuadMesh.new()
+    quad.size = Vector2(size, size)
+    var material := StandardMaterial3D.new()
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+    material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+    material.albedo_texture = _soft_mote_texture()
+    material.albedo_color = color
+    material.emission_enabled = true
+    material.emission = Color(color.r, color.g, color.b)
+    material.emission_energy_multiplier = energy
+    quad.material = material
+    return quad
+
+static func _soft_mote(parent: Node, at: Vector3, color: Color, size: float) -> MeshInstance3D:
+    ## Places one glint in the world; the caller owns the tween that moves,
+    ## fades, and frees it.
+    var mote := MeshInstance3D.new()
+    mote.mesh = _soft_mote_mesh(size, color)
+    parent.add_child(mote)
+    mote.global_position = at
+    return mote
+
+static func _soft_pulse(parent: Node, at: Vector3, color: Color) -> void:
+    ## The reduced-motion stand-in for the bigger one-shots: a single glint
+    ## that swells once and dissolves in place. No travel, no scatter.
+    var mote := _soft_mote(parent, at, color, 0.16)
+    var material := (mote.mesh as QuadMesh).material as StandardMaterial3D
+    var tween := mote.create_tween()
+    tween.set_parallel(true)
+    tween.tween_property(mote, "scale", Vector3.ONE * 1.6, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+    tween.tween_property(material, "albedo_color", Color(color.r, color.g, color.b, 0.0), 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+    tween.chain().tween_callback(mote.queue_free)
 
 static func _soft_mote_texture() -> GradientTexture2D:
     var gradient := Gradient.new()

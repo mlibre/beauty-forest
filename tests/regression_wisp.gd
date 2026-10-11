@@ -1,8 +1,9 @@
-extends SceneTree
+extends TestCase
 
 ## Focused regression coverage for wisp movement state and scaling.
 
 func _initialize() -> void:
+    suite_name = "BEAUTY_FOREST_WISP_REGRESSION"
     call_deferred("_run")
 
 func _run() -> void:
@@ -20,11 +21,12 @@ func _run() -> void:
     var expected_speed := wisp.move_speed
     print("WISP_SLOW_EXPIRED_SPEED expected=%f actual=%f" % [expected_speed, expired_speed])
     wisp.free()
-    await process_frame
-    if not is_equal_approx(slowed_speed, expected_speed * 0.5) \
-            or not is_equal_approx(expired_speed, expected_speed):
-        print("BEAUTY_FOREST_WISP_REGRESSION_FAILED")
-        quit(1)
+    await frames(1)
+    if not ok(is_equal_approx(slowed_speed, expected_speed * 0.5) \
+            and is_equal_approx(expired_speed, expected_speed),
+            "a slowed wisp must run at half speed and return to full once the slow expires (slowed %f, expired %f, full %f)" % [
+                slowed_speed, expired_speed, expected_speed]):
+        stop(null, suite_name)
         return
 
     var regular_big := Wisp.new()
@@ -40,22 +42,20 @@ func _run() -> void:
     var expected_feeling_speed := regular_big_speed * 0.8
     print("WISP_FEELING_SPEED expected=%f actual=%f" % [expected_feeling_speed, big_feeling_speed])
     big_feeling.free()
-    await process_frame
-    if not is_equal_approx(big_feeling_speed, expected_feeling_speed):
-        print("BEAUTY_FOREST_WISP_REGRESSION_FAILED")
-        quit(1)
+    await frames(1)
+    if not ok(is_equal_approx(big_feeling_speed, expected_feeling_speed),
+            "a Big Feeling must move at %f, the big wisp speed calmed by 0.8 (got %f)" % [expected_feeling_speed, big_feeling_speed]):
+        stop(null, suite_name)
         return
 
     # Still Forest has to still every animated channel a wisp owns. The boss
     # light breathes via sin() and was the one channel that never consulted the
     # setting, so a player who asked for stillness still got a pulsing light.
     if not await _check_boss_light_respects_still_forest():
-        print("BEAUTY_FOREST_WISP_REGRESSION_FAILED")
-        quit(1)
+        stop(null, suite_name)
         return
 
-    print("BEAUTY_FOREST_WISP_REGRESSION_OK")
-    quit(0)
+    finish(null, "BEAUTY_FOREST_WISP_REGRESSION")
 
 func _check_boss_light_respects_still_forest() -> bool:
     for enabled in [false, true]:
@@ -69,8 +69,8 @@ func _check_boss_light_respects_still_forest() -> bool:
             break
         if light == null:
             wisp.free()
-            await process_frame
-            print("FAIL: the big wisp has no light to still")
+            await frames(1)
+            fail("the big wisp has no light to still")
             return false
 
         # The breath is driven by Time.get_ticks_msec(), so the sample has to
@@ -88,14 +88,14 @@ func _check_boss_light_respects_still_forest() -> bool:
 
         if enabled and swing > 0.001:
             wisp.free()
-            await process_frame
-            print("FAIL: the boss light still breathes with Still Forest on (%.5f)" % swing)
+            await frames(1)
+            fail("the boss light still breathes with Still Forest on (%.5f)" % swing)
             return false
         if not enabled and swing < 0.01:
             wisp.free()
-            await process_frame
-            print("FAIL: the boss light never breathes, so this test cannot see it (%.5f)" % swing)
+            await frames(1)
+            fail("the boss light never breathes, so this test cannot see it (%.5f)" % swing)
             return false
         wisp.free()
-        await process_frame
+        await frames(1)
     return true

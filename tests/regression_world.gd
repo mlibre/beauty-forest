@@ -1,11 +1,13 @@
-extends SceneTree
+extends TestCase
 
 ## Focused regressions for ForestWorld lifecycle, accessibility, objective layout,
 ## and camera-facing generated visuals.
 
-var failures := 0
-
 func _initialize() -> void:
+    suite_name = "BEAUTY_FOREST_WORLD_REGRESSION"
+    # The relocated-stair check below drives the real game, and starting a run
+    # saves meta -- keep that write in the throwaway profile.
+    TestProfile.begin("world")
     call_deferred("_run")
 
 func _run() -> void:
@@ -35,20 +37,16 @@ func _run() -> void:
     world.build_floor(2, dungeon, false)
     _check_rebuild_teardown(world)
 
-    root.remove_child(world)
-    world.free()
-    if failures == 0:
-        print("BEAUTY_FOREST_WORLD_REGRESSION_OK")
-    quit(failures)
+    finish(world, "BEAUTY_FOREST_WORLD_REGRESSION")
 
 func _check_reduced_motion_initial_state(world: ForestWorld) -> void:
     for child in world.get_children():
         if child is GPUParticles3D:
-            _check(is_equal_approx((child as GPUParticles3D).speed_scale, 0.18),
+            ok(is_equal_approx((child as GPUParticles3D).speed_scale, 0.18),
                 "reduced motion should apply to particles during initial build")
     var wind_materials: Array = world.get("_wind_materials")
     if wind_materials.is_empty():
-        _check(false, "floor should own a wind material")
+        ok(false, "floor should own a wind material")
         return
     var wind_material := wind_materials[0] as ShaderMaterial
     wind_material.set_shader_parameter("wind_time", 0.0)
@@ -56,27 +54,27 @@ func _check_reduced_motion_initial_state(world: ForestWorld) -> void:
     var before: float = wind_material.get_shader_parameter("wind_time")
     world._process(0.25)
     var after: float = wind_material.get_shader_parameter("wind_time")
-    _check(is_equal_approx(before, after), "reduced motion should hold foliage wind time steady")
+    ok(is_equal_approx(before, after), "reduced motion should hold foliage wind time steady")
 
 func _check_pool_water_animates(world: ForestWorld) -> void:
     ## forest_water.gdshader drifts from `time_seconds`, so the pool must be
     ## fed a live clock. Reduced motion still holds it steady.
     var water: ShaderMaterial = world.get("_water_material")
     if water == null:
-        _check(false, "the wishing pool built no water material to animate")
+        ok(false, "the wishing pool built no water material to animate")
         return
-    _check(water.shader != null, "the pool water has no shader")
+    ok(water.shader != null, "the pool water has no shader")
     world.set("_time", 0.0)
     world.set("_reduced_motion", false)
     # Sentinel: if nothing drives the uniform it keeps this value forever.
     water.set_shader_parameter("time_seconds", -1.0)
     world._process(0.25)
     var moving: float = water.get_shader_parameter("time_seconds")
-    _check(moving > 0.0, "the wishing pool never animated (time_seconds stayed at %f)" % moving)
+    ok(moving > 0.0, "the wishing pool never animated (time_seconds stayed at %f)" % moving)
     world.set("_reduced_motion", true)
     water.set_shader_parameter("time_seconds", 3.0)
     world._process(0.25)
-    _check(is_equal_approx(water.get_shader_parameter("time_seconds"), 3.0), "reduced motion should hold the pool's drift steady")
+    ok(is_equal_approx(water.get_shader_parameter("time_seconds"), 3.0), "reduced motion should hold the pool's drift steady")
     world.set("_reduced_motion", false)
 
 func _check_ambient_life_centering(world: ForestWorld, dungeon: Dictionary) -> void:
@@ -85,17 +83,17 @@ func _check_ambient_life_centering(world: ForestWorld, dungeon: Dictionary) -> v
     for child in world.get_children():
         if child is GPUParticles3D:
             particle_count += 1
-            _check((child as GPUParticles3D).position.is_equal_approx(expected),
+            ok((child as GPUParticles3D).position.is_equal_approx(expected),
                 "ambient particle fields should be centered on their floor")
-    _check(particle_count == 2, "floor should own ambient motes and leaves")
+    ok(particle_count == 2, "floor should own ambient motes and leaves")
 
 func _check_objective_layout(world: ForestWorld) -> void:
     var stair := world.get_node_or_null("Stairwell") as Node3D
     var pool := world.get_node_or_null("WishingPool") as Node3D
-    _check(stair != null and pool != null, "stair and wishing pool should exist")
+    ok(stair != null and pool != null, "stair and wishing pool should exist")
     if stair and pool:
         var separation := Vector2(stair.position.x - pool.position.x, stair.position.z - pool.position.z).length()
-        _check(separation > 3.0, "stair and wishing pool should not share the same clearing center")
+        ok(separation > 3.0, "stair and wishing pool should not share the same clearing center")
     if stair == null:
         return
     var visible_step_count := 0
@@ -105,23 +103,23 @@ func _check_objective_layout(world: ForestWorld) -> void:
             var bounds: AABB = step.global_transform * step.get_aabb()
             if bounds.position.y >= -0.001:
                 visible_step_count += 1
-    _check(visible_step_count == 5, "all five stair treads should remain above the ground plane")
+    ok(visible_step_count == 5, "all five stair treads should remain above the ground plane")
     var glow: MeshInstance3D
     for child in stair.get_children():
         if child is MeshInstance3D and (child as MeshInstance3D).mesh is CylinderMesh:
             glow = child as MeshInstance3D
-    _check(glow != null and is_zero_approx(glow.global_position.y - 0.125),
+    ok(glow != null and is_zero_approx(glow.global_position.y - 0.125),
         "stair glow should sit above the top tread")
 
 func _check_camera_facing_visuals(world: ForestWorld) -> void:
     var sign := world.get_node_or_null("ForestSign")
     var label := _find_label(sign)
-    _check(label != null, "forest sign should have a label")
+    ok(label != null, "forest sign should have a label")
     if label:
-        _check(is_zero_approx(label.rotation.y), "sign label should face the fixed +Z camera side")
-        _check(label.position.z > 0.0, "sign label should sit on the camera-facing board face")
+        ok(is_zero_approx(label.rotation.y), "sign label should face the fixed +Z camera side")
+        ok(label.position.z > 0.0, "sign label should sit on the camera-facing board face")
     var merchant := world.merchant_visual
-    _check(merchant != null, "Peddle should be built before visibility filtering")
+    ok(merchant != null, "Peddle should be built before visibility filtering")
     if merchant:
         var eye_count := 0
         var camera_facing_eye_count := 0
@@ -132,7 +130,7 @@ func _check_camera_facing_visuals(world: ForestWorld) -> void:
                     eye_count += 1
                     if node.global_position.z > merchant.global_position.z:
                         camera_facing_eye_count += 1
-        _check(eye_count == 2 and camera_facing_eye_count == eye_count,
+        ok(eye_count == 2 and camera_facing_eye_count == eye_count,
             "Peddle's eyes should be visible from the fixed camera")
 
 func _check_arrived_marker_goes_dark(world: ForestWorld) -> void:
@@ -151,22 +149,22 @@ func _check_arrived_marker_goes_dark(world: ForestWorld) -> void:
     marker.set_reduced_motion(false)
     await create_timer(0.05).timeout
     if not is_instance_valid(marker):
-        _check(false, "the floor teardown freed the waypoint under the arrival check")
+        ok(false, "the floor teardown freed the waypoint under the arrival check")
         return
-    _check(marker._light.light_energy > 0.0,
+    ok(marker._light.light_energy > 0.0,
             "the waypoint light never lit up in the first place: %.2f" % marker._light.light_energy)
     marker.set_arrived(true)
     await create_timer(0.05).timeout
     if not is_instance_valid(marker):
-        _check(false, "the floor teardown freed the waypoint while it was checking arrival")
+        ok(false, "the floor teardown freed the waypoint while it was checking arrival")
         return
-    _check(marker._light.light_energy == 0.0,
+    ok(marker._light.light_energy == 0.0,
             "the waypoint light kept burning after arrival: %.2f" % marker._light.light_energy)
     marker.set_arrived(false)
     await create_timer(0.05).timeout
     if not is_instance_valid(marker):
         return
-    _check(marker._light.light_energy > 0.0,
+    ok(marker._light.light_energy > 0.0,
             "stepping away did not relight the waypoint")
     marker.queue_free()
 
@@ -185,10 +183,10 @@ func _check_rebuild_teardown(world: ForestWorld) -> void:
     for node in _descendants(world):
         if node.name == "Snoozle" or node.name == "SnoozlesFamily":
             old_dragons += 1
-    _check(world_environments == 1, "rebuilding a floor should leave one WorldEnvironment")
-    _check(physics_bodies == 1, "rebuilding a floor should leave one collision body")
-    _check(old_dragons == 0, "rebuilding should tear down the previous dragon")
-    _check(old_chimes == 0, "rebuilding should tear down the previous chimes")
+    ok(world_environments == 1, "rebuilding a floor should leave one WorldEnvironment")
+    ok(physics_bodies == 1, "rebuilding a floor should leave one collision body")
+    ok(old_dragons == 0, "rebuilding should tear down the previous dragon")
+    ok(old_chimes == 0, "rebuilding should tear down the previous chimes")
 
 func _find_label(node: Node) -> Label3D:
     if node == null:
@@ -222,10 +220,10 @@ func _check_objective_props_do_not_stack_on_generated_floors() -> void:
             probe.build_floor(real_floor, generated, true)
             var stair := probe.stair_position
             var merchant := probe.get_node_or_null("Peddle") as Node3D
-            _check(merchant != null, "floor %d built no Peddle cart" % real_floor)
+            ok(merchant != null, "floor %d built no Peddle cart" % real_floor)
             if merchant != null:
                 var separation := Vector2(stair.x - merchant.position.x, stair.z - merchant.position.z).length()
-                _check(separation > 4.0,
+                ok(separation > 4.0,
                     "floor %d stacked the stairwell and Peddle's cart %.2f m apart" % [real_floor, separation])
             # Chimes only exist on a dragon floor, and they are built against a
             # cleared room rather than by build_floor itself. Snoozle takes the
@@ -250,10 +248,10 @@ func _check_objective_props_do_not_stack_on_generated_floors() -> void:
                     farthest = reach
                     chime_room = room
             probe.build_dream_chimes(chime_room)
-            _check(not probe.chimes.is_empty(), "floor %d built no dream chimes" % real_floor)
+            ok(not probe.chimes.is_empty(), "floor %d built no dream chimes" % real_floor)
             for chime: Node3D in probe.chimes:
                 var chime_to_stair := Vector2(chime.global_position.x - stair.x, chime.global_position.z - stair.z).length()
-                _check(chime_to_stair > 2.0,
+                ok(chime_to_stair > 2.0,
                     "floor %d put a dream chime %.2f m from the stairwell" % [real_floor, chime_to_stair])
     root.remove_child(probe)
     probe.free()
@@ -265,17 +263,17 @@ func _check_objective_props_do_not_stack(world: ForestWorld, dungeon: Dictionary
     ## the arch ring and the cart canopy interpenetrating, with the E and F
     ## prompts stacked on top of each other.
     var merchant := world.get_node_or_null("Peddle") as Node3D
-    _check(merchant != null, "Peddle's cart should exist")
+    ok(merchant != null, "Peddle's cart should exist")
     if merchant == null:
         return
     var stair := world.stair_position
     var separation := Vector2(stair.x - merchant.position.x, stair.z - merchant.position.z).length()
-    _check(separation > 4.0,
+    ok(separation > 4.0,
         "the stairwell and Peddle's cart are %.2f m apart in the same clearing; they need their own rooms" % separation)
     var pool := world.get_node_or_null("WishingPool") as Node3D
     if pool != null:
         var pool_separation := Vector2(pool.position.x - merchant.position.x, pool.position.z - merchant.position.z).length()
-        _check(pool_separation > 2.0, "Peddle's cart should not sit on the wishing pool")
+        ok(pool_separation > 2.0, "Peddle's cart should not sit on the wishing pool")
 
 func _check_chimes_avoid_the_landmark_props(world: ForestWorld) -> void:
     ## Chimes are spread inside one clearing, so a chime could settle on the
@@ -283,11 +281,11 @@ func _check_chimes_avoid_the_landmark_props(world: ForestWorld) -> void:
     for chime: Node3D in world.chimes:
         var stair_distance := Vector2(chime.global_position.x - world.stair_position.x,
             chime.global_position.z - world.stair_position.z).length()
-        _check(stair_distance > 2.0,
+        ok(stair_distance > 2.0,
             "a dream chime settled %.2f m from the stairwell, on top of its glow disc" % stair_distance)
         var merchant_distance := Vector2(chime.global_position.x - world.merchant_position.x,
             chime.global_position.z - world.merchant_position.z).length()
-        _check(merchant_distance > 2.0,
+        ok(merchant_distance > 2.0,
             "a dream chime settled %.2f m from Peddle's cart" % merchant_distance)
 
 func _synthetic_dungeon() -> Dictionary:
@@ -301,13 +299,6 @@ func _synthetic_dungeon() -> Dictionary:
         {"x": 12, "y": 29, "w": 8, "h": 8, "cx": 16.0, "cy": 33.0, "area": 64},
     ]
     return {"width": size, "height": size, "grid": grid, "rooms": rooms, "seed": 123, "floor": 1}
-
-func _check(condition: bool, message: String) -> void:
-    if condition:
-        return
-    failures += 1
-    printerr("FAIL: ", message)
-
 
 func _check_the_relocated_stair_leaves_the_spawn() -> bool:
     ## A dragon floor relocates the stairwell when the generator happened to put
@@ -323,9 +314,9 @@ func _check_the_relocated_stair_leaves_the_spawn() -> bool:
     var packed: PackedScene = load("res://scenes/main.tscn")
     var game: Node = packed.instantiate()
     root.add_child(game)
-    await _wait(2)
+    await frames(2)
     game._start_run(1)
-    await _wait(4)
+    await frames(4)
     var dragon_floors := 0
     var on_spawn := 0
     # A wide contiguous band. Both defects here are LAYOUT-DEPENDENT -- they only
@@ -333,7 +324,7 @@ func _check_the_relocated_stair_leaves_the_spawn() -> bool:
     # landed on 4 dragon floors could not see either one. This band covers 30.
     for real_floor in range(1, 200):
         game._load_floor(real_floor, false)
-        await _wait(2)
+        await frames(2)
         if not game.dragon_exists:
             continue
         dragon_floors += 1
@@ -344,9 +335,9 @@ func _check_the_relocated_stair_leaves_the_spawn() -> bool:
         var separation := Vector2(stair.x - spawn.x, stair.z - spawn.z).length()
         if separation < 2.3:
             on_spawn += 1
-        _check(separation > 2.3,
+        ok(separation > 2.3,
             "floor %d left the relocated stairwell %.2f m from the spawn -- inside the 2.3 m interact radius, so the hero descends without walking" % [real_floor, separation])
-        _check(not game._point_in_room(stair, spawn_room),
+        ok(not game._point_in_room(stair, spawn_room),
             "floor %d left the relocated stairwell inside the spawn clearing the hero starts in" % real_floor)
         # And the chimes must have spread AROUND the stairwell's final home.
         # build_dream_chimes() seeds its spread from the landmark positions, so
@@ -354,17 +345,13 @@ func _check_the_relocated_stair_leaves_the_spawn() -> bool:
         # a spot the stair then moved into. That fires on 14 of 30 dragon floors.
         for chime: Node3D in game.world.chimes:
             var chime_to_stair := Vector2(chime.global_position.x - stair.x, chime.global_position.z - stair.z).length()
-            _check(chime_to_stair > 2.0,
+            ok(chime_to_stair > 2.0,
                 "floor %d settled a dream chime %.2f m from the relocated stairwell" % [real_floor, chime_to_stair])
     root.remove_child(game)
     game.free()
-    await _wait(2)
+    await frames(2)
     if dragon_floors == 0:
-        printerr("FAIL: no dragon floors were generated, so the relocated stairwell was never checked")
+        fail("no dragon floors were generated, so the relocated stairwell was never checked")
         return false
     printerr("RELOCATION_SAMPLE: %d dragon floors, %d put the stair on the spawn" % [dragon_floors, on_spawn])
     return true
-
-func _wait(count: int) -> void:
-    for _frame in range(count):
-        await process_frame

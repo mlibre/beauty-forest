@@ -1,23 +1,16 @@
-extends SceneTree
+extends TestCase
 
 const D := preload("res://scripts/dungeon_generator.gd")
 
-var failures: Array[String] = []
-
 func _initialize() -> void:
+	suite_name = "BEAUTY_FOREST_DUNGEON"
 	call_deferred("_run")
 
 func _run() -> void:
 	_test_line_of_sight_endpoints()
 	_test_generated_topology()
 	_test_no_invisible_walls_around_clearings()
-	if failures.is_empty():
-		print("BEAUTY_FOREST_DUNGEON_OK")
-		quit(0)
-		return
-	for failure: String in failures:
-		printerr("FAIL: ", failure)
-	quit(1)
+	finish(null, "BEAUTY_FOREST_DUNGEON")
 
 func _test_line_of_sight_endpoints() -> void:
 	var dungeon := {
@@ -28,10 +21,10 @@ func _test_line_of_sight_endpoints() -> void:
 	}
 	# The short-distance shortcut skipped cell validation, so a target inside a wall could appear visible.
 	if D.has_line_of_sight(dungeon, Vector3(0.99, 0.0, 0.50), Vector3(1.01, 0.0, 0.50)):
-		failures.append("line of sight returned true for a target inside a wall")
+		fail("line of sight returned true for a target inside a wall")
 	# The zero-distance shortcut also bypassed all floor validation.
 	if D.has_line_of_sight(dungeon, Vector3(1.10, 0.0, 0.50), Vector3(1.11, 0.0, 0.50)):
-		failures.append("line of sight returned true for two points inside a wall")
+		fail("line of sight returned true for two points inside a wall")
 
 func _test_generated_topology() -> void:
 	for floor_number: int in [1, 2, 5, 13, 100]:
@@ -55,8 +48,7 @@ func _test_no_invisible_walls_around_clearings() -> void:
 				for x in range(room_x - 1, room_x + int(room["w"]) + 1):
 					if D.is_floor(dungeon, x, z):
 						continue
-					failures.append(
-						"floor %d sample %d generated an undrawable wall at %d,%d inside a clearing's margin"
+					fail("floor %d sample %d generated an undrawable wall at %d,%d inside a clearing's margin"
 						% [1 + sample, sample, x, z])
 					return
 
@@ -65,11 +57,11 @@ func _validate_dungeon(dungeon: Dictionary, floor_number: int, sample: int) -> v
 	var height := int(dungeon.get("height", -1))
 	var grid: PackedInt32Array = dungeon.get("grid", PackedInt32Array())
 	if width <= 0 or height <= 0 or grid.size() != width * height:
-		failures.append("floor %d sample %d has an invalid grid" % [floor_number, sample])
+		fail("floor %d sample %d has an invalid grid" % [floor_number, sample])
 		return
 	var rooms: Array = dungeon.get("rooms", [])
 	if rooms.size() != 3:
-		failures.append("floor %d sample %d does not have three rooms" % [floor_number, sample])
+		fail("floor %d sample %d does not have three rooms" % [floor_number, sample])
 		return
 	for room_index: int in range(rooms.size()):
 		var room: Dictionary = rooms[room_index]
@@ -79,19 +71,19 @@ func _validate_dungeon(dungeon: Dictionary, floor_number: int, sample: int) -> v
 		var room_height := int(room.get("h", 0))
 		if room_x < 0 or room_y < 0 or room_width <= 0 or room_height <= 0 \
 				or room_x + room_width > width or room_y + room_height > height:
-			failures.append("floor %d sample %d room %d is out of bounds" % [floor_number, sample, room_index])
+			fail("floor %d sample %d room %d is out of bounds" % [floor_number, sample, room_index])
 			continue
 		for y in range(room_y, room_y + room_height):
 			for x in range(room_x, room_x + room_width):
 				if grid[y * width + x] != D.FLOOR:
-					failures.append("floor %d sample %d room %d contains a wall" % [floor_number, sample, room_index])
+					fail("floor %d sample %d room %d contains a wall" % [floor_number, sample, room_index])
 					break
 	for first_index: int in range(rooms.size()):
 		for second_index: int in range(first_index):
 			var first := Vector2i(int(rooms[first_index]["cx"]), int(rooms[first_index]["cy"]))
 			var second := Vector2i(int(rooms[second_index]["cx"]), int(rooms[second_index]["cy"]))
 			if not _reachable(grid, width, height, first, second):
-				failures.append("floor %d sample %d disconnects rooms %d and %d" % [floor_number, sample, first_index, second_index])
+				fail("floor %d sample %d disconnects rooms %d and %d" % [floor_number, sample, first_index, second_index])
 	var spawn_room: Dictionary = rooms[0]
 	var farthest_index := 0
 	var farthest_distance := -1.0
@@ -105,24 +97,24 @@ func _validate_dungeon(dungeon: Dictionary, floor_number: int, sample: int) -> v
 			farthest_distance = distance
 			farthest_index = room_index
 	if farthest_index != 1:
-		failures.append("floor %d sample %d puts the stair clearing in the pool slot" % [floor_number, sample])
+		fail("floor %d sample %d puts the stair clearing in the pool slot" % [floor_number, sample])
 	var pool_room: Dictionary = rooms[rooms.size() - 1]
 	var stair_room: Dictionary = rooms[farthest_index]
 	if pool_room == stair_room or Vector2(
 			float(pool_room["cx"]) - float(stair_room["cx"]),
 			float(pool_room["cy"]) - float(stair_room["cy"])
 	).length() <= 3.0:
-		failures.append("floor %d sample %d places the wishing pool on the stair clearing" % [floor_number, sample])
+		fail("floor %d sample %d places the wishing pool on the stair clearing" % [floor_number, sample])
 	var components := _floor_components(grid, width, height)
 	if components.size() != 1:
-		failures.append("floor %d sample %d has %d disconnected floor components" % [floor_number, sample, components.size()])
+		fail("floor %d sample %d has %d disconnected floor components" % [floor_number, sample, components.size()])
 	for x in range(width):
 		if grid[x] != D.WALL or grid[(height - 1) * width + x] != D.WALL:
-			failures.append("floor %d sample %d has an open horizontal border" % [floor_number, sample])
+			fail("floor %d sample %d has an open horizontal border" % [floor_number, sample])
 			break
 	for y in range(height):
 		if grid[y * width] != D.WALL or grid[y * width + width - 1] != D.WALL:
-			failures.append("floor %d sample %d has an open vertical border" % [floor_number, sample])
+			fail("floor %d sample %d has an open vertical border" % [floor_number, sample])
 			break
 
 func _floor_components(grid: PackedInt32Array, width: int, height: int) -> Array:

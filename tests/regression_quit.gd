@@ -10,6 +10,10 @@ extends SceneTree
 ## quit never fires, the fallback below fails loudly instead of hanging a
 ## suite. Run with:
 ## godot --headless --path . --script tests/regression_quit.gd
+##
+## This suite stays standalone on purpose: it asserts that the process exits
+## by itself through the production quit path, and a harness finish() call
+## would quit first and preempt the graceful quit it is testing.
 
 func _initialize() -> void:
     call_deferred("_run")

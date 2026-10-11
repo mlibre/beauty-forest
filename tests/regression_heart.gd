@@ -1,19 +1,13 @@
-extends SceneTree
+extends TestCase
 
 ## Regression for thank-you heart pickups:
 ##  - a single pickup must never heal the hero twice (queue_free is deferred,
 ##    so overlapping Area3D reports used to emit a second heart_collected)
 ##  - a heart that times out must say so instead of vanishing silently
 
-var _failures := 0
-
 func _initialize() -> void:
+	suite_name = "BEAUTY_FOREST_HEART"
 	call_deferred("_run")
-
-func _check(condition: bool, message: String) -> void:
-	if not condition:
-		_failures += 1
-		push_error(message)
 
 func _run() -> void:
 	var holder := Node3D.new()
@@ -34,8 +28,8 @@ func _run() -> void:
 	# The same overlap can be reported more than once in a frame.
 	heart._on_body_entered(player)
 	heart._on_body_entered(player)
-	_check(collected[0] == 1, "one heart granted warmth %d times instead of once" % collected[0])
-	_check(expired[0] == 0, "a collected heart also reported an expiry")
+	ok(collected[0] == 1, "one heart granted warmth %d times instead of once" % collected[0])
+	ok(expired[0] == 0, "a collected heart also reported an expiry")
 
 	# An uncollected heart must announce its drift-off exactly once.
 	var lonely := HeartPickup.new()
@@ -46,12 +40,12 @@ func _run() -> void:
 	lonely.lifetime = 0.5
 	lonely._process(0.6)
 	lonely._process(0.6)
-	_check(lonely_expired[0] == 1, "a drifted-off heart reported its expiry %d times instead of once" % lonely_expired[0])
-	_check(collected[0] == 1, "a drifting-off heart still granted warmth")
+	ok(lonely_expired[0] == 1, "a drifted-off heart reported its expiry %d times instead of once" % lonely_expired[0])
+	ok(collected[0] == 1, "a drifting-off heart still granted warmth")
 
 	# A collected heart must not keep ticking (and re-report) while freeing.
 	heart._process(1.0)
-	_check(expired[0] == 0, "a collected heart reported an expiry while freeing")
+	ok(expired[0] == 0, "a collected heart reported an expiry while freeing")
 
 	# Pickup upgrades promise a wider attraction, not just a larger direct
 	# collision shape. A Dandelion/Lodestar heart at 4.5 m should be acquired
@@ -68,21 +62,13 @@ func _run() -> void:
 		if child is CollisionShape3D:
 			magnet_shape = child
 			break
-	_check(magnet_shape != null, "a magnet heart did not build its attraction sensor")
+	ok(magnet_shape != null, "a magnet heart did not build its attraction sensor")
 	if magnet_shape != null:
 		var magnet_sphere := magnet_shape.shape as SphereShape3D
-		_check(magnet_sphere != null and is_equal_approx(magnet_sphere.radius, 5.25), "the pickup upgrade did not widen the heart magnet to 5.25 m")
+		ok(magnet_sphere != null and is_equal_approx(magnet_sphere.radius, 5.25), "the pickup upgrade did not widen the heart magnet to 5.25 m")
 	wide_heart._on_magnet_body_entered(wide_player)
 	var magnet_before := wide_heart.global_position
 	wide_heart._process(1.0 / 60.0)
-	_check(wide_heart.global_position.distance_to(magnet_before) > 0.01, "a widened heart magnet did not drift toward a player inside its range")
+	ok(wide_heart.global_position.distance_to(magnet_before) > 0.01, "a widened heart magnet did not drift toward a player inside its range")
 
-	if _failures > 0:
-		quit(1)
-		return
-
-	print("BEAUTY_FOREST_HEART_OK")
-	root.remove_child(holder)
-	holder.free()
-	await process_frame
-	quit(0)
+	finish(holder, "BEAUTY_FOREST_HEART")

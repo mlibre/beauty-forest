@@ -23,9 +23,16 @@ godot --headless --path . --script res://tests/regression_player.gd
 ```
 
 A passing suite prints `<TOKEN>_OK (N checks)` and exits 0. Anything else is a
-failure — `tests/support/test_case.gd` collects checks and owns the exit code,
-because Godot's own `assert()` only logs a `SCRIPT ERROR` and keeps going, which
-let suites print their OK line with the game broken.
+failure. Every `regression_*` suite but one extends the shared `TestCase`
+harness (`tests/support/test_case.gd`): `ok()` collects checks, `finish()` owns
+the exit code, and a 600-frame stall watchdog quits a suite that has failed and
+stopped moving rather than let it hang. The harness exists because Godot's own
+`assert()` only logs a `SCRIPT ERROR` and keeps going, which let suites print
+their OK line with the game broken.
+
+The one standalone suite is `regression_quit.gd`: it asserts that the process
+exits by itself through the production quit path, and a harness `finish()` would
+quit first and preempt the graceful quit it is testing.
 
 ## Indentation
 
@@ -48,7 +55,7 @@ journal → settings → dragon and Big Feeling floors.
 godot --headless --path . --script res://tests/runtime_smoke.gd
 ```
 
-Prints `BEAUTY_FOREST_SMOKE_OK`.
+Prints `BEAUTY_FOREST_SMOKE_OK (N checks)`.
 
 ## The two suites that need a display
 

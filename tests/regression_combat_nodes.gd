@@ -1,17 +1,19 @@
-extends SceneTree
+extends TestCase
 
 ## Focused regressions for automatic combat and reward nodes.
 
 func _initialize() -> void:
+    suite_name = "BEAUTY_FOREST_COMBAT_NODES"
     call_deferred("_run")
 
 func _run() -> void:
     if not await _test_magnet_heart_acquires_player_before_contact():
+        stop(null, suite_name)
         return
     if not await _test_giggle_split_children_get_spawn_grace():
+        stop(null, suite_name)
         return
-    print("BEAUTY_FOREST_COMBAT_NODES_OK")
-    quit(0)
+    finish(null, "BEAUTY_FOREST_COMBAT_NODES")
 
 func _test_magnet_heart_acquires_player_before_contact() -> bool:
     var fixture := Node3D.new()
@@ -32,13 +34,12 @@ func _test_magnet_heart_acquires_player_before_contact() -> bool:
     # with its attraction sensor, then pull the heart toward the player.
     await physics_frame
     await physics_frame
-    if not is_instance_valid(heart):
-        _fail("magnet heart vanished before its normal pickup range")
+    if not ok(is_instance_valid(heart), "magnet heart vanished before its normal pickup range"):
         return false
     var before := heart.global_position
     heart._process(1.0 / 60.0)
-    if heart.global_position.distance_to(before) < 0.01:
-        _fail("magnet heart did not move after acquiring a nearby player")
+    if not ok(heart.global_position.distance_to(before) >= 0.01,
+            "magnet heart did not move after acquiring a nearby player"):
         return false
 
     fixture.free()
@@ -53,11 +54,9 @@ func _test_giggle_split_children_get_spawn_grace() -> bool:
     var packed: PackedScene = load("res://scenes/main.tscn")
     var game: Node = packed.instantiate()
     root.add_child(game)
-    await process_frame
-    await process_frame
+    await frames(2)
     game._start_run(1)
-    await process_frame
-    await process_frame
+    await frames(2)
     var parent := Wisp.new()
     parent.setup("Giggle Puff", 1)
     parent.position = game.player.global_position + Vector3(0.8, 0.0, 0.0)
@@ -68,20 +67,15 @@ func _test_giggle_split_children_get_spawn_grace() -> bool:
     for wisp: Wisp in game.wisps:
         if is_instance_valid(wisp) and wisp != parent and bool(wisp.get_meta("no_split", false)):
             children.append(wisp)
-    if children.size() != 2:
-        _fail("soothing a Giggle Puff produced %d split children instead of 2" % children.size())
+    if not ok(children.size() == 2,
+            "soothing a Giggle Puff produced %d split children instead of 2" % children.size()):
         return false
     for child: Wisp in children:
-        if float(child.get_meta("attack_cooldown", 0.0)) <= 0.0:
-            _fail("a split gigglelet arrived with no contact grace and can bump instantly")
+        if not ok(float(child.get_meta("attack_cooldown", 0.0)) > 0.0,
+                "a split gigglelet arrived with no contact grace and can bump instantly"):
             return false
     TestProfile.end()
     root.remove_child(game)
     game.free()
-    await process_frame
-    await process_frame
+    await frames(2)
     return true
-
-func _fail(message: String) -> void:
-    push_error("BEAUTY_FOREST_COMBAT_NODES_FAIL: %s" % message)
-    quit(1)
