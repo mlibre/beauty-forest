@@ -142,7 +142,7 @@ func show_menu(meta: Dictionary) -> void:
     # had no way to reach the gentler-forest panel before starting: zero entry
     # points on this screen. Offer it here, next to the leave button it pairs
     # with, and let the director hand the menu back on close.
-    var cozy := _button("Make it gentler", false)
+    var cozy := _button("Cozy options ♥", false)
     cozy.custom_minimum_size = Vector2(300, 44)
     cozy.tooltip_text = "Reduce hits, calm the wobble, and turn up the contrast before you begin."
     cozy.pressed.connect(func(): settings_open_requested.emit())
@@ -220,7 +220,7 @@ func show_pause(meta: Dictionary) -> void:
     _overlay_content.add_child(_walker_summary())
     _overlay_content.add_child(_spacer(14))
     _overlay_content.add_child(_centered_button("♥  Keep wandering", true, func(): resume_requested.emit()))
-    _overlay_content.add_child(_centered_button("Make it gentler", false, func(): settings_open_requested.emit()))
+    _overlay_content.add_child(_centered_button("Cozy options ♥", false, func(): settings_open_requested.emit()))
     _overlay_content.add_child(_centered_button("Start a fresh walk", false, func(): restart_requested.emit(false)))
     # The title used to be a one-visit room: nothing anywhere returned to it,
     # so the style trails and the front door were reachable exactly once per

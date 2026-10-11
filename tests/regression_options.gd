@@ -38,8 +38,30 @@ func _run() -> void:
 	await _check_bump_softness_drags_toward_softness()
 	await _check_accessibility_toggles_name_what_they_change()
 	await _check_vitals_follow_the_accessibility_settings()
+	await _check_the_settings_door_has_one_name(game)
 
 	finish(game, "BEAUTY_FOREST_OPTIONS")
+
+func _check_the_settings_door_has_one_name(game: Node) -> void:
+	## The same panel was "Cozy options" in the key line and "Make it gentler"
+	## on the pause card -- two names for one screen, ON THE SAME SCREEN, and
+	## a player matching the key line's words to a button could not. The door
+	## is named what the key line calls it now, on every card that opens it.
+	game.ui.close_panels()
+	game.ui.show_pause(game.meta)
+	await frames(4)
+	var named := 0
+	var wrong := 0
+	for node in game.ui._overlay_content.find_children("*", "Button", true, false):
+		var button := node as Button
+		if button == null:
+			continue
+		if "Cozy options" in button.text:
+			named += 1
+		elif "gentler" in button.text:
+			wrong += 1
+	ok(named == 1 and wrong == 0,
+			"the pause card's settings door is not singularly named: cozy=%d gentler=%d" % [named, wrong])
 
 func _check_vitals_follow_the_accessibility_settings() -> void:
 	## The vitals ring, sparkle count and charm sockets drew with whatever flags

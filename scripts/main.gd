@@ -443,7 +443,7 @@ func _on_settings_closed() -> void:
         mode = Mode.PAUSED
         ui.show_pause(meta)
     elif previous_mode == Mode.MENU:
-        # Came here straight from the menu's "Make it gentler": hand the menu
+        # Came here straight from the menu's "Cozy options" button: hand the menu
         # back rather than closing every panel, which would leave the player
         # staring at an empty screen instead of the one they opened from.
         _show_menu()
