@@ -18,6 +18,7 @@ extends "res://tests/support/test_case.gd"
 const BeautyData := preload("res://scripts/beauty_data.gd")
 const BeautyLore := preload("res://scripts/beauty_lore.gd")
 const CozyWaypoint := preload("res://scripts/cozy_waypoint.gd")
+const CozyVitals := preload("res://scripts/cozy_vitals.gd")
 const BeautyContent := preload("res://scripts/beauty_content.gd")
 
 func _initialize() -> void:
