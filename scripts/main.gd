@@ -264,7 +264,13 @@ func _start_run(start_floor: int, keep_progress: bool = false) -> void:
     # Recomputes hp_max from style + worn charms and refills warmth, so a
     # continued walk starts rested but keeps everything that was earned.
     _recalculate_loadout(true)
-    _mote_line = "Here we go! Thirteen floors of forest between us and one very sleepy dragon family."
+    # A fresh walk is aimed at the Roost; a continued walk left the Roost
+    # behind floors ago, so Mote announces the descent, not a dragon count
+    # that no longer describes the walk.
+    if keep_progress:
+        _mote_line = String(BeautyContent.random_choice(BeautyLore.DESCEND_LINES))
+    else:
+        _mote_line = "Here we go! Thirteen floors of forest between us and one very sleepy dragon family."
     _mote_line_timer = 28.0
     _load_floor(maxi(1, start_floor), false)
     ui.add_log("Mote: “%s”" % _mote_line)
