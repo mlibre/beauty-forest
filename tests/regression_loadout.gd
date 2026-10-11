@@ -342,22 +342,32 @@ func _check_free_items_do_not_claim_to_be_owned(game: Node) -> bool:
 		return false
 	# The verse shelf must not print a ceiling: "2/2" taught the player that
 	# songs were finished, and sent them looking elsewhere for upgrades. The
-	# CHARM shelf legitimately prints worn/room (that is the room to grow into),
-	# so this only looks at the songs heading, which is the one that used to lie.
-	var verse_ceiling := false
-	for label in _all_labels(game.ui._shop_frame):
+	# CHARM shelf legitimately prints worn/room (that is the room to grow
+	# into), so this looks at the songs heading and nothing else -- found by
+	# its title, not by walking the whole frame: a full lantern makes the
+	# charm heading read 3/3, which is honest, not a ceiling.
+	var songs_row := _shelf_heading(game.ui._shop_frame, "LANTERN SONGS")
+	if not ok(songs_row != null,
+			"the songs shelf heading is missing from the cart entirely"):
+		return false
+	var songs_texts: Array[String] = []
+	var songs_ceiling := false
+	for child in songs_row.get_children():
+		var label := child as Label
+		if label == null:
+			continue
 		var text := String(label.text)
+		if not text.is_empty():
+			songs_texts.append(text)
 		if text.is_empty() or not text.contains("/"):
 			continue
 		var number := text.get_slice("/", 0).strip_edges()
 		var denominator := text.get_slice("/", 1).strip_edges()
-		if not number.is_valid_int() or not denominator.is_valid_int():
-			continue
 		# A ceiling is n/n -- reached and immovable. n/m with room left is not.
-		if number == denominator:
-			verse_ceiling = true
-	if not ok(not verse_ceiling,
-			"the cart still prints a reached x/x ceiling; nothing in this game has one"):
+		if number.is_valid_int() and denominator.is_valid_int() and number == denominator:
+			songs_ceiling = true
+	if not ok(not songs_ceiling,
+			"the cart's LANTERN SONGS heading prints a reached x/x ceiling; nothing in this game has one: %s" % [songs_texts]):
 		return false
 	game.ui.close_panels()
 	await frames(2)
@@ -496,3 +506,18 @@ func _all_labels(node: Node) -> Array:
 			out.append(child)
 		out.append_array(_all_labels(child))
 	return out
+
+## The heading HBox whose title Label paints exactly `title`, or null. Shelf
+## headings are icon + title + count rows, so a count can be judged by the
+## shelf it belongs to rather than by walking the whole frame -- the charm
+## heading's honest worn/room reads 3/3 whenever the lantern is full.
+func _shelf_heading(node: Node, title: String) -> HBoxContainer:
+	for child in node.get_children():
+		if child is HBoxContainer:
+			for sub in child.get_children():
+				if sub is Label and String(sub.text) == title:
+					return child
+		var deeper := _shelf_heading(child, title)
+		if deeper != null:
+			return deeper
+	return null
