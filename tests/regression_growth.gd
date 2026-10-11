@@ -35,6 +35,8 @@ func _run() -> void:
         return
     if not await _check_the_draft_waits_for_the_song(game):
         return
+    if not await _check_the_walk_continues_past_a_finale(game):
+        return
 
     finish(game, "BEAUTY_FOREST_GROWTH")
 
@@ -273,6 +275,49 @@ func _check_endless_floors_build(game: Node) -> bool:
         if is_instance_valid(wisp) and wisp.is_feeling:
             feeling_wisps += 1
     if not ok(feeling_wisps == 1, "endless floor 17 hosts %d Big Feelings" % feeling_wisps):
+        return false
+    return true
+
+func _check_the_walk_continues_past_a_finale(game: Node) -> bool:
+    ## "Wander deeper" is the whole infinite promise: the Roost finale at
+    ## story 13 hands the walk to the ending card, and accepting it must
+    ## carry EVERYTHING earned -- level, sparkles, the loadout, queued
+    ## drafts -- into the next chapter's first floor, not a fresh walk.
+    game._start_run(BeautyContent.CAMPAIGN_LENGTH)
+    await frames(6)
+    game.level = 9
+    game.attack = 44.0
+    game.sparkles = 77
+    game.charms_owned.append({"key": "ember", "tier": 1})
+    game.charms_equipped.append({"key": "ember", "tier": 1})
+    game._apply_level_up_boon()
+    game._win_dragon()
+    if not ok(game.ending_pending, "the Roost finale did not open the ending"):
+        return false
+    game._show_ending()
+    if not ok(game.mode == game.Mode.ENDING, "the finale did not reach the ending card"):
+        return false
+    game._start_run(BeautyContent.CAMPAIGN_LENGTH + 1, true)
+    await frames(8)
+    if not ok(game.floor_number == BeautyContent.CAMPAIGN_LENGTH + 1 and game.region.get("key", "") == "endless-1",
+            "wandering deeper did not land on the next chapter's first floor: %s" % str(game.region.get("key"))):
+        return false
+    if not ok(game.level == 9 and game.attack == 44.0 and game.sparkles == 77,
+            "wandering deeper lost earned numbers: level %d song %f sparkles %d" % [game.level, game.attack, game.sparkles]):
+        return false
+    if not ok(BeautyData.wearing(game.charms_equipped, "ember", 1),
+            "wandering deeper lost a worn ware: %s" % str(game.charms_equipped)):
+        return false
+    if not ok(game.pending_boons == 1, "wandering deeper dropped the queued gift: %d" % game.pending_boons):
+        return false
+    game._refresh_ui()
+    await frames(2)
+    if not ok(game.mode == game.Mode.DRAFT, "the gift carried deeper was never offered"):
+        return false
+    game.pick_boon(String(game._draft_offers[0].get("key", "")))
+    await frames(2)
+    if not ok(game.mode == game.Mode.PLAYING and game.pending_boons == 0,
+            "settling the carried gift left the walk in %s" % str(game.mode)):
         return false
     return true
 
