@@ -261,13 +261,13 @@ func _check_curious_wisp_facts_can_win_the_sticker(game: Node) -> bool:
     # player's oldest entries and renumbered the rest. Measured after 12 runs:
     # 120 entries kept of 480 learned, only 24 of them distinct -- 96
     # duplicate copies -- while the pause card counted 480.
-    if not ok(BeautyContent.FACTS.size() < 120,
-            "the journal cap of 120 is now reachable against a table of %d facts" % BeautyContent.FACTS.size()):
+    if not ok(BeautyLore.FACTS.size() < 120,
+            "the journal cap of 120 is now reachable against a table of %d facts" % BeautyLore.FACTS.size()):
         return false
     game.meta["facts_learned"] = []
     game.meta["facts"] = 0
     # Learn far more facts than the table holds, the way many runs do.
-    for _i in BeautyContent.FACTS.size() * 3:
+    for _i in BeautyLore.FACTS.size() * 3:
         game._learn_fact("A level-up lantern fact")
     var journal: Array = game.meta.get("facts_learned", [])
     var distinct := {}
@@ -275,11 +275,11 @@ func _check_curious_wisp_facts_can_win_the_sticker(game: Node) -> bool:
         distinct[entry] = true
     if not ok(journal.size() == distinct.size(),
             "learning %d facts from a table of %d produced %d entries holding %d distinct ones" % [
-                BeautyContent.FACTS.size() * 3, BeautyContent.FACTS.size(), journal.size(), distinct.size()]):
+                BeautyLore.FACTS.size() * 3, BeautyLore.FACTS.size(), journal.size(), distinct.size()]):
         return false
-    if not ok(journal.size() <= BeautyContent.FACTS.size(),
+    if not ok(journal.size() <= BeautyLore.FACTS.size(),
             "the journal grew to %d entries, past the %d facts that actually exist" % [
-                journal.size(), BeautyContent.FACTS.size()]):
+                journal.size(), BeautyLore.FACTS.size()]):
         return false
     # The pause card and the memory book must not disagree: one reads the
     # lifetime counter, the other the journal's length.

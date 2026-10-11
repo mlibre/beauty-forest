@@ -222,7 +222,7 @@ func _build_sign(world_position: Vector3) -> void:
     board.position = Vector3(0, 1.35, 0)
     sign.add_child(board)
     var label := Label3D.new()
-    label.text = String(BeautyContent.random_choice(BeautyContent.SIGNS))
+    label.text = String(BeautyContent.random_choice(BeautyLore.SIGNS))
     label.font_size = 22
     label.pixel_size = 0.006
     label.modulate = Color("#5c3d2c")

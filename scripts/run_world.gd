@@ -120,17 +120,17 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
 
     camera.global_position = player.global_position + CAMERA_OFFSET
     camera.look_at(player.global_position + Vector3.UP * 0.78, Vector3.UP)
-    audio.start_ambient(String(region["key"]))
+    audio.start_ambient(String(region.get("ambient", region["key"])))
     ui.set_map(dungeon, player.global_position)
     _refresh_ui()
     if not menu_stage:
         player.set_control_enabled(true)
-        var story_number := BeautyContent.story_floor(floor_number)
-        var vignette: Array = BeautyContent.STORY.get(story_number, [])
+        var vignette: Array = BeautyContent.story_for_floor(floor_number)
         if not vignette.is_empty():
             ui.show_story(String(vignette[0]), String(vignette[1]))
-        var entry_floor: int = int({"sunlit-roots": 1, "pollen-halls": 5, "mushroom-lull": 9, "roost": 13}.get(String(region["key"]), -1))
-        if story_number == entry_floor:
+        # A region says hello on its first floor: `min` is that floor for the
+        # campaign's own regions and for a composed endless chapter alike.
+        if floor_number == int(region.get("min", 1)):
             ui.add_log("Mote: “%s”" % String(region["entry"]))
         ui.add_log("Mote: “Today’s forecast: %s — %s.”" % [String(floor_modifier.get("name", "cozy air")), String(floor_modifier.get("description", "the woods are humming"))])
         if merchant_exists:
@@ -246,7 +246,7 @@ func _descend() -> void:
     meta["best_floor"] = maxi(int(meta.get("best_floor", 0)), next_floor)
     BeautyData.save_meta(meta)
     ui.add_log("Floor %d cleared. You rest by the stairwell (+30 warmth), then wander down." % floor_number)
-    ui.add_log("Mote: “%s”" % String(BeautyContent.random_choice(BeautyContent.DESCEND_LINES)))
+    ui.add_log("Mote: “%s”" % String(BeautyContent.random_choice(BeautyLore.DESCEND_LINES)))
     audio.play_chord([392.0, 493.88, 587.33], 0.72, 0.09)
     _load_floor(next_floor, false)
 

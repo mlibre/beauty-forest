@@ -144,7 +144,7 @@ func _on_mote_verse_requested(key: String) -> void:
     mote_verse_key = key
     _recalculate_loadout(false)
     audio.play_tone(783.99, 0.30, 0.055, 1)
-    ui.add_log("Mote: “%s — I’ll hum that beside you.”" % (String(BeautyContent.random_choice(BeautyContent.MOTE_LINES)) if not key.is_empty() else "I’ll hum softly beside you."))
+    ui.add_log("Mote: “%s — I’ll hum that beside you.”" % (String(BeautyContent.random_choice(BeautyLore.MOTE_LINES)) if not key.is_empty() else "I’ll hum softly beside you."))
     ui.show_shop(_shop_state())
 
 func _recalculate_loadout(reset_hp: bool) -> void:

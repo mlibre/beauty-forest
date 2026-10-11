@@ -42,8 +42,8 @@ static func wearable_charms() -> int:
 ## without the content table growing a combinatorial number of rows.
 ##
 ## `tier_scale` is the multiplier on every effect that charm carries.
-const TIER_NAMES := ["", "I", "II"]
-const TIER_SCALES := [1.0, 1.0, 1.6]
+const TIER_NAMES := ["", "I", "II", "III"]
+const TIER_SCALES := [1.0, 1.0, 1.6, 2.3]
 
 static func tier_index(tier: int) -> int:
     return clampi(tier, 1, TIER_SCALES.size() - 1)
@@ -132,6 +132,21 @@ const WISP_TYPES := {
         "grumbles": ["Hee! That tickles! Everything tickles!", "I am full of giggles and cannot hold them. Hee!"],
         "farewells": ["Hee-hee! Splitting happily ever after!", "Two giggles are better than one! Byeee!"],
     },
+    "Puffcap": {
+        "hp": 36.0, "speed": 1.8, "damage": 9.0, "soul": 12.0, "scale": 1.1, "color": "#e8b78a", "lingers": true,
+        "grumbles": ["I am 90% hat. The rest is also hat.", "Spores are my love language."],
+        "farewells": ["Off to spore somewhere sunnier!", "Keep a puff for yourself. On me."],
+    },
+    "Comet": {
+        "hp": 12.0, "speed": 5.2, "damage": 4.0, "soul": 14.0, "scale": 0.65, "color": "#ffd98a", "flighty": true,
+        "grumbles": ["Wheee—sorry—wheee!", "I have somewhere to be! Everywhere! All at once!"],
+        "farewells": ["Tail of gold, heart of calm. Byeee!", "Slowing down was the adventure. Bye!"],
+    },
+    "Snugbug": {
+        "hp": 64.0, "speed": 1.2, "damage": 11.0, "soul": 16.0, "scale": 1.2, "color": "#c9a2e8",
+        "grumbles": ["I am rolled up for warmth. It is working. Mostly.", "Bugs hug back, you know."],
+        "farewells": ["Unrolling… ahh. Hello, world.", "A snug bug am I, homeward-bound. Toodle-oo."],
+    },
 }
 
 const NICKNAMES := [
@@ -168,7 +183,6 @@ const REGIONS := [
 ]
 
 const FLOOR_MODIFIERS := [
-    {},
     {"name": "Extra hearts tonight", "description": "grateful wisps leave more thank-you hearts", "heart_rate": 0.60},
     {"name": "Rich souls", "description": "wisps carry extra soul-light (+50% soul)", "soul": 1.50},
     {"name": "Brisk wisps", "description": "everyone is a little speedier today", "speed": 1.25},
@@ -178,6 +192,11 @@ const FLOOR_MODIFIERS := [
     {"name": "Bouncy caps", "description": "mushroom caps bounce hearts toward you", "heart_drift": true},
     {"name": "Firefly evening", "description": "fireflies hum along: song-notes fly a little farther", "note_range": 1.15},
     {"name": "Honeyed air", "description": "everything feels possible: richer souls and warmer hearts", "soul": 1.20, "heart_rate": 0.15},
+    {"name": "Golden updrafts", "description": "the deep wood exhales: song-notes fly much farther", "note_range": 1.30},
+    {"name": "Grandmoss evening", "description": "the oldest moss hums: everyone is a shade gentler", "speed": 0.85, "aggro": 0.85},
+    {"name": "Comet season", "description": "bright tails everywhere: much richer souls, brisker wisps", "soul": 1.35, "speed": 1.15},
+    {"name": "Heart of the wood", "description": "the forest is grateful: hearts everywhere, drifting to you", "heart_rate": 0.70, "heart_drift": true},
+    {"name": "Lantern bloom", "description": "flowers glow like little lamps: richer souls and softer bumps", "soul": 1.15},
 ]
 
 const CHARMS := [
@@ -222,79 +241,6 @@ const MOTE_VERSES := [
     {"key": "softstep", "name": "Counter-melody of Soft Steps", "description": "The forest makes every bump 10% softer.", "damage_taken": 0.90},
 ]
 
-const FACTS := [
-    "Octopuses have three hearts — two just for the gills.",
-    "Honey found in ancient Egyptian tombs is still perfectly edible.",
-    "Bananas are berries; strawberries are not.",
-    "A day on Venus is longer than its year.",
-    "Sea otters hold hands while sleeping so they don’t drift apart.",
-    "The Eiffel Tower grows about 15 cm taller in summer heat.",
-    "Wombats produce cube-shaped droppings. Science remains polite about it.",
-    "There are more possible chess games than atoms in the observable universe.",
-    "Some turtles can breathe through their rear ends. Nature is resourceful.",
-    "Sunlight takes about eight minutes to reach us. You are seeing the past!",
-    "A group of flamingos is called a flamboyance.",
-    "Oxford University is older than the Aztec Empire.",
-    "Banana plants are giant herbs, not trees.",
-    "Cows have best friends and get stressed when separated.",
-    "Butterflies taste with their feet.",
-    "Hot water can freeze faster than cold water under the right conditions.",
-    "Fireflies talk to each other in flashes — each species has its own Morse code.",
-    "A single teaspoon of honey is the life's work of about twelve bees.",
-    "Otters hold hands while sleeping so they don't drift apart — twice as cozy as rumored.",
-    "Mushrooms breathe out a little mist every night, like tiny forest kettles.",
-    "A snail can sleep for three years when the weather is unkind. Relatable.",
-    "Dandelion seeds can ride the wind for miles on their tiny parachutes.",
-    "Bees can recognize human faces, and they gossip about the kind ones.",
-    "Trees share sugar with their seedlings through underground fungal post.",
-]
-
-const MOTE_LINES := [
-    "You’re doing wonderfully. Statistically, even.",
-    "Fun fact: I am made of leftover starlight and optimism.",
-    "If you get lost, we are lost together. That’s teamwork.",
-    "I counted the wisps. There are… several.",
-    "You smell like courage. Or bread. Hard to tell down here.",
-    "Every floor is new. Like a sandwich, but spatial.",
-    "Take your time. The forest has nowhere to be either.",
-    "I named a rock earlier. It’s called Kevin. Very reliable.",
-    "That mushroom glows because it read a lot as a spore.",
-    "Wandering counts as a plan. A lovely, leaf-crunchy plan.",
-    "I polished your lantern while you blinked. You blinked beautifully.",
-    "The pollen says hello. I translated. It was kind.",
-    "My map says we are exactly where the cozy is.",
-    "Somewhere a dragon is snoring in your honor. Probably.",
-    "No rush, no fuss. The stairs will wait. They are stairs.",
-    "I packed snacks. They are made of light. Zero crumbs.",
-    "That wisp just waved at you. With its whole body. Charming.",
-    "Your lantern is humming in a major key today. Fancy.",
-    "I asked a mushroom for directions. It said ‘down, but prettily’.",
-    "Somewhere, a pebble is cheering for you. Quietly. Like a pebble.",
-    "You walk like someone who waves at trees. The trees noticed.",
-    "Deep breath in… smell that? That is Tuesday. Cozy Tuesday.",
-]
-
-const SOOTHE_LINES := [
-    "Oh, that one floated home smiling. Lovely work.",
-    "Gentle! That wisp is practically purring.",
-    "Home they go, warm as toast. You did that.",
-    "That soothe was softer than a dandelion sneeze.",
-    "The lantern sang, the wisp sighed happily. Teamwork.",
-    "Guided home! The forest applauds, quietly, with leaves.",
-    "That wisp is telling everyone about you. In glows.",
-    "Softer than soup! And twice as warming.",
-]
-
-const DESCEND_LINES := [
-    "Down we go! I will hold the map. And your sleeve. Lightly.",
-    "New floor, same wonderful you. The stairs approve.",
-    "Mind the first step. It is dramatic and loves attention.",
-    "Deeper still! The cozy thickens most beautifully.",
-    "I can smell adventure. Or soup. Either way, onward.",
-    "Another floor, another blanket of moss. The forest shows off for you.",
-    "Careful, the stairs are showing off their glow again.",
-]
-
 const FEELINGS := {
     4: {"name": "The Lonely", "farewell": "Thank you for sitting with me. I feel found."},
     8: {"name": "The Hurried", "farewell": "Slowing down… together… ahh. That is the whole trick."},
@@ -316,24 +262,6 @@ const STORY := {
     12: ["Almost to the Roost", "Warm light pools from below. ‘Nearly there,’ Mote breathes. ‘Tuck in your scarf. Family reunions need coziness.’"],
     13: ["The Roost", "The Roost glows like the inside of a lantern. Snoozle’s whole family dreams here — time for the biggest, softest lullaby."],
 }
-
-const SIGNS := [
-    "Wander kindly. Rest often.",
-    "Wisps: please stop losing yourselves.",
-    "Free hugs. Ask the glowing one.",
-    "Beware: excellent moss ahead.",
-    "Stairs down. Or up. Perspective.",
-    "This grove is swept daily.",
-    "Lost? Me too. Lovely evening though.",
-    "Nap often. The ferns insist.",
-    "You are exactly where the cozy is.",
-    "Sing softly. The walls hum along.",
-    "Kevin the rock was here. Still reliable.",
-    "No grumps past this point, by decree.",
-    "Honk softly if you love lanterns.",
-    "This way to the coziest moss. All ways, actually.",
-    "Wisps guided home today: too many to count, happily.",
-]
 
 ## Every sticker the journal can pin: the name it shows and the award line the
 ## toast speaks. One home -- these tables used to live apart and could drift.
@@ -386,7 +314,7 @@ static func charm_price(key: String, tier: int) -> int:
 ## additions (max_hp, heart_heal, invulnerable) scale as amounts. Treating both
 ## the same way would make a tier-II Wool Scarf add 48 warmth and a tier-II
 ## Moss Pillow soften bumps by 36%, which is not what "stronger" means.
-const TIER_PRICE_SCALE := [1.0, 1.0, 2.2]
+const TIER_PRICE_SCALE := [1.0, 1.0, 2.2, 4.6]
 
 static func charm_effects_at(key: String, tier: int) -> Dictionary:
     var entry := charm(key)
@@ -459,11 +387,28 @@ static func story_floor(floor_number: int) -> int:
     return ((floor_number - 1) % CAMPAIGN_LENGTH) + 1
 
 static func region_for_floor(floor_number: int) -> Dictionary:
+    var composed := BeautyEndless.region_for_floor(floor_number)
+    if not composed.is_empty():
+        return composed
     var story := story_floor(floor_number)
     for region: Dictionary in REGIONS:
         if story >= int(region["min"]) and story <= int(region["max"]):
             return region
     return REGIONS[0]
+
+## The Big Feeling sitting on this floor, or an empty dict. The campaign's
+## three are hand-placed; the endless chapters grow two of their own each.
+static func feeling_for_floor(floor_number: int) -> Dictionary:
+    if BeautyEndless.is_endless(floor_number):
+        return BeautyEndless.feeling_for_floor(floor_number)
+    return FEELINGS.get(story_floor(floor_number), {})
+
+## The floor's story vignette: [title, body]. Campaign floors read the
+## hand-written page; endless floors read their chapter's composed page.
+static func story_for_floor(floor_number: int) -> Array:
+    if BeautyEndless.is_endless(floor_number):
+        return BeautyEndless.story_for_floor(floor_number)
+    return STORY.get(story_floor(floor_number), [])
 
 static func is_dragon_floor(floor_number: int) -> bool:
     return story_floor(floor_number) in [5, 13]
@@ -476,16 +421,26 @@ static func random_choice(items: Array) -> Variant:
 static func random_modifier(story: int) -> Dictionary:
     if story == 13:
         return {"name": "Lantern-hush morning", "description": "the Roost rests easy", "heart_rate": 0.55}
-    return FLOOR_MODIFIERS[1 + (randi() % (FLOOR_MODIFIERS.size() - 1))].duplicate(true)
+    return FLOOR_MODIFIERS[randi() % FLOOR_MODIFIERS.size()].duplicate(true)
 
 static func wisp_pool(floor_number: int) -> Array:
     if floor_number == 1:
         return [["Shambler", 40], ["Crawler", 60], ["Dandelion", 8], ["Teacup", 8], ["Lantern Moth", 6]]
-    return [
+    var pool := [
         ["Shambler", 40], ["Crawler", 33], ["Warden", 15], ["Hummingbird", 12],
         ["Dandelion", 8], ["Teacup", 8], ["Pebble", 7], ["Mossbell", 7],
         ["Lantern Moth", 6], ["Giggle Puff", 6],
     ]
+    # The endless depths keep meeting you with newcomers: each chapter rotates
+    # the deep types in, so a long walk never settles into the same crowd.
+    var rotation := BeautyEndless.deep_wisp_rotation(floor_number)
+    if rotation.is_empty():
+        return pool
+    var deepened := []
+    for entry: Array in pool:
+        deepened.append([String(entry[0]), int(float(entry[1]) * 0.82)])
+    deepened.append_array(rotation)
+    return deepened
 
 static func pick_wisp_type(floor_number: int) -> String:
     var pool := wisp_pool(floor_number)

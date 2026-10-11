@@ -1,5 +1,5 @@
 class_name RunCombat
-extends RunShop
+extends RunBoons
 
 ## Automatic lantern combat, wisp spawning and rewards, thank-you hearts, and
 ## player damage. The song ceremonies that share this state extend it in
@@ -31,8 +31,9 @@ func _spawn_wisps() -> void:
     var story := BeautyContent.story_floor(floor_number)
     if story % 3 == 0 and story >= 3 and story != 12:
         _spawn_boss()
-    if BeautyContent.FEELINGS.has(story):
-        _spawn_feeling(story)
+    var feeling := BeautyContent.feeling_for_floor(floor_number)
+    if not feeling.is_empty():
+        _spawn_feeling(feeling, story)
 
 func _spawn_boss() -> void:
     var spawn_room: Dictionary = dungeon["rooms"][0]
@@ -47,13 +48,13 @@ func _spawn_boss() -> void:
     wisps.append(wisp)
     ui.add_log("Mote: “Oh my. That wisp ate one too many sandwiches. Sing when its halo turns GOLD!”")
 
-func _spawn_feeling(story: int) -> void:
+func _spawn_feeling(feeling: Dictionary, story: int) -> void:
     var base_types := ["Shambler", "Crawler", "Warden"]
     var base_index := posmod(story / 4 - 1, 3)
     var spawn_room: Dictionary = dungeon["rooms"][0]
     var cell := DungeonGenerator.random_floor_cell(dungeon, _rng, Vector2(spawn_room["cx"], spawn_room["cy"]), 7.0)
     var wisp := Wisp.new()
-    wisp.setup(base_types[base_index], floor_number, true, BeautyContent.FEELINGS[story])
+    wisp.setup(base_types[base_index], floor_number, true, feeling)
     wisp.set_reduced_motion(bool(settings.get("reduced_motion", false)))
     wisp.position = DungeonGenerator.cell_to_world(cell, 0.0)
     wisp.set_meta("attack_cooldown", 0.8)
@@ -145,7 +146,7 @@ func _auto_combat(_delta: float) -> void:
     if notes.size() >= cap:
         note_cooldown = 0.25
         return
-    var note_range := 10.0 * float(floor_modifier.get("note_range", 1.0))
+    var note_range := 10.0 * float(floor_modifier.get("note_range", 1.0)) * float(charm_effects.get("note_range", 1.0))
     var far_target := _nearest_wisp(player.global_position, note_range, true)
     if far_target == null:
         note_cooldown = 0.25
@@ -324,7 +325,7 @@ func _soothe_wisp(wisp: Wisp, distant: bool) -> void:
     if was_big:
         ui.add_log("Mote: “THE BIG ONE! A gentle giant. Someone give that wisp a medal.”")
     elif randf() < 0.25:
-        ui.add_log("Mote: “%s”" % String(BeautyContent.random_choice(BeautyContent.SOOTHE_LINES)))
+        ui.add_log("Mote: “%s”" % String(BeautyContent.random_choice(BeautyLore.SOOTHE_LINES)))
     if distant:
         _award_sticker("long_lullaby")
     if wisp.curious:

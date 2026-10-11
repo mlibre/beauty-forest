@@ -155,6 +155,39 @@ func show_menu(meta: Dictionary) -> void:
     # widths, and _refit_content can only clamp children that already exist.
     _focus_control(start_button)
 
+## The level-up draft: Mote offers three gifts as three big glyph cards.
+## A card is a picture first -- the glyph says what it is, one word says the
+## shape of the gift, and the exact figure rides on the hover, where a player
+## who wants it can find it. The walk waits; nothing here hurries.
+func show_draft(offers: Array, level: int) -> void:
+    _dismiss_beat_ring()
+    _cancel_story()
+    _reset_touch_joystick()
+    _clear(_overlay_content)
+    _hud.visible = true
+    set_text_chrome_visible(true)
+    _show_overlay()
+    _overlay_content.add_child(_centered_label("Level %d — Mote offers three gifts" % level, 34, Color("#ffe6a0")))
+    _overlay_content.add_child(_spacer(8))
+    var cards := HBoxContainer.new()
+    cards.alignment = BoxContainer.ALIGNMENT_CENTER
+    cards.add_theme_constant_override("separation", 16)
+    for index in range(offers.size()):
+        var offer: Dictionary = offers[index]
+        var card := _button(String(offer.get("word", "a gift")), index == 0)
+        card.custom_minimum_size = Vector2(176, 128)
+        card.icon = GardenGlyphs.get_glyph(String(offer.get("glyph", GardenGlyphs.HEART)))
+        card.expand_icon = true
+        card.add_theme_constant_override("icon_max_width", 56)
+        card.tooltip_text = "%s  ·  press %d" % [String(offer.get("hint", "")), index + 1]
+        var pick := func(): boon_picked.emit(String(offer.get("key", "")))
+        card.pressed.connect(pick)
+        cards.add_child(card)
+    _overlay_content.add_child(cards)
+    _overlay_content.add_child(_centered_label("The forest waits. Pick whichever feels right.", 15, Color("#cbdcb7")))
+    _fit_layout()
+    _focus_first_enabled(_overlay_content)
+
 func show_pause(meta: Dictionary) -> void:
     _clear(_overlay_content)
     _hud.visible = true

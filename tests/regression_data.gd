@@ -45,7 +45,7 @@ func _run() -> void:
 func _test_meta_recovery() -> void:
     var facts: Array[String] = []
     for index in range(121):
-        facts.append(String(BeautyContent.FACTS[index % BeautyContent.FACTS.size()]))
+        facts.append(String(BeautyLore.FACTS[index % BeautyLore.FACTS.size()]))
     var mixed_facts: Array = []
     mixed_facts.append_array(facts)
     mixed_facts.append(null)
@@ -125,7 +125,7 @@ func _test_settings_recovery() -> void:
 func _test_save_round_trips() -> void:
     var facts: Array[String] = []
     for index in range(121):
-        facts.append(String(BeautyContent.FACTS[index % BeautyContent.FACTS.size()]))
+        facts.append(String(BeautyLore.FACTS[index % BeautyLore.FACTS.size()]))
     var mixed_facts: Array = []
     mixed_facts.append_array(facts)
     mixed_facts.append(null)

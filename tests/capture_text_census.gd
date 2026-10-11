@@ -111,6 +111,19 @@ func _run() -> void:
 	await _frames(4)
 	var settings_seen := _report("SETTINGS", ui._shop_content)
 
+	# The level-up draft is a screen the player sees every level of every run,
+	# so it gets a budget like every other one. Its text is one heading, three
+	# one-word cards and one closing line; the exact figures live on hovers,
+	# which the census does not count (a hover is read on purpose).
+	ui.close_panels()
+	ui.show_draft([
+		{"key": "warmth", "glyph": "heart", "word": "Warmer", "hint": "+20 max warmth, filled now"},
+		{"key": "song", "glyph": "chime", "word": "Brighter", "hint": "+4 song power"},
+		{"key": "both", "glyph": "soul", "word": "Both", "hint": "+10 warmth and +2 song"},
+	], 7)
+	await _frames(4)
+	var draft_seen := _report("DRAFT", ui._root)
+
 	root.remove_child(game)
 	game.free()
 	# The walk screen has a hard budget of zero: AGENTS.md says it paints no
@@ -163,7 +176,8 @@ func _run() -> void:
 	if longest_cue.length() > CUE_BUDGET:
 		failed += 1
 	var measured := {"PLAYING": walked, "MENU": menu_seen, "PAUSE": pause_seen, "SHOP": shop_seen,
-		"NAP": nap_seen, "ENDING": ending_seen, "JOURNAL": journal_seen, "SETTINGS": settings_seen}
+		"NAP": nap_seen, "ENDING": ending_seen, "JOURNAL": journal_seen, "SETTINGS": settings_seen,
+		"DRAFT": draft_seen}
 	for screen: String in BUDGETS:
 		var budget: int = int(BUDGETS[screen])
 		var chars := int((measured[screen] as Dictionary)["chars"])
@@ -224,6 +238,11 @@ const BUDGETS := {
 	"ENDING": 240,
 	"JOURNAL": 380,
 	"SETTINGS": 320,
+	# DRAFT's own words are one heading, three one-word cards and one closing
+	# line (~95 chars); like the other _root screens the count includes the
+	# log strip beneath, which carries the run's accrued Mote lines and the
+	# floor's random forecast -- the same variance PAUSE's headroom absorbs.
+	"DRAFT": 420,
 }
 
 ## Fails loudly if the walk screen is not actually drawn: a census over a hidden

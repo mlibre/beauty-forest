@@ -43,6 +43,7 @@ func _connect_ui() -> void:
     ui.style_picked.connect(_on_style_picked)
     ui.resume_requested.connect(_resume_game)
     ui.restart_requested.connect(_on_restart_requested)
+    ui.boon_picked.connect(pick_boon)
     ui.quit_requested.connect(quit_gracefully)
     ui.shop_closed.connect(_on_shop_closed)
     ui.journal_closed.connect(_on_journal_closed)
@@ -108,9 +109,22 @@ func _unhandled_input(event: InputEvent) -> void:
         DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED)
         get_viewport().set_input_as_handled()
         return
-    if mode == Mode.MENU and event.is_action_pressed("ui_accept"):
-        _start_run(1)
-        get_viewport().set_input_as_handled()
+    if mode == Mode.DRAFT and event is InputEventKey and event.pressed:
+        # The three cards answer to 1/2/3 as well as to a click or a focused
+        # Enter, so a keyboard walker never has to leave home row mid-level.
+        var digit := -1
+        match event.keycode:
+            KEY_1:
+                digit = 0
+            KEY_2:
+                digit = 1
+            KEY_3:
+                digit = 2
+        if digit >= 0:
+            # _draft_offers is the draft's own pending list, inherited here.
+            if digit < _draft_offers.size():
+                pick_boon(String(_draft_offers[digit].get("key", "")))
+            get_viewport().set_input_as_handled()
         return
     # The menu's key line promises C opens the gentler-forest options, so it has
     # to work before a run starts -- otherwise the only way in is to begin, pause,
@@ -155,7 +169,7 @@ func _process(delta: float) -> void:
         invulnerable_time = maxf(0.0, invulnerable_time - delta)
         _mote_line_timer -= delta
         if _mote_line_timer <= 0.0:
-            _mote_line = String(BeautyContent.random_choice(BeautyContent.MOTE_LINES))
+            _mote_line = String(BeautyContent.random_choice(BeautyLore.MOTE_LINES))
             _mote_line_timer = _rng.randf_range(24.0, 36.0)
         if play_seconds >= _next_petal_shower:
             _next_petal_shower = play_seconds + _rng.randf_range(34.0, 58.0)
@@ -237,6 +251,9 @@ func _start_run(start_floor: int, keep_progress: bool = false) -> void:
         charms_equipped.clear()
         stanzas_equipped = {"petals": true, "echoes": true}
         mote_verse_key = ""
+        pending_boons = 0
+        _draft_offers = []
+        boon_effects = {}
         play_seconds = 0.0
         hp_max = 100.0 + (15.0 if selected_style == "gentle" else 0.0)
         level_hp_bonus = 0.0
@@ -304,7 +321,7 @@ func _resume_game() -> void:
     _set_world_processing(true)
     player.set_control_enabled(_gameplay_controls_enabled())
     if not ending_pending:
-        audio.start_ambient(String(region["key"]))
+        audio.start_ambient(String(region.get("ambient", region["key"])))
 
 func _on_style_picked(style_key: String) -> void:
     # A trail picked on the menu must be the trail that starts, whichever way
@@ -385,7 +402,7 @@ func _open_settings() -> void:
     # so pressing it has to work. Close the modal underneath, remember it, and
     # hand the player back to it on close rather than swallowing the press.
     var return_to := mode
-    if mode in [Mode.SHOP, Mode.JOURNAL]:
+    if mode in [Mode.SHOP, Mode.JOURNAL, Mode.DRAFT]:
         ui.close_panels()
         return_to = Mode.PLAYING
     previous_mode = return_to

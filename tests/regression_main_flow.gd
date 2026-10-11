@@ -12,6 +12,18 @@ func _initialize() -> void:
     TestProfile.begin("main_flow")
     call_deferred("_run")
 
+## Answer every pending level-up draft. The draft pauses the walk on purpose,
+## so a suite that granted XP hands the pick back to Mote before driving the
+## mode machine -- otherwise the pause/resume checks below would be testing
+## Mote's card table instead of the game.
+func settle_drafts(game: Node) -> void:
+    var guard := 0
+    while game.pending_boons > 0 and guard < 40:
+        guard += 1
+        if game.mode == game.Mode.DRAFT and not game._draft_offers.is_empty():
+            game.pick_boon(String(game._draft_offers[0].get("key", "")))
+        await frames(2)
+
 func _run() -> void:
     var packed: PackedScene = load("res://scenes/main.tscn")
     var game: Node = packed.instantiate()
@@ -116,7 +128,7 @@ func _run() -> void:
     # instead: that skipped the whole designed moment and still handed out
     # the "sat with a Big Feeling" sticker.
     var feeling: Wisp = null
-    game._spawn_feeling(8)
+    game._spawn_feeling(BeautyContent.feeling_for_floor(8), 8)
     for wisp: Wisp in game.wisps:
         if wisp.is_feeling:
             feeling = wisp
@@ -201,6 +213,7 @@ func _run() -> void:
     game.pulse_cooldown = 9999.0
     game.note_cooldown = 9999.0
 
+    await settle_drafts(game)
     game._pause_game()
     note.global_position = target.global_position + Vector3.UP * (0.70 * target.visual_scale)
     note.launch(Vector3.ZERO)
@@ -224,6 +237,7 @@ func _run() -> void:
         return
     if not ok(game.sparkles > 0, "combat sparkles were lost after resuming"):
         return
+    await settle_drafts(game)
 
     # Touch callbacks must obey the same gameplay boundary as keyboard input.
     var stair: Node3D = game.world.get_node("Stairwell") as Node3D

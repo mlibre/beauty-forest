@@ -44,6 +44,12 @@ func _run() -> void:
     ok(game.stanzas_equipped.size() == 2 and not game.stanzas_equipped.get("dawn", false),
         "resting Dawn did not leave the other two songs alone: %s" % str(game.stanzas_equipped))
     game._on_stanza_equip_requested("dawn")
+    # Auto-combat may have levelled the hero during the walk above; an
+    # unanswered draft owns the mode machine, so settle it before pausing.
+    while game.pending_boons > 0:
+        if game.mode == game.Mode.DRAFT and not game._draft_offers.is_empty():
+            game.pick_boon(String(game._draft_offers[0].get("key", "")))
+        await frames(2)
     game._pause_game()
     game.ui.settings_open_requested.emit()
     await frames(2)

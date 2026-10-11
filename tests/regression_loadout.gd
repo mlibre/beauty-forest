@@ -113,8 +113,16 @@ func _check_a_charm_can_be_bought_twice(game: Node) -> bool:
 			"both copies of a charm should be on together: %s" % str(game.charms_equipped)):
 		return false
 
-	# A third purchase must be refused by the cart, loudly and without charging:
-	# the deepest tier is the end of that ware, not a silent no-op.
+	# The shelf now deepens to tier III, so a THIRD purchase is legal and worn
+	# with the others -- capacity grows with depth, so nothing needs evicting.
+	game._on_buy_requested("boots")
+	await frames(2)
+	if not ok(wears(game.charms_equipped, "boots", 3),
+			"the third copy of a charm should wear beside the others: %s" % str(game.charms_equipped)):
+		return false
+
+	# A FOURTH purchase must be refused by the cart, loudly and without
+	# charging: the deepest tier is the end of that ware, not a silent no-op.
 	var purse: int = game.sparkles
 	var before: int = game.charms_owned.size()
 	game._on_buy_requested("boots")
@@ -129,20 +137,20 @@ func _check_a_charm_can_be_bought_twice(game: Node) -> bool:
 			"buying past the deepest tier said nothing at all"):
 		return false
 
-	# And the two copies must actually differ in strength, which is the whole
-	# reason the second one exists.
+	# And the copies must actually differ in strength, which is the whole
+	# reason deeper ones exist.
 	var base := float(BeautyContent.charm_effects_at("boots", 1).get("speed", 1.0))
-	var deep := float(BeautyContent.charm_effects_at("boots", 2).get("speed", 1.0))
+	var deep := float(BeautyContent.charm_effects_at("boots", 3).get("speed", 1.0))
 	if not ok(deep > base,
 			"the deeper copy is no stronger (speed %f vs %f)" % [deep, base]):
 		return false
 	# ...and the blurb it sells itself with must tell the truth about that.
-	var blurb := BeautyContent.charm_blurb("boots", 2)
+	var blurb := BeautyContent.charm_blurb("boots", 3)
 	if not ok(blurb.contains("%d%%" % roundi((deep - 1.0) * 100.0)),
 			"the deeper copy's description does not match its numbers: %s" % blurb):
 		return false
-	print("TIERS boots: tier1 %s / tier2 %s at %d and %d sparkles" % [
-		base, deep, BeautyContent.charm_price("boots", 1), BeautyContent.charm_price("boots", 2)])
+	print("TIERS boots: tier1 %s / tier3 %s at %d and %d sparkles" % [
+		base, deep, BeautyContent.charm_price("boots", 1), BeautyContent.charm_price("boots", 3)])
 	return true
 
 func _check_a_deeper_walk_opens_more_sockets(game: Node) -> bool:
@@ -203,19 +211,26 @@ func _check_a_full_loadout_is_never_emptied(game: Node) -> bool:
 	# Buy five wares twice over, so the check covers both ways a loadout grows:
 	# new icons, and deeper copies of icons the hero already loves. Buying is
 	# synchronous -- no await, because a per-purchase frame wait made this
-	# fixture alone blow the suite's runtime budget.
+	# fixture alone blow the suite's runtime budget. The five are charms no
+	# earlier check in this suite touches, so the arithmetic below counts THIS
+	# check's purchases and nothing else's -- the shelf order says which.
+	var owned_before: int = game.charms_owned.size()
 	for _pass in 2:
-		for key in ["boots", "scarf", "echo", "ember", "moss"]:
+		for key in ["ember", "moss", "honey", "pebble", "firefly"]:
 			game._on_buy_requested(key)
 	var after_buys := worn_keys(game.charms_equipped)
 	# Five wares bought twice is ten purchases, and with capacity this deep every
 	# one of them is on: the old cap would have thrown seven away silently.
-	if not ok(after_buys.size() == 10,
-			"ten wares were bought and only %d are worn: %s" % [after_buys.size(), str(after_buys)]):
+	if not ok(game.charms_owned.size() == owned_before + 10,
+			"ten wares were bought and the shelf holds %d (was %d): %s" % [
+				game.charms_owned.size(), owned_before, str(game.charms_owned)]):
 		return false
-	if not ok(game.charms_owned.size() == 10,
-			"ten wares were bought and only %d are owned: %s" % [
-				game.charms_owned.size(), str(game.charms_owned)]):
+	if not ok(after_buys.size() == game.charms_owned.size(),
+			"the shelf grew but the hero is not wearing all of it: %s" % str(after_buys)):
+		return false
+	if not ok(wears(game.charms_equipped, "ember", 1) and wears(game.charms_equipped, "ember", 2) \
+			and wears(game.charms_equipped, "firefly", 2),
+			"a bought copy is missing from the hero: %s" % str(after_buys)):
 		return false
 
 	# Toggling one OFF and back ON must not disturb any of the others.

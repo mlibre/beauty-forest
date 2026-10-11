@@ -6,7 +6,7 @@ extends Node3D
 ## The director wires this up in main.gd; Peddle's cart extends this in
 ## RunShop, combat in RunCombat and floor construction in RunWorld.
 
-enum Mode { MENU, PLAYING, PAUSED, SHOP, JOURNAL, SETTINGS, DEAD, ENDING }
+enum Mode { MENU, PLAYING, PAUSED, DRAFT, SHOP, JOURNAL, SETTINGS, DEAD, ENDING }
 
 const CAMERA_OFFSET := Vector3(6.4, 8.8, 6.4)
 const CHIME_TONES: Array[float] = [523.25, 587.33, 659.25, 783.99, 880.0]
@@ -98,6 +98,12 @@ var _mote_joy := 0.0
 func _gameplay_controls_enabled() -> bool:
     return mode == Mode.PLAYING and not ending_pending
 
+## One level's gift, offered to the player. RunState only defines the hook;
+## RunBoons implements it as the level-up draft, so the moment a level lands
+## the walker is asked what they want rather than handed a random perk.
+func _apply_level_up_boon() -> void:
+    pass
+
 func _gain_xp(amount: int) -> void:
     xp += maxi(0, amount)
     var levels := 0
@@ -106,21 +112,7 @@ func _gain_xp(amount: int) -> void:
         level += 1
         levels += 1
         xp_next = _next_level_cost()
-        var roll := randf()
-        if roll < 0.40:
-            level_hp_bonus += 20.0
-            hp_max += 20.0
-            hp = hp_max
-            ui.add_log("Level %d! Your heart grows two sizes (+20 max warmth)." % level)
-        elif roll < 0.80:
-            attack += 4.0
-            ui.add_log("Level %d! Your song carries farther (+4 Song)." % level)
-        else:
-            level_hp_bonus += 10.0
-            hp_max += 10.0
-            attack += 2.0
-            hp = hp_max
-            ui.add_log("Level %d! Heart and song both grow." % level)
+        _apply_level_up_boon()
         _learn_fact("A level-up lantern fact")
     if levels > 0:
         CozyVFX.burst(world, player.global_position + Vector3.UP * 1.1, Color("#ffe99a"), 44, 2.0, 1.25)
@@ -184,7 +176,7 @@ func _celebrate(duration: float) -> void:
 ## -- while the journal still told players a curious wisp was a way to earn it.
 ## `facts_from_wisps` is its own tally so the sticker means what it says.
 func _learn_fact(reason: String, counts_toward_finder: bool = false) -> void:
-    # The Atlas holds BeautyContent.FACTS entries and this picks by index, so it
+    # The Atlas holds BeautyLore.FACTS entries and this picks by index, so it
     # cycles. It used to append unconditionally, which filled the journal with
     # duplicate copies of the same facts: measured after 12 runs, 120 entries
     # holding only 24 distinct ones, until the 120-entry cap dropped the
@@ -192,7 +184,7 @@ func _learn_fact(reason: String, counts_toward_finder: bool = false) -> void:
     # memory book is a collection, so it should hold each fact once.
     var learned: Array = meta.get("facts_learned", [])
     var available: Array[String] = []
-    for entry: Variant in BeautyContent.FACTS:
+    for entry: Variant in BeautyLore.FACTS:
         var text := String(entry)
         if not learned.has(text):
             available.append(text)
@@ -243,7 +235,7 @@ func _near_feeling(max_distance: float) -> Wisp:
     return best
 
 func _has_feeling_floor() -> bool:
-    return BeautyContent.FEELINGS.has(BeautyContent.story_floor(floor_number))
+    return not BeautyContent.feeling_for_floor(floor_number).is_empty()
 
 func _award_sticker(key: String) -> void:
     var stickers: Array = meta.get("stickers", [])

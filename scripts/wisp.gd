@@ -230,6 +230,27 @@ func _add_type_prop(base_color: Color) -> void:
                 var pom := _sphere(0.105 * visual_scale, Color("#ffd1dc"))
                 pom.position = Vector3(side * 0.16 * visual_scale, 1.34 * visual_scale, 0)
                 _visual.add_child(pom)
+        "Puffcap":
+            var cap := _cone(0.34 * visual_scale, 0.24 * visual_scale, Color("#d9a06b"))
+            cap.position = Vector3(0, 1.30 * visual_scale, 0)
+            _visual.add_child(cap)
+            for offset in [-0.55, 0.35]:
+                var dot := _sphere(0.045 * visual_scale, Color("#fff1d4"))
+                dot.position = Vector3(offset * visual_scale, 1.38 * visual_scale, 0.18 * visual_scale)
+                _visual.add_child(dot)
+        "Comet":
+            var tail := _cone(0.16 * visual_scale, 0.55 * visual_scale, Color("#ffedbe"))
+            tail.position = Vector3(0, 0.92 * visual_scale, 0.42 * visual_scale)
+            tail.rotation.x = -0.9
+            _visual.add_child(tail)
+        "Snugbug":
+            var shell := _sphere(0.30 * visual_scale, Color("#b58fd8"))
+            shell.scale = Vector3(1.0, 0.82, 1.12)
+            shell.position = Vector3(0, 0.88 * visual_scale, 0)
+            _visual.add_child(shell)
+            var seam := _box(Vector3(0.02, 0.5, 0.86) * visual_scale, Color("#8f6bb0"))
+            seam.position = Vector3(0, 0.90 * visual_scale, 0)
+            _visual.add_child(seam)
 
 func tick_behavior(delta: float, player_position: Vector3, aggro_range: float, speed_multiplier: float, kindness_speed: float) -> void:
     if not alive:
