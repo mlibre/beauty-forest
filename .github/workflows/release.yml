@@ -1,0 +1,135 @@
+name: Release builds
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.7.2 and templates
+        run: |
+          curl -sL -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+          unzip -q godot.zip && sudo install -m 755 Godot_v4.7.2-stable_linux.x86_64 /usr/local/bin/godot
+          curl -sL -o templates.tpz https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates
+          unzip -q templates.tpz -d tpl && mv tpl/templates ~/.local/share/godot/export_templates/4.7.2.stable
+      - name: Export Windows build
+        run: |
+          mkdir -p builds/windows
+          touch builds/.gdignore
+          godot --headless --path . --import
+          godot --headless --path . --export-release "Windows" builds/windows/BeautyForest.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BeautyForest-windows
+          path: builds/windows/BeautyForest.exe
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.7.2 and templates
+        run: |
+          curl -sL -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+          unzip -q godot.zip && sudo install -m 755 Godot_v4.7.2-stable_linux.x86_64 /usr/local/bin/godot
+          curl -sL -o templates.tpz https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates
+          unzip -q templates.tpz -d tpl && mv tpl/templates ~/.local/share/godot/export_templates/4.7.2.stable
+      - name: Export Linux build
+        run: |
+          mkdir -p builds/linux
+          touch builds/.gdignore
+          godot --headless --path . --import
+          godot --headless --path . --export-release "Linux" builds/linux/BeautyForest.x86_64
+      - name: Smoke the exported binary
+        run: |
+          chmod +x builds/linux/BeautyForest.x86_64
+          builds/linux/BeautyForest.x86_64 --headless --quit-after 300 | tee boot.log
+          grep -q "BEAUTY_FOREST_BOOT_OK" boot.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BeautyForest-linux
+          path: builds/linux/BeautyForest.x86_64
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install Godot 4.7.2 and templates
+        run: |
+          curl -sL -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+          unzip -q godot.zip && sudo install -m 755 Godot_v4.7.2-stable_linux.x86_64 /usr/local/bin/godot
+          curl -sL -o templates.tpz https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates
+          unzip -q templates.tpz -d tpl && mv tpl/templates ~/.local/share/godot/export_templates/4.7.2.stable
+      - name: Point Godot's editor settings at the CI toolchain
+        run: |
+          mkdir -p ~/.config/godot
+          cat >> ~/.config/godot/editor_settings-4.7.tres << SETTINGS
+
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          SETTINGS
+      - name: Generate a release keystore
+        run: |
+          keytool -genkeypair -v -keystore beauty.keystore -alias beautyforest \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$KEYSTORE_PASSWORD" -keypass "$KEYSTORE_PASSWORD" \
+            -dname "CN=Beauty Forest, O=mlibre, C=US"
+          mkdir -p .godot
+          cat > .godot/export_credentials.cfg << CREDENTIALS
+
+          [preset.3.options]
+
+          keystore/debug="$GITHUB_WORKSPACE/beauty.keystore"
+          keystore/debug_user="beautyforest"
+          keystore/debug_pass="$KEYSTORE_PASSWORD"
+          keystore/release="$GITHUB_WORKSPACE/beauty.keystore"
+          keystore/release_user="beautyforest"
+          keystore/release_pass="$KEYSTORE_PASSWORD"
+          CREDENTIALS
+        env:
+          KEYSTORE_PASSWORD: beauty-forest-cozy-walk
+      - name: Export Android build
+        run: |
+          mkdir -p builds/android
+          touch builds/.gdignore
+          godot --headless --path . --import
+          godot --headless --path . --export-release "Android" builds/android/BeautyForest.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BeautyForest-android
+          path: builds/android/BeautyForest.apk
+
+  release:
+    needs: [windows, linux, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+      - name: Package and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          zip -j BeautyForest-Windows.zip BeautyForest-windows/BeautyForest.exe
+          zip -j BeautyForest-Linux.zip BeautyForest-linux/BeautyForest.x86_64
+          cp BeautyForest-android/BeautyForest.apk BeautyForest-Android.apk
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" BeautyForest-Windows.zip BeautyForest-Linux.zip BeautyForest-Android.apk --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              BeautyForest-Windows.zip BeautyForest-Linux.zip BeautyForest-Android.apk \
+              --title "Beauty Forest $GITHUB_REF_NAME" \
+              --notes "A cozy walk — no hurry, no losing. Unzip, run, wander. The Android APK is self-signed: allow installs from this source when your phone asks."
+          fi

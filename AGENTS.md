@@ -10,6 +10,10 @@
 - **Camera**: Do not revert to first-person or distant high-angle views. **No camera shake, ever** — no screen-shake, no mouse- or aim-driven camera drift; the camera glides smoothly and settles rock-steady at its fixed offset from the hero.
 - **Hero**: a visible real-time 3D character model with blend-tree walk/swing animation; the hero may visibly carry a staff as prophetic, cosmetic look — these are never manual attack inputs; combat stays fully automatic
 - **Icons and visuals, not instructions**
+- **One name per thing.** Every stat, screen and button has exactly one word
+  across the whole game — warmth is hearts, song is strength, the book holds
+  the facts — because a word that means two things, or a place the game never
+  built, teaches the player to stop trusting the signposts.
 - **Numbers die with the world, not on it**: state the player must feel continuously (warmth, being hurt) is expressed in the 3D scene — the lantern dims and reddens — so the HUD and the world can never disagree.
 
 ## Core principles
