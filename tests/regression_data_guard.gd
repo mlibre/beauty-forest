@@ -19,6 +19,7 @@ func _run() -> void:
     await _test_the_save_guard_refuses_a_damaged_satchel()
     await _test_a_failed_save_is_visible_to_the_player()
     await _test_unreadable_satchel_is_never_overwritten()
+    await _test_unreadable_settings_are_never_overwritten()
     finish(null, "BEAUTY_FOREST_DATA_GUARD")
 
 func _test_the_save_guard_refuses_a_damaged_satchel() -> void:
@@ -46,7 +47,7 @@ func _test_the_save_guard_refuses_a_damaged_satchel() -> void:
     _clear_quarantined(BeautyData.settings_path())
     await _wait_for_a_fresh_stamp()
     for stamp: String in [BeautyData.quarantine_path(BeautyData.save_path()),
-            _next_second_stamp()]:
+            _next_second_stamp(BeautyData.save_path())]:
         DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(stamp))
     var stuck := FileAccess.open(BeautyData.save_path(), FileAccess.WRITE)
     ok(stuck != null, "the second truncation fixture must be creatable")
@@ -67,7 +68,7 @@ func _test_the_save_guard_refuses_a_damaged_satchel() -> void:
         retried = true
         _clear_quarantined(BeautyData.save_path())
         for stamp: String in [BeautyData.quarantine_path(BeautyData.save_path()),
-                _next_second_stamp()]:
+                _next_second_stamp(BeautyData.save_path())]:
             DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(stamp))
         var retry := FileAccess.open(BeautyData.save_path(), FileAccess.WRITE)
         if retry != null:
@@ -92,7 +93,7 @@ func _test_the_save_guard_refuses_a_damaged_satchel() -> void:
     # planted obstructions come out -- the one for this second and the one for
     # the next, which only the boundary case ever created.
     for stamp: String in [BeautyData.quarantine_path(BeautyData.save_path()),
-            _next_second_stamp()]:
+            _next_second_stamp(BeautyData.save_path())]:
         DirAccess.remove_absolute(ProjectSettings.globalize_path(stamp))
     await _wait_for_a_fresh_stamp()
     var retry := FileAccess.open(BeautyData.save_path(), FileAccess.WRITE)
@@ -109,14 +110,14 @@ func _wait_for_a_fresh_stamp() -> void:
         await process_frame
 
 ## The quarantine stamp for the SECOND AFTER the one BeautyData would use now.
-## Planting both makes the save-guard fixture immune to a second boundary falling
+## Planting both makes a save-guard fixture immune to a second boundary falling
 ## between planting and loading.
 ##
 ## The arithmetic is on the UNIX TIME, not on the formatted string: a datetime
 ## string is not a number, so adding a second to it in place is not possible.
-func _next_second_stamp() -> String:
+func _next_second_stamp(base_path: String) -> String:
     var ahead := Time.get_unix_time_from_system() + 1.0
-    return "%s.corrupt-%s" % [BeautyData.save_path(),
+    return "%s.corrupt-%s" % [base_path,
         Time.get_datetime_string_from_unix_time(int(ahead))
             .replace(":", "-").replace("T", "_")]
 
@@ -289,6 +290,70 @@ func _test_unreadable_satchel_is_never_overwritten() -> void:
         "a settings file that would not parse was moved aside instead of being overwritten")
     ok(not bool(reloaded["reduced_motion"]) and float(reloaded["text_scale"]) == 1.0,
         "damaged settings must fall back to readable defaults, not to half-parsed values")
+
+func _test_unreadable_settings_are_never_overwritten() -> void:
+    # The satchel refuses to save while a damaged file it could not move aside
+    # still sits at the live path. Settings documented the same promise -- "the
+    # same data-loss shape ... do not overwrite it" -- but load_settings
+    # discarded the quarantine result and save_settings had no guard, so when
+    # the move failed the next ordinary save silently destroyed the only copy
+    # of the config that held a player's accessibility choices.
+    _clear_quarantined(BeautyData.settings_path())
+    var comfy := BeautyData.default_settings()
+    comfy["reduced_motion"] = true
+    comfy["text_scale"] = 2.0
+    ok(BeautyData.save_settings(comfy), "the readable settings fixture must save")
+
+    # The realistic damage shape the ConfigFile loader does reject.
+    var damaged := FileAccess.open(BeautyData.settings_path(), FileAccess.WRITE)
+    if not ok(damaged != null, "the damaged settings fixture must be creatable"):
+        return
+    damaged.store_string("[cozy]\nreduced_motion = tr")
+    damaged.close()
+
+    # Block the quarantine the same way the satchel fixture does: a directory
+    # where the backup would land, planted for this second and the next.
+    await _wait_for_a_fresh_stamp()
+    var retried := false
+    while not FileAccess.file_exists(BeautyData.settings_path()) and not retried:
+        retried = true
+        _clear_quarantined(BeautyData.settings_path())
+        var replant := FileAccess.open(BeautyData.settings_path(), FileAccess.WRITE)
+        if replant != null:
+            replant.store_string("[cozy]\nreduced_motion = tr")
+            replant.close()
+        for stamp: String in [BeautyData.quarantine_path(BeautyData.settings_path()),
+                _next_second_stamp(BeautyData.settings_path())]:
+            DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(stamp))
+        BeautyData.load_settings()
+    for stamp: String in [BeautyData.quarantine_path(BeautyData.settings_path()),
+            _next_second_stamp(BeautyData.settings_path())]:
+        DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(stamp))
+    BeautyData.load_settings()
+    ok(FileAccess.file_exists(BeautyData.settings_path()),
+        "test setup: the damaged settings file must still sit at the live path (quarantine obstructed)")
+
+    ok(not BeautyData.save_settings(BeautyData.default_settings()),
+        "a settings save must be refused while the only copy of the damaged file still sits at the live path")
+    var survivor := FileAccess.open(BeautyData.settings_path(), FileAccess.READ)
+    var preserved := survivor != null and survivor.get_as_text().contains("reduced_motion = tr")
+    if survivor != null:
+        survivor.close()
+    ok(preserved,
+        "the refused settings save must not have overwritten the only copy of the damaged file")
+
+    # Recovery mirrors the satchel: once the obstruction is gone, the next
+    # load moves the damaged file aside and saving works again immediately.
+    for stamp: String in [BeautyData.quarantine_path(BeautyData.settings_path()),
+            _next_second_stamp(BeautyData.settings_path())]:
+        DirAccess.remove_absolute(ProjectSettings.globalize_path(stamp))
+    await _wait_for_a_fresh_stamp()
+    BeautyData.load_settings()
+    var kept := _find_quarantined(BeautyData.settings_path())
+    ok(not kept.is_empty() and FileAccess.get_file_as_string(kept).contains("reduced_motion = tr"),
+        "the recovery load must still move the damaged settings aside, bytes intact")
+    ok(BeautyData.save_settings(comfy), "settings saves must resume once the damaged file is out of the way")
+    _clear_quarantined(BeautyData.settings_path())
 
 func _test_sticker_tables_agree() -> void:
     # "Century of Kindness" once went missing from the toast-line table, so

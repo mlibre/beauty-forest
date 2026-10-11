@@ -104,6 +104,12 @@ static var _meta_read_failed := false
 ## free and saving works normally again; the quarantined bytes stay untouched
 ## either way.
 static var _meta_write_blocked := false
+## The settings twin of _meta_write_blocked: true only while an unreadable
+## config still SITS AT the live settings path because moving it aside failed.
+## Without this, the next save_settings destroyed the only copy of the file
+## that held the player's accessibility choices -- the satchel refused exactly
+## this and the settings section promised the same behavior it did not keep.
+static var _settings_write_blocked := false
 
 static func meta_read_failed() -> bool:
     return _meta_read_failed
@@ -247,13 +253,14 @@ static func default_settings() -> Dictionary:
 ## the damaged file aside for the same reason, and do not overwrite it.
 static func load_settings() -> Dictionary:
     var result := default_settings()
+    _settings_write_blocked = false
     var config := ConfigFile.new()
     if config.load(settings_path()) != OK:
         # A missing file is a first run; only a file that EXISTS and will not
         # parse is damage worth preserving.
         if FileAccess.file_exists(settings_path()):
             push_warning("Beauty Forest settings could not be read, so the damaged file was kept aside.")
-            _quarantine(settings_path(), "settings")
+            _settings_write_blocked = _quarantine(settings_path(), "settings").is_empty()
         return result
     result["reduced_motion"] = _setting_bool(config.get_value("cozy", "reduced_motion", false))
     result["text_scale"] = _setting_float(config.get_value("cozy", "text_scale", result["text_scale"]), 0.75, 2.0, result["text_scale"])
@@ -266,6 +273,12 @@ static func load_settings() -> Dictionary:
     return result
 
 static func save_settings(settings: Dictionary) -> bool:
+    # The satchel's guard, kept honest here too: refuse only while an
+    # unreadable config still sits at the live path -- writing now would
+    # destroy the only copy of a file we already failed to understand.
+    if _settings_write_blocked:
+        push_warning("Not writing over settings that could not be read this session; the damaged file is kept aside.")
+        return false
     var clean := _clean_settings(settings)
     var config := ConfigFile.new()
     config.set_value("cozy", "reduced_motion", clean["reduced_motion"])
