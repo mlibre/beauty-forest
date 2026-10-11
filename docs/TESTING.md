@@ -89,6 +89,14 @@ godot --headless --path . --script res://tests/regression_cold_boot.gd
   the copy, and requires it to reach `main.gd`'s `BEAUTY_FOREST_BOOT_OK`
   marker with zero parse errors and quit by itself.
 
+One more real-world state sits on top: a machine that opened the editor long
+ago carries a class cache built by *older* code, and that cache can outlive the
+code so thoroughly that boot fails with `Could not resolve class ...` naming a
+file whose current source is fine — a cache built by the previous commit did
+not reproduce this, so the trigger is age, not distance. The cure is one
+command: `rm -rf .godot/` and run again. It is regenerable, and this project
+parses cache-free by design, so nothing else is needed.
+
 The dependency direction between the two content modules is load-bearing too:
 `beauty_content.gd` may ask `BeautyEndless` questions, never the reverse — a
 const borrowed back the other way is a cycle no loader can resolve. That is why

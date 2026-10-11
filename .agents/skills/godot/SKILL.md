@@ -71,6 +71,7 @@ Read [architecture-editor.md](references/architecture-editor.md) as well when a 
 
 - Use `res://` for shipped project resources and `user://` for the project's writable namespace. Writable does not guarantee durable persistence on every platform.
 - Check every `FileAccess`/`DirAccess`/save/load/export result. Do not hand-edit `.godot/`; commit appropriate source assets, `.import` sidecars, `.uid` metadata, and `export_presets.cfg`.
+- `.godot/` is a regenerable cache, and the global script class cache inside it outlives the code that built it. After pulling or otherwise replacing many scripts, a boot can fail with `Could not resolve class "X"` plus cascading `Failed to compile depended scripts` even though every current source is correct — the stale cache is the culprit, and deleting `.godot/` is the cure. The editor rebuilds the class cache on its next open; a plain run never builds it, so a project that must boot without an editor session (player machines, CI) has to parse cache-free: quote `extends` paths (`extends "res://..."`) and pin every bare class reference behind a `preload` constant.
 - Use Resources for reusable/editor-authored data and explicit versioned DTOs for save schemas. Loaded Resources can be shared; Runtime Resources need their own stable identity when persisted.
 - Keep object/Variant decoding disabled for untrusted data. Verify downloaded packs or patches before loading them as executable project content.
 
