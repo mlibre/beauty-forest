@@ -207,9 +207,7 @@ func _run() -> void:
 ## queue, and a run that stacks three of them is the case worth catching.
 func _longest_cue() -> String:
         var longest := ""
-        for path in ["res://scripts/run_combat.gd", "res://scripts/main.gd", "res://scripts/game_ui.gd"]:
-                if not FileAccess.file_exists(path):
-                        continue
+        for path in _script_paths():
                 for line in FileAccess.get_file_as_string(path).split("\n"):
                         var stripped := line.strip_edges()
                         if not stripped.begins_with("ui.add_cue(") and not stripped.begins_with("add_cue("):
@@ -222,6 +220,25 @@ func _longest_cue() -> String:
                                 if text.length() > longest.length():
                                         longest = text
         return longest
+
+## Every authored script, not a remembered list of three. The list named the
+## files that happened to hold cues the day the gate was written; run_world
+## since grew five cues of its own and the gate never looked at them -- a
+## budget nobody enforces is a wish, and this one claimed to be whole.
+func _script_paths() -> Array[String]:
+        var paths: Array[String] = []
+        var dir := DirAccess.open("res://scripts")
+        if dir == null:
+                return paths
+        dir.list_dir_begin()
+        var file_name := dir.get_next()
+        while file_name != "":
+                if not dir.current_is_dir() and file_name.ends_with(".gd"):
+                        paths.append("res://scripts/" + file_name)
+                file_name = dir.get_next()
+        dir.list_dir_end()
+        paths.sort()
+        return paths
 
 ## How long the longest walk-screen cue may be.
 ##
