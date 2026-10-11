@@ -176,8 +176,6 @@ static func story_for_floor(floor_number: int) -> Array:
     if not is_endless(floor_number):
         return []
     var story := story_in_chapter(floor_number)
-    var rng := RandomNumberGenerator.new()
-    rng.seed = hash("endless-story-%d" % chapter_for_floor(floor_number))
     var beat: Array = CHAPTER_BEATS[story - 1]
     var region_name := String(region(chapter_for_floor(floor_number))["name"])
     var title := String(beat[0]) % region_name if "%s" in String(beat[0]) else String(beat[0])
