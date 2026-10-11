@@ -1,5 +1,5 @@
 ---
-name: Godot 4.7 End-User Development
+name: godot
 description: Practical, version-aware guidance for native Godot 4.7 editor and GDScript projects. Use for designing, implementing, reviewing, debugging, testing, optimizing, or exporting Godot 2D/3D games and apps, including scenes, nodes, resources, UI, input, shaders, audio, physics, assets, networking, and platform integration. Excludes C#/.NET, C++/GDExtension, engine development, and engine compilation.
 metadata:
   opencode/autoinvoke: true

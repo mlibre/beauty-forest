@@ -1,5 +1,5 @@
 ---
-name: Godot Skill Refresh
+name: godot-refresh
 description: Learn Godot from the official latest online docs and use it to update, correct, and simplify the Godot end-user skill. Use when asked to refresh/update/learn Godot documentation, audit the Godot skill, remove non-Godot content, or verify Godot guidance. Native editor and GDScript only, excludes C#.
 metadata:
   opencode/autoinvoke: false
