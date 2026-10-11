@@ -47,14 +47,18 @@ var _draft_offers: Array = []
 func _apply_level_up_boon() -> void:
     pending_boons += 1
 
-## Offer the next pending gift whenever the walk is the thing on screen.
-## _refresh_ui runs on the director's 0.1 s throttle, which keeps the draft
-## from opening mid-physics -- soothing a wisp and levelling happens inside
-## the combat tick, and pausing the world there would leave half a frame of
-## combat running under the cards.
+## Offer the next pending gift whenever the walk is the thing on screen, and
+## the song is not. _refresh_ui runs on the director's 0.1 s throttle, which
+## keeps the draft from opening mid-physics -- soothing a wisp and levelling
+## happens inside the combat tick, and pausing the world there would leave
+## half a frame of combat running under the cards. An active lullaby also
+## holds the mode machine: bystander wisps keep getting soothed all through a
+## ceremony, so a level can land mid-song, and seizing the beat ring to deal
+## cards would freeze the song on its own gold note. The gift waits; the
+## same tick offers it the moment the last beat lands.
 func _refresh_ui() -> void:
     super()
-    if pending_boons > 0 and mode == Mode.PLAYING and not ending_pending:
+    if pending_boons > 0 and mode == Mode.PLAYING and not ending_pending and not _lullaby_active:
         _open_draft()
 
 func _open_draft() -> void:

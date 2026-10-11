@@ -33,6 +33,8 @@ func _run() -> void:
         return
     if not await _check_the_new_depth_wisps_exist(game):
         return
+    if not await _check_the_draft_waits_for_the_song(game):
+        return
 
     finish(game, "BEAUTY_FOREST_GROWTH")
 
@@ -271,6 +273,38 @@ func _check_endless_floors_build(game: Node) -> bool:
         if is_instance_valid(wisp) and wisp.is_feeling:
             feeling_wisps += 1
     if not ok(feeling_wisps == 1, "endless floor 17 hosts %d Big Feelings" % feeling_wisps):
+        return false
+    return true
+
+func _check_the_draft_waits_for_the_song(game: Node) -> bool:
+    ## Soothing a bystander wisp during a dragon lullaby still earns XP, so a
+    ## level can land MID-SONG. The draft must not seize the walk then: the
+    ## ceremony owns the mode machine until its last beat. The gift is not
+    ## lost -- it comes back the moment the song ends.
+    game._start_run(5)
+    await frames(6)
+    if not ok(game.dragon_exists, "floor 5 built without its dragon"):
+        return false
+    game._lullaby_active = true
+    game._lullaby_kind = "dragon"
+    game._apply_level_up_boon()
+    game._refresh_ui()
+    await frames(2)
+    if not ok(game.mode != game.Mode.DRAFT, "a draft stole the walk in the middle of a lullaby"):
+        return false
+    if not ok(game._lullaby_active and game.pending_boons == 1,
+            "the queued gift was dropped instead of waiting: %d" % game.pending_boons):
+        return false
+    game._lullaby_active = false
+    game._refresh_ui()
+    await frames(2)
+    if not ok(game.mode == game.Mode.DRAFT and not game._draft_offers.is_empty(),
+            "the pending gift never came back after the song"):
+        return false
+    game.pick_boon(String(game._draft_offers[0].get("key", "")))
+    await frames(2)
+    if not ok(game.mode == game.Mode.PLAYING and game.pending_boons == 0,
+            "settling the waited gift left the walk in %s with %d pending" % [str(game.mode), game.pending_boons]):
         return false
     return true
 
