@@ -87,6 +87,8 @@ var _beat_ring: Panel
 var _beat_inner: Panel
 var _warm_flash: ColorRect
 var _settings: Dictionary = {}
+## The title card's slow breathing loop; null everywhere else.
+var _menu_breath: Tween
 var _selected_style := "standard"
 var _toast_queue: Array[Dictionary] = []
 var _toast_active := false

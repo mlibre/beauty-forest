@@ -420,6 +420,10 @@ func _on_player_footstep(world_position: Vector3) -> void:
     audio.play_footstep()
 
 func _on_player_dashed(world_position: Vector3, direction: Vector3) -> void:
-    CozyVFX.burst(world, world_position + Vector3.UP * 0.25, Color("#f0d8a4"), 20, 1.8, 0.75)
-    CozyVFX.ring(world, world_position + Vector3.UP * 0.1, Color("#ffe3a0"), 1.8, 0.45)
+    # The dash paints its whole path, not just its start: a comet streak from
+    # where the hero left to where the slide ends, then the soft arrival.
+    var landing := world_position + direction * player.move_speed * 2.6 * 0.28
+    CozyVFX.trail(world, world_position + Vector3.UP * 0.4, landing + Vector3.UP * 0.4,
+        Color("#f0d8a4"), 7, bool(settings.get("reduced_motion", false)))
+    CozyVFX.burst(world, landing + Vector3.UP * 0.25, Color("#f0d8a4"), 16, 1.6, 0.7)
     audio.play_dash()

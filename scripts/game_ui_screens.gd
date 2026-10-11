@@ -183,6 +183,13 @@ func show_draft(offers: Array, level: int) -> void:
         var pick := func(): boon_picked.emit(String(offer.get("key", "")))
         card.pressed.connect(pick)
         cards.add_child(card)
+        # Each gift arrives a breath after the last, so the draft reads as
+        # Mote dealing three cards rather than three things popping at once.
+        if not _reduced_motion:
+            card.modulate.a = 0.0
+            var arrive := card.create_tween()
+            arrive.tween_property(card, "modulate:a", 1.0, 0.24).set_delay(0.08 + index * 0.07) \
+                .set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
     _overlay_content.add_child(cards)
     _overlay_content.add_child(_centered_label("The forest waits. Pick whichever feels right.", 15, Color("#cbdcb7")))
     _fit_layout()

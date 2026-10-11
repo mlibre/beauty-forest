@@ -12,19 +12,39 @@ const MODAL_SCROLLBAR_ALLOWANCE := 14.0
 ## Responsive placement for every HUD and modal control, plus the helpers that
 ## measure the real parent rect instead of trusting pre-tree anchor offsets.
 
+## The display's cut-outs and bars, in canvas pixels, as (left, top, right,
+## bottom). Desktop windows report their own bounds, so every margin is zero
+## and nothing moves; a phone's notch lifts the HUD off the glass. The stretch
+## transform is approximated with the smaller axis ratio, which is exact for
+## the canvas_items stretch at the aspect ratios phones actually rotate to.
+func _safe_margins(canvas: Vector2) -> Vector4:
+    var window := Vector2(DisplayServer.window_get_size())
+    if window.x <= 1.0 or window.y <= 1.0:
+        return Vector4.ZERO
+    var area := DisplayServer.get_display_safe_area()
+    if area.size.x <= 0.0 or area.size.y <= 0.0:
+        return Vector4.ZERO
+    var scale := minf(canvas.x / window.x, canvas.y / window.y)
+    return Vector4(
+        maxf(0.0, area.position.x) * scale,
+        maxf(0.0, area.position.y) * scale,
+        maxf(0.0, window.x - area.end.x) * scale,
+        maxf(0.0, window.y - area.end.y) * scale)
+
 func _fit_layout() -> void:
     # Responsive pass: place the vitals ring, minimap, log and both modal cards
     # so small/portrait windows show controls, not clipped panels.
     if _root == null or _overlay_card == null:
         return
     var viewport_size := _parent_size()
+    var safe := _safe_margins(viewport_size)
     var small_height := viewport_size.y < 600.0
     # The two corner word-cards are gone, so a short window no longer has to
     # choose between them: the compact decision is now only "is there room for
     # the map and the chatter?" — both pictures and words yield at the same size.
     _compact_hud = viewport_size.y < 320.0 or (_text_scale > 1.25 and viewport_size.y < 600.0)
     if is_instance_valid(_vitals):
-        _vitals.position = Vector2(8.0, 8.0) if _compact_hud else Vector2(18.0, 16.0)
+        _vitals.position = (Vector2(8.0, 8.0) if _compact_hud else Vector2(18.0, 16.0)) + Vector2(safe.x, safe.y)
     if is_instance_valid(_minimap):
         _minimap.visible = not _compact_hud
         var map_side := clampf(minf(viewport_size.x, viewport_size.y) * 0.19, 96.0, 172.0 if not small_height else 132.0)
@@ -39,8 +59,8 @@ func _fit_layout() -> void:
         # touchscreen. Try the corner, then straight above the cluster, then
         # beside it; the map yields rather than hide underneath the buttons.
         var corner := Vector2(
-            maxf(0.0, viewport_size.x - map_rect.size.x - 14.0),
-            maxf(0.0, viewport_size.y - map_rect.size.y - 14.0)
+            maxf(safe.x + 8.0, viewport_size.x - map_rect.size.x - 14.0 - safe.z),
+            maxf(safe.y + 8.0, viewport_size.y - map_rect.size.y - 14.0 - safe.w)
         )
         var cluster := _touch_cluster_rect()
         var map_spot := corner
@@ -71,7 +91,7 @@ func _fit_layout() -> void:
         # Lift it above the stick, slide it beside it, and let it yield rather
         # than overlap.
         var log_rect := _effective_rect(_log_label)
-        var log_spot := Vector2(16.0, maxf(8.0, viewport_size.y - log_rect.size.y - 26.0))
+        var log_spot := Vector2(16.0 + safe.x, maxf(8.0 + safe.y, viewport_size.y - log_rect.size.y - 26.0 - safe.w))
         var joystick := _joystick_rect()
         if joystick.size.x > 1.0:
             var cluster_rect := _touch_cluster_rect()
@@ -338,6 +358,40 @@ func _show_overlay(for_menu: bool = false) -> void:
     _overlay_card.visible = true
     _overlay_card.modulate.a = 1.0
     _fit_layout()
+    if for_menu:
+        # The menu card skips the settle and goes straight to breathing: it is
+        # the one screen meant to feel alive before anything happens.
+        _breathe_menu()
+    else:
+        _stop_menu_breath()
+        _settle_in(_overlay_card)
+
+## A card arrives like a leaf settling: a quick fade, then perfectly still.
+## Instant when reduced motion is on -- gentler means calmer, not uglier.
+func _settle_in(card: Control) -> void:
+    if _reduced_motion:
+        return
+    card.modulate.a = 0.0
+    var settle := card.create_tween()
+    settle.tween_property(card, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+## The title card breathes, slowly, forever: one gentle loop, no bounce, no
+## attention grab. Stopped the moment any other screen owns the card.
+func _breathe_menu() -> void:
+    _stop_menu_breath()
+    if _reduced_motion:
+        return
+    _menu_breath = create_tween()
+    _menu_breath.set_loops()
+    _menu_breath.tween_property(_overlay_card, "modulate:a", 0.93, 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+    _menu_breath.tween_property(_overlay_card, "modulate:a", 1.0, 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+func _stop_menu_breath() -> void:
+    if _menu_breath != null and _menu_breath.is_valid():
+        _menu_breath.kill()
+    _menu_breath = null
+    if is_instance_valid(_overlay_card):
+        _overlay_card.modulate.a = 1.0
 
 func _dismiss_beat_ring() -> void:
     ## The beat ring is a live gameplay affordance ("press E on the gold") and

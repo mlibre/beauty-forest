@@ -458,6 +458,7 @@ func close_settings() -> void:
 ## menu's light scrim under a panel, stacking two darkening rects on top of
 ## each other -- so `close_panels` clears all of them by name.
 func close_panels() -> void:
+    _stop_menu_breath()
     _menu_scrim.visible = false
     _shop_scrim.visible = false
     _shop_card.visible = false
