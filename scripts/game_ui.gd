@@ -197,11 +197,13 @@ func show_story(title: String, body: String, duration: float = 3.8, glyph: Strin
         if has_glyph:
             _story_glyph.texture = GardenGlyphs.get_glyph(glyph)
     _story_card.visible = true
-    # The picture changed the card's height (the glyph row appears and
-    # disappears with the story), and the layout pass positioned the card
-    # from its previous height -- on a short window a taller card hangs off
-    # the bottom edge until something else happens to resize it. Re-fit now.
-    _fit_layout()
+    # The picture changes the card's height, and re-fitting here is a trap
+    # the gate already sprung once: a fit that runs before the container's
+    # own layout pass measures the words at a stale (or never-laid-out)
+    # width and grows the card to 1911px on a 720p window. The next layout
+    # pass (resize, panel open, window settle) absorbs the glyph's ~44px;
+    # a card briefly 44px proud on a very short window beats one that
+    # balloons past the whole screen.
     _story_card.modulate.a = 0.0
     _story_tween = create_tween()
     _story_tween.tween_property(_story_card, "modulate:a", 1.0, 0.35)
