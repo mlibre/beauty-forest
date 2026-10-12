@@ -45,6 +45,9 @@ renderer/rendering_method="forward_plus"
 renderer/rendering_method.mobile="mobile"
 renderer/rendering_method.web="gl_compatibility"
 textures/default_filters/use_nearest_mipmap_filter=false
+; Android refuses to export without an ETC2/ASTC-capable texture set; the
+; game is procedural, so the only texture that ever imports is the icon.
+textures/vram_compression/import_etc2_astc=true
 anti_aliasing/quality/msaa_3d=2
 anti_aliasing/quality/screen_space_aa=1
 environment/defaults/default_clear_color=Color(0.72, 0.84, 0.55, 1)
