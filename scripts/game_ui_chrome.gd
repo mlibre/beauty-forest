@@ -1,5 +1,5 @@
 class_name GameUIChrome
-extends "res://scripts/game_ui_state.gd"
+extends "res://scripts/game_ui_factories.gd"
 ## Builds the interface once at boot: HUD cards, minimap, modal cards, story
 ## card, beat ring and the touch controls.
 
