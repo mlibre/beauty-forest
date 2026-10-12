@@ -254,12 +254,19 @@ func _on_journal_closed() -> void:
 
 func _open_settings() -> void:
     # The COZY button stays lit while Peddle's cart or the memory book is open,
-    # so pressing it has to work. Close the modal underneath, remember it, and
-    # hand the player back to it on close rather than swallowing the press.
+    # so pressing it has to work. Whatever screen sits underneath goes down
+    # first -- a panel opening owns the whole screen -- because the pause
+    # card, the menu and the nap card each keep their own scrim lit, and
+    # raising the settings panel over one stacked a second darkening rect on
+    # top of it. The close handlers below re-raise every card this hides, so
+    # the player is handed back to the screen they came from either way.
     var return_to := mode
     if mode in [Mode.SHOP, Mode.JOURNAL, Mode.DRAFT]:
-        ui.close_panels()
+        # The cart and the memory book have no close handler that re-raises
+        # them (their card is emptied on the way out), so they land on the
+        # walk, which is where both genuinely came from.
         return_to = Mode.PLAYING
+    ui.close_panels()
     previous_mode = return_to
     mode = Mode.SETTINGS
     _set_world_processing(false)
