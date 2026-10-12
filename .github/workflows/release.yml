@@ -120,11 +120,13 @@ jobs:
           zip -j BeautyForest-Windows.zip BeautyForest-windows/BeautyForest.exe
           zip -j BeautyForest-Linux.zip BeautyForest-linux/BeautyForest.x86_64
           cp BeautyForest-android/BeautyForest.apk BeautyForest-Android.apk
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" BeautyForest-Windows.zip BeautyForest-Linux.zip BeautyForest-Android.apk --clobber
+          # This job checks out nothing, so gh cannot discover the repository
+          # from git; every call names it explicitly with -R.
+          if gh release view -R mlibre/beauty-forest "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload -R mlibre/beauty-forest "$GITHUB_REF_NAME" BeautyForest-Windows.zip BeautyForest-Linux.zip BeautyForest-Android.apk --clobber
           else
-            gh release create "$GITHUB_REF_NAME" \
+            gh release create -R mlibre/beauty-forest "$GITHUB_REF_NAME" \
               BeautyForest-Windows.zip BeautyForest-Linux.zip BeautyForest-Android.apk \
               --title "Beauty Forest $GITHUB_REF_NAME" \
-              --notes "A cozy walk — no hurry, no losing. Unzip, run, wander. The Android APK is self-signed: allow installs from this source when your phone asks."
+              --notes "A gentle walk — no hurry, no losing. Unzip, run, wander. The Android APK is self-signed: allow installs from this source when your phone asks."
           fi
