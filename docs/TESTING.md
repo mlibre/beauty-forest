@@ -274,6 +274,8 @@ instead of take on faith.
 | `_audit/probe_soak.gd` | Does a long walk leak? Revisits floors and compares live object counts. |
 | `_audit/probe_chime_pool.gd` | Do the Dream Chimes stay clear of the wishing pool across generated dragon floors? |
 | `_audit/probe_endless.gd` | Do the deep chapters compose completely? Region fields, story beats, feeling positions, name uniqueness. |
+| `_audit/probe_flow_gauntlet.gd` | Do the screens survive every interleaved transition? Asserts panel-vs-mode and floor-scoped state across pause, cart, drafts, settings, lullaby, nap and title. Exits non-zero on a violated invariant. |
+| `_audit/probe_deep_walk.gd` | Does the real run loop walk the deep chapters? Floor 200's composed dragon floor, its lullaby, descents, a deep draft, nap and restart. Exits non-zero on a violated invariant. |
 
 The growth probe is the one that guards the central promise of the game. It
 prints the level, the song-to-creature ratio and the worst ratio on the walk; the
