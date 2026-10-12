@@ -421,17 +421,6 @@ func _begin_voice(song_key: String) -> void:
                 leaving.stop()
         )
 
-func _fade(voice: int, target_db: float, seconds: float) -> void:
-    if voice < 0 or voice >= _players.size() or not is_instance_valid(_players[voice]):
-        return
-    var serial := _serial
-    _fade_tween = create_tween()
-    _fade_tween.tween_property(_players[voice], "volume_db", target_db, seconds)
-    _fade_tween.tween_callback(func() -> void:
-        if serial == _serial and is_instance_valid(_players[voice]) and target_db <= SILENCE_DB + 1.0:
-            _players[voice].stop()
-    )
-
 func _apply_output() -> void:
     if _shut_down or not is_inside_tree():
         return
@@ -473,8 +462,9 @@ func _apply_output() -> void:
                 _begin_voice(_want_key)
         elif _queue.is_empty():
             _schedule_render(_want_key)
-    elif not _current_key.is_empty() and _songs.has(_current_key):
-        _begin_voice(_current_key)
+    # `_current_key` never survives `_want_key` (the two are cleared together
+    # in stop_music, shutdown and _exit_tree, and every voice start names a
+    # want first), so there is no current-but-unwanted state to restore.
 
 func _cancel_fade() -> void:
     if _fade_tween != null and _fade_tween.is_valid():
