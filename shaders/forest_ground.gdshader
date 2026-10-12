@@ -13,6 +13,11 @@ uniform vec4 base_color : source_color = vec4(0.48, 0.72, 0.32, 1.0);
 uniform vec4 light_patch : source_color = vec4(0.70, 0.77, 0.39, 1.0);
 uniform vec4 deep_patch : source_color = vec4(0.36, 0.56, 0.28, 1.0);
 uniform float sparkle_strength : hint_range(0.0, 1.0) = 0.30;
+// How strongly the sun pools light the floor. The compatibility renderer has
+// no SSAO/SSIL, so the pools it paints flat read brighter than the same
+// numbers on Forward+; the web calibration turns this down instead of
+// darkening the whole moss (which would flatten the drifts too).
+uniform float pool_strength : hint_range(0.0, 1.0) = 1.0;
 
 varying vec3 world_position;
 varying float view_depth;
@@ -64,7 +69,7 @@ void fragment() {
         float fleck = pow(max(0.0, sin(p.x * 1.31) * sin(p.y * 1.17)), 18.0);
 
         vec3 moss = mix(deep_patch.rgb, base_color.rgb, clamp(broad * (0.82 + 0.36 * drift), 0.0, 1.0));
-        moss = mix(moss, light_patch.rgb, pool * (0.16 + 0.14 * drift));
+        moss = mix(moss, light_patch.rgb, pool * (0.16 + 0.14 * drift) * pool_strength);
         moss *= COLOR.rgb;
         moss *= 0.94 + 0.10 * drift;
         moss += vec3(0.10, 0.09, 0.025) * fleck;

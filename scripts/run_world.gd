@@ -137,14 +137,18 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
 
     camera.global_position = player.global_position + CAMERA_OFFSET
     camera.look_at(player.global_position + Vector3.UP * 0.78, Vector3.UP)
-    music.play_region(String(region.get("ambient", region["key"])))
+    # Odd floors hum each region's variation, so a long walk hears two songs
+    # per region instead of one loop forever (see MusicDirector.floor_song).
+    music.play_region(music.floor_song(String(region.get("ambient", region["key"])), floor_number))
     ui.set_map(dungeon, player.global_position)
     _refresh_ui()
     if not menu_stage:
         player.set_control_enabled(true)
         var vignette: Array = BeautyContent.story_for_floor(floor_number)
         if not vignette.is_empty():
-            ui.show_story(String(vignette[0]), String(vignette[1]))
+            # The floor's opening page arrives illustrated: the region's own
+            # mark rides above the words, the way the intro's pages do.
+            ui.show_story(String(vignette[0]), String(vignette[1]), 3.8, String(region.get("glyph", "mote")))
         # A region says hello on its first floor: `min` is that floor for the
         # campaign's own regions and for a composed endless chapter alike.
         # A toast, not the hidden log: the greeting is the region's one moment.
@@ -159,7 +163,7 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
             CozyVFX.burst(world, player.global_position + Vector3(0, 3.0, 0), Color("#ffe9a8"), 56, 1.6, 2.6)
             ui.show_toast("The forest cheers — %d floors deep!" % floor_number, 3.0)
         if merchant_exists:
-            ui.show_toast("Peddle’s cart is nearby. Press F when you’re ready to browse.")
+            ui.show_toast("Peddle’s cart is nearby — walk up and press E to browse.", 3.2)
         if _has_feeling_floor():
             ui.show_toast("A Big Feeling wanders this floor. Wait for its GOLD halo, then press E nearby and sing with it.")
         if _surprise != null:
@@ -237,6 +241,50 @@ func _tick_surprise(delta: float) -> void:
                 audio.play_chord([659.25, 880.0], 0.5, 0.07)
                 ui.show_toast("Every puff is popped — the seeds drift down. +2 sparkles.", 3.0)
                 _refresh_ui()
+        "firefly_chase":
+            # A small optional adventure: catch all three fireflies by walking
+            # to them. Each one caught pays a sparkle on the spot; the last
+            # one pays a bonus. Ignoring them costs nothing but the sparkle.
+            if not _surprise.get_meta("surprise_used"):
+                var caught := 0
+                for index in range(3):
+                    var fly := _surprise.get_node_or_null("Fly%d" % index) as MeshInstance3D
+                    if fly == null or not fly.visible:
+                        caught += 1
+                        continue
+                    if player.global_position.distance_to(fly.global_position) < 1.6:
+                        fly.visible = false
+                        caught += 1
+                        sparkles += 1
+                        audio.play_tone(920.0 + float(index) * 90.0, 0.22, 0.05, 1)
+                        CozyVFX.burst(world, fly.global_position, Color("#fff3a0"), 14, 1.0, 0.7)
+                        _refresh_ui()
+                if caught >= 3:
+                    _surprise.set_meta("surprise_used", true)
+                    sparkles += 2
+                    audio.play_chord([659.25, 880.0, 1046.5], 0.6, 0.07)
+                    ui.show_toast("Every firefly caught — they wave their little lights goodbye. +2 sparkles.", 3.2)
+                    _refresh_ui()
+        "star_trail":
+            # Another optional adventure: five stars that only answer in
+            # order. Walking the whole trail ends in a thank-you heart; the
+            # trail is never an objective and never blocks the stair.
+            if not _surprise.get_meta("surprise_used"):
+                var next := int(_surprise.get_meta("trail_next", 0))
+                var stone := _surprise.get_node_or_null("Star%d" % next) as Node3D
+                if stone != null and player.global_position.distance_to(stone.global_position) < 1.7:
+                    _surprise.set_meta("trail_next", next + 1)
+                    stone.material_override = FloorSurprise.glow(Color("#ffe9a8"), 2.2)
+                    audio.play_tone(523.25 * pow(1.26, float(next)), 0.30, 0.055, 1)
+                    CozyVFX.burst(world, stone.global_position, Color("#bfe8ff"), 12, 0.9, 0.7)
+                    if next + 1 >= 5:
+                        _surprise.set_meta("surprise_used", true)
+                        var heart := HeartPickup.new()
+                        world.add_child(heart)
+                        heart.setup(_surprise.global_position + Vector3(0.6, 0.8, 0), 12.0, 1.0, true)
+                        heart.heart_collected.connect(_on_heart_collected)
+                        heart.heart_expired.connect(_on_heart_expired)
+                        ui.show_toast("The star trail ends in a thank-you heart.", 3.2)
 
 ## The surprise's E-answers, tried before the generic wander cue. Returns
 ## true when the press belonged to the surprise, so the caller stops there.
@@ -286,6 +334,17 @@ func _surprise_interact() -> bool:
                 _learn_fact("A mossy doodle on floor %d taught it: “%s”" % [floor_number, String(BeautyLore.FACTS[randi() % BeautyLore.FACTS.size()])])
                 audio.play_chord([783.99, 987.77], 0.5, 0.06)
                 _refresh_ui()
+                return true
+        "echo_shell":
+            if near and not used:
+                _surprise.set_meta("surprise_used", true)
+                for step in range(3):
+                    audio.play_tone(392.0 * pow(1.335, float(step)), 0.5, 0.06, 1)
+                # The shell's echo settles the whole floor a shade: a small,
+                # honest blessing that is over the moment you hear it.
+                floor_modifier["aggro"] = float(floor_modifier.get("aggro", 1.0)) * 0.90
+                CozyVFX.ring(world, _surprise.global_position + Vector3.UP * 0.5, Color("#cfe8ff"), 2.6, 1.0)
+                ui.show_toast("The shell echoes the forest's hum — the wisps settle a little this floor.", 3.2)
                 return true
         _:
             pass
@@ -372,6 +431,14 @@ func _try_interact() -> void:
     if _lullaby_active:
         _judge_lullaby_beat()
         return
+    # One key for every nearby kindness. Peddle's cart used to want its own
+    # key (F), which is one more thing to learn and one more thing to forget
+    # at the moment of use; the context pill and the touch button now carry
+    # the whole truth ("E · Peddle's cart"), and F keeps working as an
+    # alias for hands that already learned it. Opening the stall is the
+    # director's move (see the hook in RunState), so this asks, not does.
+    if _near_merchant() and _try_open_nearby_shop():
+        return
     if stair_visible and world and is_instance_valid(world.get_node_or_null("Stairwell")):
         var stair := world.get_node("Stairwell") as Node3D
         if stair.visible and player.global_position.distance_to(stair.global_position) < 2.3:
@@ -394,6 +461,52 @@ func _try_interact() -> void:
         ui.add_cue("chimes drift close — no button")
         return
     ui.add_cue("wander toward whatever glows")
+
+## What the hero is standing beside, in one verb — the same senses, in the
+## same order, as _try_interact answers them. The context pill ("E · Descend")
+## and the touch action button's face are both fed from here, so the hint and
+## the press can never disagree about what E does right now.
+func _interact_hint_text() -> String:
+    if _lullaby_active or player == null or not is_instance_valid(player):
+        return ""
+    if _near_merchant():
+        return "Peddle's cart"
+    if stair_visible and world and is_instance_valid(world.get_node_or_null("Stairwell")):
+        var stair := world.get_node("Stairwell") as Node3D
+        if stair.visible and player.global_position.distance_to(stair.global_position) < 2.3:
+            return "Descend"
+    var feeling := _near_feeling(4.5)
+    if feeling != null and feeling.is_boss_vulnerable():
+        return "Sing together"
+    if world and is_instance_valid(world.get_node_or_null("WishingPool")):
+        var pool := world.get_node("WishingPool") as Node3D
+        if pool and player.global_position.distance_to(pool.global_position) < 2.6:
+            return "Make a wish"
+    return _surprise_hint_text()
+
+## The floor surprise's own verb, when the hero is close enough to answer it.
+func _surprise_hint_text() -> String:
+    if _surprise == null or not is_instance_valid(_surprise):
+        return ""
+    if bool(_surprise.get_meta("surprise_used")):
+        return ""
+    if player == null or not is_instance_valid(player):
+        return ""
+    if player.global_position.distance_to(_surprise.global_position) >= 2.6:
+        return ""
+    return FloorSurprise.verb_for(String(_surprise.get_meta("surprise_key")))
+
+## Feed the pill and the touch button from the same sense. An empty verb
+## hides the pill and rests the button; a panel opening hides it via
+## close_panels, so no stale "press E" survives a modal.
+func _update_context_hint() -> void:
+    if ui == null or not is_instance_valid(ui):
+        return
+    var verb := ""
+    if mode == Mode.PLAYING and not ending_pending:
+        verb = _interact_hint_text()
+    ui.show_context_hint(verb)
+    ui.set_action_label(verb)
 
 ## The wishing pool was the one landmark nothing could do anything with: an
 ## elaborate prop whose only interaction was Mote's generic fallback line. Now

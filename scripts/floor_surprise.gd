@@ -12,6 +12,13 @@ const DungeonGenerator := preload("res://scripts/dungeon_generator.gd")
 ## floors never repeat, while the dungeon around it is freshly random every
 ## walk. All props are the game's own primitives; nothing here can hurt, and
 ## every reward is small by design — the surprise IS the reward.
+##
+## Three of the kinds are little ADVENTURES rather than single finds: a
+## firefly chase, a star trail to walk in order, a shell that answers a
+## listen. Every one of them is strictly optional — none is ever counted as
+## an objective, none gates the stair, and a hero who ignores the whole lot
+## descends exactly as freely as one who chased every firefly. The reward is
+## a few sparkles or a heart, never progress.
 
 const KINDS: Array = [
     {"key": "picnic", "name": "a wisp picnic", "line": "Three wisps are sharing something on a blanket."},
@@ -21,12 +28,35 @@ const KINDS: Array = [
     {"key": "comet_log", "name": "a comet-watching log", "line": "A soft log sits alone, pointed at the sky."},
     {"key": "mossy_doodle", "name": "a mossy doodle", "line": "Something drew a glowing picture in the moss."},
     {"key": "balloon_puffs", "name": "balloon puffs", "line": "A few round puffs float just above the grass."},
+    {"key": "firefly_chase", "name": "a firefly chase", "line": "Three fireflies zigzag above the grass, playing catch-me."},
+    {"key": "star_trail", "name": "a star trail", "line": "Little blue stars dot a winding path, one after another."},
+    {"key": "echo_shell", "name": "an echo shell", "line": "A big spiral shell sits quietly, holding a sound."},
 ]
 
-## The multipliers that keep consecutive floors on different surprises:
-## five shares no factor with seven, so stepping one floor always turns the
-## wheel to a different kind.
-const WHEEL_STEP := 5
+## The multipliers that keep consecutive floors on different surprises: the
+## step shares no factor with the wheel's size (7 against 10), so stepping
+## one floor always turns the wheel to a different kind, and a full turn of
+## the wheel visits every kind.
+const WHEEL_STEP := 7
+
+## The verb the context hint speaks for each kind a PRESS can answer, or ""
+## when the kind answers proximity instead (the glade warms, the bloom lights,
+## the puffs pop — no button involved). The hint pill, the touch action
+## button and the press itself all read from this one table, so the three can
+## never disagree about what E does beside a surprise.
+static func verb_for(key: String) -> String:
+    match key:
+        "picnic":
+            return "Share the picnic"
+        "singing_ring":
+            return "Join the song"
+        "comet_log":
+            return "Watch the comet"
+        "mossy_doodle":
+            return "Look closer"
+        "echo_shell":
+            return "Listen to the shell"
+    return ""
 
 static func kind_for_floor(floor_number: int) -> Dictionary:
     return KINDS[posmod(int(floor_number) * WHEEL_STEP, KINDS.size())]
@@ -62,6 +92,12 @@ static func spawn(parent: Node3D, dungeon: Dictionary, rng: RandomNumberGenerato
             _build_mossy_doodle(root)
         "balloon_puffs":
             _build_balloon_puffs(root, rng)
+        "firefly_chase":
+            _build_firefly_chase(root, rng)
+        "star_trail":
+            _build_star_trail(root, rng)
+        "echo_shell":
+            _build_echo_shell(root)
     parent.add_child(root)
     return root
 
@@ -208,3 +244,54 @@ static func _build_balloon_puffs(root: Node3D, rng: RandomNumberGenerator) -> vo
             rng.randf_range(0.7, 1.4),
             rng.randf_range(-1.6, 1.6))
         root.add_child(puff)
+
+static func _build_firefly_chase(root: Node3D, rng: RandomNumberGenerator) -> void:
+    ## Three fireflies scattered a small wander apart. Nothing chases back:
+    ## the hero walks to each one and the chase is over in twenty gentle
+    ## seconds — a sprint for a toddler, a stroll for everyone else.
+    for index in range(3):
+        var fly := _ball(0.12, Color("#fff3a0"), true)
+        fly.name = "Fly%d" % index
+        var angle := TAU * float(index) / 3.0 + rng.randf_range(-0.3, 0.3)
+        var reach := rng.randf_range(1.3, 2.0)
+        fly.position = Vector3(cos(angle) * reach, rng.randf_range(0.55, 1.0), sin(angle) * reach)
+        root.add_child(fly)
+
+static func _build_star_trail(root: Node3D, rng: RandomNumberGenerator) -> void:
+    ## Five blue stars in a short winding path, meant to be walked in order:
+    ## the game only answers the NEXT star, so the trail teaches its own
+    ## sequence and never asks the hero to read a word about it.
+    var angle := rng.randf_range(0.0, TAU)
+    for index in range(5):
+        angle += rng.randf_range(0.55, 1.05)
+        var star := _ball(0.10, Color("#bfe8ff"), true)
+        star.name = "Star%d" % index
+        star.position = Vector3(cos(angle) * 1.6, 0.34 + float(index) * 0.04, sin(angle) * 1.6)
+        root.add_child(star)
+
+static func _build_echo_shell(root: Node3D) -> void:
+    ## A big spiral shell that holds the forest's own hum. One press, one
+    ## chord, one small blessing — the quietest kind of adventure.
+    var shell := MeshInstance3D.new()
+    var shell_mesh := SphereMesh.new()
+    shell_mesh.radius = 0.42
+    shell_mesh.height = 0.72
+    shell.mesh = shell_mesh
+    shell.material_override = _pbr(Color("#e8d8b8"))
+    shell.scale = Vector3(1.0, 0.82, 1.0)
+    shell.position = Vector3(0, 0.30, 0)
+    root.add_child(shell)
+    var mouth := MeshInstance3D.new()
+    var mouth_mesh := CylinderMesh.new()
+    mouth_mesh.top_radius = 0.28
+    mouth_mesh.bottom_radius = 0.28
+    mouth_mesh.height = 0.03
+    mouth_mesh.radial_segments = 14
+    mouth.mesh = mouth_mesh
+    mouth.material_override = _pbr(Color("#c9b088"))
+    mouth.position = Vector3(0.10, 0.40, 0.30)
+    mouth.rotation.x = PI * 0.42
+    root.add_child(mouth)
+    var pearl := _ball(0.07, Color("#ffe9c8"), true)
+    pearl.position = Vector3(-0.10, 0.55, -0.05)
+    root.add_child(pearl)

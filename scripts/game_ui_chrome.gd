@@ -183,6 +183,17 @@ func _build_interface() -> void:
     _story_card.add_child(story_margin)
     var story_box := VBoxContainer.new()
     story_margin.add_child(story_box)
+    # The vignette's picture: the region's own mark, shown when the story
+    # carries one. A floor's opening line lands with its picture, the same
+    # way the intro's pages do.
+    _story_glyph = TextureRect.new()
+    _story_glyph.custom_minimum_size = Vector2(30, 30)
+    _story_glyph.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    _story_glyph.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    _story_glyph.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+    _story_glyph.visible = false
+    _story_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    story_box.add_child(_story_glyph)
     _story_title = _label("", 22, Color("#ffe69d"))
     _story_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     story_box.add_child(_story_title)
@@ -223,8 +234,36 @@ func _build_interface() -> void:
     _warm_flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     _warm_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _root.add_child(_warm_flash)
+    _build_context_hint()
     _build_intro()
     _build_touch_controls()
+
+## The bottom-centre hint pill: the one piece of prose the walk screen is
+## allowed to paint, and only while a press would actually do something.
+## "E · Descend" appears when the hero reaches the stair, "E · Peddle's cart"
+## at the cart, and so on -- the button hints itself at the moment of use,
+## instead of a permanent control line the eye learns to ignore.
+func _build_context_hint() -> void:
+    _context_hint = PanelContainer.new()
+    _context_hint.name = "ContextHint"
+    var style := StyleBoxFlat.new()
+    style.bg_color = Color(0.07, 0.14, 0.09, 0.88)
+    style.border_color = Color("#ffe29a")
+    style.set_border_width_all(2)
+    style.set_corner_radius_all(14)
+    style.content_margin_left = 16
+    style.content_margin_right = 16
+    style.content_margin_top = 7
+    style.content_margin_bottom = 7
+    _context_hint.add_theme_stylebox_override("panel", style)
+    _context_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _context_label = _label("", 15, Color("#fff2c4"))
+    _context_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    _context_label.add_theme_color_override("font_outline_color", Color(0.06, 0.11, 0.07, 0.9))
+    _context_label.add_theme_constant_override("outline_size", 4)
+    _context_hint.add_child(_context_label)
+    _context_hint.visible = false
+    _root.add_child(_context_hint)
 
 ## The storybook intro: one page at a time over the still-bright menu forest.
 ## A tap turns the page, the Skip plate ends the telling; the world behind it
@@ -257,13 +296,31 @@ func _build_intro() -> void:
     var page_margin := _margin(28, 26, 28, 24)
     page.add_child(page_margin)
     page_margin.add_child(column)
+    # The page's own little scene: a tinted glow the picture sits in. Each page
+    # of the story wears its own color (the dragon's ember, the lantern's gold,
+    # the wisps' blue, the promise's rose, the descent's moss), so turning a
+    # page changes the light the way a illustrated book changes plates.
+    var glow_holder := CenterContainer.new()
+    glow_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    column.add_child(glow_holder)
+    _intro_glow = Panel.new()
+    _intro_glow.custom_minimum_size = Vector2(104, 104)
+    _intro_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    glow_holder.add_child(_intro_glow)
+    var glow_style := StyleBoxFlat.new()
+    glow_style.bg_color = Color("#ffe9a0", 0.22)
+    glow_style.set_corner_radius_all(52)
+    _intro_glow.add_theme_stylebox_override("panel", glow_style)
+    var glyph_holder := CenterContainer.new()
+    glyph_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    glyph_holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    _intro_glow.add_child(glyph_holder)
     _intro_glyph = TextureRect.new()
-    _intro_glyph.custom_minimum_size = Vector2(72, 72)
+    _intro_glyph.custom_minimum_size = Vector2(64, 64)
     _intro_glyph.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     _intro_glyph.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    _intro_glyph.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
     _intro_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    column.add_child(_intro_glyph)
+    glyph_holder.add_child(_intro_glyph)
     _intro_title = _label("", 28, Color("#ffe6a0"))
     _intro_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     column.add_child(_intro_title)
@@ -272,6 +329,16 @@ func _build_intro() -> void:
     _intro_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     column.add_child(_intro_body)
     column.add_child(_spacer(4))
+    # One dot per page: where the telling is, and how much story is left. A
+    # row of dots reads without words, which is the intro's whole grammar. The
+    # dots themselves are grown by show_intro_page, which learns the page
+    # count from the director — the story's length belongs to the story.
+    _intro_dots = HBoxContainer.new()
+    _intro_dots.alignment = BoxContainer.ALIGNMENT_CENTER
+    _intro_dots.add_theme_constant_override("separation", 8)
+    _intro_dots.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    column.add_child(_intro_dots)
+    column.add_child(_spacer(2))
     _intro_hint = _centered_label("tap to continue  ·  Esc skips", 12, Color("#9fb892"))
     column.add_child(_intro_hint)
     # The one plate on the intro that ends it: bottom-right, honest word.
@@ -318,32 +385,33 @@ func _build_touch_controls() -> void:
     # wants, so GameUILayout measures these live rects and moves the map (and
     # the log, under the joystick) out of the way instead of letting the opaque
     # buttons paint over them.
+    #
+    # Four buttons, not six. CART is gone because E answers it: the action
+    # button below IS the context, so standing beside Peddle re-labels it
+    # "CART" and a touch press opens the stall -- one button that is always
+    # the right one, wherever the hero stands. COMFORT moved into the pause
+    # card, which a touch player reaches with the PAUSE button and which
+    # already carries the "Comfort options" door; a cluster of six crowded
+    # plates taught none of them.
     var use_button := _touch_button("SING ♥", Color("#ffe29a"), Vector2(-280, -180))
-    use_button.tooltip_text = "Hug, sing, and go down stairs. Same as E."
+    use_button.tooltip_text = "Whatever is near you: hug, sing, wish, or go down. Same as E."
     use_button.pressed.connect(func(): touch_interact_requested.emit())
     touch_root.add_child(use_button)
+    _touch_action_button = use_button
     var dash_button := _touch_button("DASH", Color("#a9d9ff"), Vector2(-170, -180))
     dash_button.tooltip_text = "A quick soft hop. Same as Shift."
     dash_button.pressed.connect(func(): touch_dash_requested.emit())
     touch_root.add_child(dash_button)
-    var shop_button := _touch_button("CART ♥", Color("#f5b58c"), Vector2(-280, -118))
-    shop_button.tooltip_text = "Browse Peddle's cart. Same as F."
-    shop_button.pressed.connect(func(): touch_shop_requested.emit())
-    touch_root.add_child(shop_button)
-    var journal_button := _touch_button("BOOK ♥", Color("#c9e7a6"), Vector2(-170, -118))
+    var journal_button := _touch_button("BOOK ♥", Color("#c9e7a6"), Vector2(-280, -118))
     journal_button.tooltip_text = "Your memories and stickers. Same as J."
     journal_button.pressed.connect(func(): touch_journal_requested.emit())
     touch_root.add_child(journal_button)
-    var options_button := _touch_button("COMFORT", Color("#d7c8ff"), Vector2(-280, -56))
-    options_button.tooltip_text = "Make things gentler. Same as C."
-    options_button.pressed.connect(func(): touch_settings_requested.emit())
-    touch_root.add_child(options_button)
 
     # A touchscreen has no Escape key and this project maps no back gesture,
-    # so without this the five buttons above are the whole control set: the
-    # player could sing, dash, shop, read and soften the forest but never
-    # reach the pause card, the journal summary or the way home.
-    var pause_button := _touch_button("PAUSE", Color("#cfd8e8"), Vector2(-170, -56))
+    # so without this the buttons above are only half the control set: the
+    # player could sing, dash and read but never reach the pause card -- the
+    # card that carries the comfort options, the summary and the way home.
+    var pause_button := _touch_button("PAUSE", Color("#cfd8e8"), Vector2(-170, -118))
     pause_button.tooltip_text = "Rest a moment. Same as Esc."
     pause_button.pressed.connect(func(): touch_pause_requested.emit())
     touch_root.add_child(pause_button)

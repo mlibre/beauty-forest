@@ -221,6 +221,30 @@ func _check_web_render_calibration() -> void:
     ok(environment.adjustment_brightness < 1.0, "the web grade must ease the brightness")
     ok(environment.adjustment_saturation > 1.0, "the web grade must hand the warmth back")
 
+    # The ground is the largest bright surface on screen and the environment
+    # dial alone left it washed out on web (the shader colors render flat with
+    # no SSAO/SSIL to crease them). The moss has its own pure-function dial.
+    var ground := ShaderMaterial.new()
+    ground.shader = load("res://shaders/forest_ground.gdshader")
+    var authored_base := Color("#87bd62").darkened(0.13)
+    ground.set_shader_parameter("base_color", authored_base)
+    ground.set_shader_parameter("light_patch", authored_base.lerp(Color("#d6cf82"), 0.27))
+    ground.set_shader_parameter("deep_patch", authored_base.lerp(Color("#3f6b33"), 0.34))
+    Scenery._calibrate_ground_for_renderer(ground, "forward_plus")
+    ok(is_equal_approx((ground.get_shader_parameter("base_color") as Color).r, authored_base.r),
+        "the desktop renderer must keep the authored moss untouched")
+    ok(is_equal_approx(float(ground.get_shader_parameter("pool_strength")), 1.0),
+        "the desktop renderer must keep the sun pools at full strength")
+    Scenery._calibrate_ground_for_renderer(ground, "gl_compatibility")
+    var web_base := ground.get_shader_parameter("base_color") as Color
+    ok(web_base.r < authored_base.r and web_base.g < authored_base.g,
+        "the web calibration must darken the moss itself")
+    var web_light := ground.get_shader_parameter("light_patch") as Color
+    ok(web_light.r < (authored_base.lerp(Color("#d6cf82"), 0.27)).r,
+        "the web calibration must dim the bright sun-patch color")
+    ok(float(ground.get_shader_parameter("pool_strength")) < 1.0,
+        "the web calibration must shrink how much floor the sun pools light")
+
 func _find_label(node: Node) -> Label3D:
     if node == null:
         return null

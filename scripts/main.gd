@@ -7,15 +7,26 @@ extends "res://scripts/run_world.gd"
 
 const InputActions := preload("res://scripts/input_actions.gd")
 
-## The story the Play button tells before the first floor loads: three pages
-## over the menu forest while the camera glides down from the canopy. Any key
-## or tap turns a page; Esc or Skip goes straight to the walk.
+## The story the Play button tells before the first floor loads: five pages
+## over the menu forest while the camera glides down from the canopy. Each
+## page carries its own tint — the glow behind the picture, the picture itself
+## and the page dot all wear it, so the story reads as five small scenes (the
+## dragon's rumor, the lantern's song, the lost souls, the promise, the
+## descent) rather than one flat card. Any key or tap turns a page; Esc or
+## Skip goes straight to the walk.
 const INTRO_PAGES: Array = [
-    {"glyph": "dragon", "title": "The rumor", "body": "Far below, a whole dragon family has forgotten how to sleep."},
-    {"glyph": "lantern", "title": "The lantern", "body": "Your lantern sings by itself. You just wander."},
-    {"glyph": "heart", "title": "The promise", "body": "Sing every lost soul home. No hurry, no losing."},
+    {"glyph": "dragon", "title": "The rumor", "tint": Color("#ffd9a8"),
+        "body": "Far beneath the moss, a whole dragon family has forgotten how to sleep. Their dreams went missing first."},
+    {"glyph": "lantern", "title": "The lantern", "tint": Color("#ffe9a0"),
+        "body": "Your lantern hums a song all by itself — an old tune every lost soul still remembers."},
+    {"glyph": "wisp", "title": "The lost ones", "tint": Color("#bfe8ff"),
+        "body": "Sad little wisps drift through the roots, dim and lonely, waiting for someone kind to wander by."},
+    {"glyph": "heart", "title": "The promise", "tint": Color("#ffd9e0"),
+        "body": "Sit with them. Hum until they glow. No hurry, no losing — kindness is the whole game."},
+    {"glyph": "stairs", "title": "The descent", "tint": Color("#bdf0bd"),
+        "body": "Thirteen floors below, Snoozle waits for the softest lullaby ever hummed. Ready? Let's wander."},
 ]
-const INTRO_PAGE_SECONDS := 3.4
+const INTRO_PAGE_SECONDS := 4.6
 const INTRO_GLIDE_SECONDS := 3.0
 ## The camera starts high in the canopy and settles to its walk offset.
 const CAMERA_INTRO_OFFSET := Vector3(0.0, 26.0, 19.0)
@@ -100,9 +111,7 @@ func _connect_ui() -> void:
     )
     ui.touch_dash_requested.connect(_touch_dash)
     ui.touch_interact_requested.connect(_try_interact)
-    ui.touch_shop_requested.connect(_touch_shop)
     ui.touch_journal_requested.connect(_open_journal)
-    ui.touch_settings_requested.connect(_open_settings)
     ui.touch_pause_requested.connect(_touch_pause)
     ui.settings_changed.connect(func(value): _apply_settings(value, true))
 
@@ -131,7 +140,10 @@ func _begin_intro() -> void:
     _intro_timer = INTRO_PAGE_SECONDS
     _intro_cam_t = 0.0
     ui.close_panels()
-    ui.show_intro_page(INTRO_PAGES[0])
+    # The interface learns how long the telling is before the first page: the
+    # progress dots are grown from this, and the story owns its own length.
+    ui.set_intro_page_count(INTRO_PAGES.size())
+    ui.show_intro_page(INTRO_PAGES[0], 0)
 
 func _advance_intro() -> void:
     if not _intro_active:
@@ -141,7 +153,7 @@ func _advance_intro() -> void:
         _finish_intro()
         return
     _intro_timer = INTRO_PAGE_SECONDS
-    ui.show_intro_page(INTRO_PAGES[_intro_page])
+    ui.show_intro_page(INTRO_PAGES[_intro_page], _intro_page)
 
 func _finish_intro() -> void:
     if not _intro_active:
@@ -282,6 +294,10 @@ func _process(delta: float) -> void:
     if _ui_refresh <= 0.0:
         _ui_refresh = 0.10
         _refresh_ui()
+        # The hint pill and the touch action button ride the same slow tick
+        # as the HUD: proximity answers change at walking speed, so a tenth
+        # of a second of latency is invisible and the check costs nothing.
+        _update_context_hint()
 
 func _physics_process(delta: float) -> void:
     if mode != Mode.PLAYING and mode != Mode.MENU:
@@ -392,12 +408,6 @@ func _touch_pause() -> void:
     # _advance_pause_state(), so the touch button and the key cannot drift.
     _advance_pause_state()
 
-func _touch_shop() -> void:
-    if mode == Mode.PLAYING and _near_merchant():
-        _open_shop()
-    elif mode == Mode.PLAYING:
-        ui.show_toast("Peddle parks on floors 2 · 4 · 7 · 10 of every thirteen-floor stretch.", 3.4)
-
 func _pause_game() -> void:
     if mode != Mode.PLAYING:
         return
@@ -430,7 +440,7 @@ func _resume_game() -> void:
     _set_world_processing(true)
     player.set_control_enabled(_gameplay_controls_enabled())
     if not ending_pending:
-        music.play_region(String(region.get("ambient", region["key"])))
+        music.play_region(music.floor_song(String(region.get("ambient", region["key"])), floor_number))
 
 func _on_style_picked(style_key: String) -> void:
     # A trail picked on the menu must be the trail that starts, whichever way
@@ -486,6 +496,16 @@ func _open_shop() -> void:
     _set_world_processing(false)
     player.set_control_enabled(false)
     ui.show_shop(_shop_state())
+
+## E beside Peddle opens the cart now: this is the director's half of the
+## hook RunState declares and RunWorld's _try_interact asks. The guards are
+## _open_shop's own, and _near_merchant() has already vouched for proximity,
+## so a true return always means the stall actually opened.
+func _try_open_nearby_shop() -> bool:
+    if mode != Mode.PLAYING or not _near_merchant():
+        return false
+    _open_shop()
+    return mode == Mode.SHOP
 
 func _on_shop_closed() -> void:
     if mode == Mode.SHOP:

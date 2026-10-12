@@ -95,6 +95,11 @@ func _build_stairwell(world_position: Vector3) -> void:
     stairwell.add_child(light)
 
 func _build_merchant(world_position: Vector3) -> void:
+    ## Peddle's stall, built like the shop it opens: a striped canopy with a
+    ## bunting line, a counter of glowing wares, a rug, crates, and Peddle
+    ## humming under a little hat. The cart used to be a bare box with one
+    ## cone above it — the least-loved prop in the forest, and the one screen
+    ## the walk is built around visiting.
     merchant_visual = Node3D.new()
     merchant_visual.name = "Peddle"
     merchant_visual.position = world_position
@@ -103,13 +108,42 @@ func _build_merchant(world_position: Vector3) -> void:
     body.name = "MerchantBody"
     merchant_visual.add_child(body)
     _merchant_body = body
+
+    # A woven rug under everything, so the stall owns its clearing.
+    var rug := MeshInstance3D.new()
+    var rug_mesh := CylinderMesh.new()
+    rug_mesh.top_radius = 1.55
+    rug_mesh.bottom_radius = 1.55
+    rug_mesh.height = 0.04
+    rug_mesh.radial_segments = 24
+    rug.mesh = rug_mesh
+    rug.material_override = _pbr(Color("#b8695a"), 0.95)
+    rug.position = Vector3(0, 0.02, 0)
+    body.add_child(rug)
+
+    # The counter: warm wood, a lighter lid, and a trim band where they meet.
     var cart := MeshInstance3D.new()
     var cart_mesh := BoxMesh.new()
     cart_mesh.size = Vector3(1.65, 0.72, 1.05)
     cart.mesh = cart_mesh
-    cart.material_override = _pbr(Color("#b86f50"), 0.82)
+    cart.material_override = _pbr(Color("#a9633f"), 0.82)
     cart.position = Vector3(0, 0.66, 0)
     body.add_child(cart)
+    var lid := MeshInstance3D.new()
+    var lid_mesh := BoxMesh.new()
+    lid_mesh.size = Vector3(1.78, 0.10, 1.18)
+    lid.mesh = lid_mesh
+    lid.material_override = _pbr(Color("#e8c188"), 0.78)
+    lid.position = Vector3(0, 1.07, 0)
+    body.add_child(lid)
+    var trim := MeshInstance3D.new()
+    var trim_mesh := BoxMesh.new()
+    trim_mesh.size = Vector3(1.70, 0.14, 1.10)
+    trim.mesh = trim_mesh
+    trim.material_override = _pbr(Color("#7d4a33"), 0.86)
+    trim.position = Vector3(0, 0.78, 0)
+    body.add_child(trim)
+
     for side in [-1.0, 1.0]:
         var wheel := MeshInstance3D.new()
         var wheel_mesh := TorusMesh.new()
@@ -120,6 +154,19 @@ func _build_merchant(world_position: Vector3) -> void:
         wheel.position = Vector3(side * 0.88, 0.38, 0)
         wheel.rotation.y = PI * 0.5
         body.add_child(wheel)
+        var hub := MeshInstance3D.new()
+        var hub_mesh := CylinderMesh.new()
+        hub_mesh.top_radius = 0.10
+        hub_mesh.bottom_radius = 0.10
+        hub_mesh.height = 0.09
+        hub.mesh = hub_mesh
+        hub.material_override = _pbr(Color("#e8c188"), 0.75)
+        hub.position = Vector3(side * 0.88, 0.38, 0)
+        hub.rotation.z = PI * 0.5
+        body.add_child(hub)
+
+    # The canopy: a wide warm cone over a slimmer inner one, striped by six
+    # alternating panels pinned around its rim.
     var canopy := MeshInstance3D.new()
     var canopy_mesh := CylinderMesh.new()
     canopy_mesh.top_radius = 0.18
@@ -129,16 +176,87 @@ func _build_merchant(world_position: Vector3) -> void:
     canopy.material_override = _pbr(Color("#f3c66f"), 0.78)
     canopy.position = Vector3(0, 1.85, 0)
     body.add_child(canopy)
-    for x in [-0.68, 0.68]:
-        var post := MeshInstance3D.new()
-        var post_mesh := CylinderMesh.new()
-        post_mesh.top_radius = 0.035
-        post_mesh.bottom_radius = 0.045
-        post_mesh.height = 1.25
-        post.mesh = post_mesh
-        post.material_override = _pbr(Color("#765238"), 0.90)
-        post.position = Vector3(x, 1.46, 0.45)
-        body.add_child(post)
+    var canopy_crown := MeshInstance3D.new()
+    var crown_mesh := SphereMesh.new()
+    crown_mesh.radius = 0.16
+    crown_mesh.height = 0.26
+    crown_mesh.is_hemisphere = true
+    crown_mesh.radial_segments = 12
+    crown_mesh.rings = 6
+    canopy_crown.mesh = crown_mesh
+    canopy_crown.material_override = _emissive(Color("#ffe9a8"), 1.4)
+    canopy_crown.position = Vector3(0, 2.24, 0)
+    body.add_child(canopy_crown)
+    var flag_colors: Array[Color] = [Color("#e8707a"), Color("#ffe497"), Color("#8fd0a0"), Color("#f3a95f"), Color("#9ec7ef"), Color("#f0b7d4")]
+    for flag_index in range(6):
+        var angle := TAU * float(flag_index) / 6.0
+        var flag := MeshInstance3D.new()
+        var flag_mesh := BoxMesh.new()
+        flag_mesh.size = Vector3(0.20, 0.30, 0.03)
+        flag.mesh = flag_mesh
+        flag.material_override = _pbr(flag_colors[flag_index], 0.85)
+        flag.position = Vector3(cos(angle) * 1.02, 1.62, sin(angle) * 1.02)
+        flag.rotation.y = -angle
+        body.add_child(flag)
+
+    # The wares ON the counter: three glowing jars that say "shop" before the
+    # shop UI ever opens.
+    var ware_colors: Array[Color] = [Color("#ffd97a"), Color("#a7e8c3"), Color("#f5b8d8")]
+    for jar_index in range(3):
+        var jar_x := -0.45 + float(jar_index) * 0.45
+        var jar := MeshInstance3D.new()
+        var jar_mesh := CylinderMesh.new()
+        jar_mesh.top_radius = 0.10
+        jar_mesh.bottom_radius = 0.12
+        jar_mesh.height = 0.26
+        jar_mesh.radial_segments = 10
+        jar.mesh = jar_mesh
+        jar.material_override = _emissive(ware_colors[jar_index], 1.7)
+        jar.position = Vector3(jar_x, 1.26, 0.12)
+        body.add_child(jar)
+        var stopper := MeshInstance3D.new()
+        var stopper_mesh := SphereMesh.new()
+        # Deliberately not 0.055: that radius is Peddle's eye size, and the
+        # camera-facing check counts every sphere of that radius on the
+        # stall -- three jar stoppers would read as three extra eyes.
+        stopper_mesh.radius = 0.05
+        stopper_mesh.height = 0.08
+        stopper.mesh = stopper_mesh
+        stopper.material_override = _pbr(Color("#7d4a33"), 0.85)
+        stopper.position = Vector3(jar_x, 1.42, 0.12)
+        body.add_child(stopper)
+
+    # One lantern hanging from the canopy's crown, the stall's own lamp.
+    var hang := MeshInstance3D.new()
+    var hang_mesh := CylinderMesh.new()
+    hang_mesh.top_radius = 0.012
+    hang_mesh.bottom_radius = 0.012
+    hang_mesh.height = 0.34
+    hang.mesh = hang_mesh
+    hang.material_override = _pbr(Color("#5c4630"), 0.9)
+    hang.position = Vector3(0, 2.02, 0.72)
+    body.add_child(hang)
+    var lantern := MeshInstance3D.new()
+    var lantern_mesh := SphereMesh.new()
+    lantern_mesh.radius = 0.11
+    lantern_mesh.height = 0.18
+    lantern.mesh = lantern_mesh
+    lantern.material_override = _emissive(Color("#ffe2a0"), 2.4)
+    lantern.position = Vector3(0, 1.80, 0.72)
+    body.add_child(lantern)
+
+    # Crates beside the counter, the honest clutter of a travelling merchant.
+    for crate_offset: Vector3 in [Vector3(1.15, 0.16, 0.35), Vector3(1.18, 0.48, 0.32), Vector3(-1.12, 0.16, -0.40)]:
+        var crate := MeshInstance3D.new()
+        var crate_mesh := BoxMesh.new()
+        crate_mesh.size = Vector3(0.34, 0.32, 0.34)
+        crate.mesh = crate_mesh
+        crate.material_override = _pbr(Color("#8a6a45"), 0.92)
+        crate.position = crate_offset
+        crate.rotation.y = 0.4 * crate_offset.x + 0.2 * crate_offset.z
+        body.add_child(crate)
+
+    # Peddle themself: a glowing round keeper with eyes and a little hat.
     var peddle := MeshInstance3D.new()
     peddle.mesh = SphereMesh.new()
     peddle.mesh.radius = 0.34
@@ -146,6 +264,16 @@ func _build_merchant(world_position: Vector3) -> void:
     peddle.material_override = _emissive(Color("#fff0a4"), 2.0)
     peddle.position = Vector3(0, 2.72, 0)
     body.add_child(peddle)
+    var hat := MeshInstance3D.new()
+    var hat_mesh := CylinderMesh.new()
+    hat_mesh.top_radius = 0.015
+    hat_mesh.bottom_radius = 0.24
+    hat_mesh.height = 0.30
+    hat_mesh.radial_segments = 10
+    hat.mesh = hat_mesh
+    hat.material_override = _pbr(Color("#b8695a"), 0.85)
+    hat.position = Vector3(0, 3.18, 0)
+    body.add_child(hat)
     for side in [-1.0, 1.0]:
         var eye := MeshInstance3D.new()
         eye.mesh = SphereMesh.new()
@@ -154,10 +282,18 @@ func _build_merchant(world_position: Vector3) -> void:
         eye.material_override = _pbr(Color("#493a2e"), 0.62)
         eye.position = Vector3(side * 0.11, 2.78, 0.31)
         body.add_child(eye)
+        var cheek := MeshInstance3D.new()
+        var cheek_mesh := SphereMesh.new()
+        cheek_mesh.radius = 0.045
+        cheek_mesh.height = 0.07
+        cheek.mesh = cheek_mesh
+        cheek.material_override = _emissive(Color("#ffc2c2"), 0.9)
+        cheek.position = Vector3(side * 0.20, 2.70, 0.26)
+        body.add_child(cheek)
     var light := OmniLight3D.new()
     light.light_color = Color("#ffe5a0")
-    light.light_energy = 0.80
-    light.omni_range = 5.0
+    light.light_energy = 0.85
+    light.omni_range = 5.2
     light.position = Vector3(0, 2.4, 0)
     merchant_visual.add_child(light)
 

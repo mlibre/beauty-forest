@@ -111,16 +111,43 @@ func _build_environment() -> void:
 ## that cannot render either target. Adjustments are the last dial because the
 ## compatibility renderer ignores them on some driver stacks: the ambient and
 ## glow corrections carry the fix on their own.
+##
+## The GROUND needs its own correction, separate from the sky's: the moss plane
+## is the single largest bright surface on screen and it reads its color
+## straight from a shader with no lighting tricks to hide behind, so an
+## environment-only fix left the floor itself still washed out on web. The
+## ground dial lives in _calibrate_ground_for_renderer, called from
+## _build_ground_and_collisions with the same renderer name.
 static func _calibrate_for_renderer(environment: Environment, rendering_method: String) -> void:
     if rendering_method != "gl_compatibility":
         return
-    environment.ambient_light_energy = 0.40
-    environment.glow_intensity = 0.70
-    environment.glow_bloom = 0.18
+    environment.ambient_light_energy = 0.32
+    environment.tonemap_exposure = 0.73
+    environment.glow_intensity = 0.62
+    environment.glow_bloom = 0.16
     environment.adjustment_enabled = true
-    environment.adjustment_brightness = 0.97
-    environment.adjustment_contrast = 0.97
-    environment.adjustment_saturation = 1.05
+    environment.adjustment_brightness = 0.92
+    environment.adjustment_contrast = 0.96
+    environment.adjustment_saturation = 1.08
+
+## The moss floor's own web correction. The shader colors are baked bright for
+## Forward+'s creased, indirect-lit render; compatibility renders them flat and
+## full-strength, which is why the web walk's ground still glowed after the
+## environment was calibrated. Pure function of the renderer name, so the
+## regression suite can hold every darkening exactly.
+static func _calibrate_ground_for_renderer(material: ShaderMaterial, rendering_method: String) -> void:
+    if rendering_method != "gl_compatibility":
+        return
+    var base := material.get_shader_parameter("base_color") as Color
+    material.set_shader_parameter("base_color", base.darkened(0.16))
+    # The light patches are what read as "the floor is glowing": keep the moss
+    # varied but pull the bright end visibly down and shrink how much of the
+    # floor lights up.
+    var light := material.get_shader_parameter("light_patch") as Color
+    material.set_shader_parameter("light_patch", light.darkened(0.22))
+    material.set_shader_parameter("pool_strength", 0.55)
+    var deep := material.get_shader_parameter("deep_patch") as Color
+    material.set_shader_parameter("deep_patch", Color(deep.r * 0.86, deep.g * 0.86, deep.b * 0.86))
 
 func _build_ground_and_collisions() -> void:
     var width := int(dungeon["width"])
@@ -163,6 +190,9 @@ func _build_ground_and_collisions() -> void:
     ground_material.set_shader_parameter("base_color", ground_base)
     ground_material.set_shader_parameter("light_patch", ground_base.lerp(Color("#d6cf82"), 0.27))
     ground_material.set_shader_parameter("deep_patch", ground_base.lerp(Color("#3f6b33"), 0.34))
+    # The web renderer paints this plane flat and bright (no SSAO/SSIL to crease
+    # it), so the same calibration that fixes the sky also reins the moss in.
+    _calibrate_ground_for_renderer(ground_material, RenderingServer.get_current_rendering_method())
     ground_visual.material_override = ground_material
     ground_visual.position = Vector3(float(width) * 0.5, 0.0, float(depth) * 0.5)
     ground_visual.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

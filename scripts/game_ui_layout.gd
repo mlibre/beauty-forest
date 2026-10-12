@@ -113,6 +113,15 @@ func _fit_layout() -> void:
         _toast_label.custom_minimum_size = Vector2(toast_width, 54.0)
         _toast_label.reset_size()
         _toast_label.position = Vector2(maxf(8.0, (viewport_size.x - _toast_label.size.x) * 0.5), 76.0 if small_height else 96.0)
+    if is_instance_valid(_context_hint):
+        # The hint pill owns the bottom-centre: a spot neither the joystick's
+        # corner nor the touch cluster's corner wants, so it never has to
+        # yield. Repositioned here because its width follows its text, which
+        # the director rewrites while it is visible.
+        _context_hint.reset_size()
+        var hint_rect := _effective_rect(_context_hint)
+        var hint_y := viewport_size.y - hint_rect.size.y - 30.0 - safe.w
+        _context_hint.position = Vector2((viewport_size.x - hint_rect.size.x) * 0.5, hint_y)
     if is_instance_valid(_story_card):
         # The story card is opaque and draws after the HUD, so it has to start
         # below the toast band measured above it. Fixed offsets (96 on short

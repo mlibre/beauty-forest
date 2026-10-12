@@ -161,7 +161,7 @@ func _win_dragon() -> void:
         # Snoozle's lullaby silences the grove so the song reads clearly, but
         # the hero keeps playing on this floor. Bring the ambience back, or the
         # coziest moment in the game leaves the rest of the run muted.
-        music.play_region(String(region.get("ambient", region.get("key", "sunlit-roots"))))
+        music.play_region(music.floor_song(String(region.get("ambient", region.get("key", "sunlit-roots"))), floor_number))
         ui.show_story("DEEPER STILL", "Snoozle snoozes on, warm and enormous. But Mote tugs your sleeve: there are cousins below, and the forest grows deeper than any map.", 4.2)
         ui.add_log("Mote: “Snoozle sleeps soundly. The stair is glowing now.”")
 

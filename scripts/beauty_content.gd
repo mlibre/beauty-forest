@@ -165,25 +165,25 @@ const NICKNAMES := [
 
 const REGIONS := [
     {
-        "key": "sunlit-roots", "name": "Sunlit Roots", "min": 1, "max": 4,
+        "key": "sunlit-roots", "name": "Sunlit Roots", "min": 1, "max": 4, "glyph": "lantern",
         "sky": "#f8e7ae", "horizon": "#fff3c4", "fog": "#dbe6a3", "sun": "#ffe29a",
         "foliage": "#65b947", "tip": "#b7dc55", "flower": "#ffd1e8", "ground": "#87bd62", "accent": "#fff0a5",
         "entry": "Sunlit Roots hum hello. The map says ‘here, but cozier’.",
     },
     {
-        "key": "pollen-halls", "name": "Pollen Halls", "min": 5, "max": 8,
+        "key": "pollen-halls", "name": "Pollen Halls", "min": 5, "max": 8, "glyph": "sparkle",
         "sky": "#f6d890", "horizon": "#ffe6a3", "fog": "#e9d78f", "sun": "#ffd06a",
         "foliage": "#91b943", "tip": "#dac95b", "flower": "#ffe98d", "ground": "#a8bf55", "accent": "#fff2aa",
         "entry": "Pollen Halls drift golden. Mote sneezes heroically and apologizes to the air.",
     },
     {
-        "key": "mushroom-lull", "name": "Mushroom Lull", "min": 9, "max": 12,
+        "key": "mushroom-lull", "name": "Mushroom Lull", "min": 9, "max": 12, "glyph": "mote",
         "sky": "#f4c98d", "horizon": "#ffd9a8", "fog": "#e5c08d", "sun": "#ffc06e",
         "foliage": "#b68150", "tip": "#e3b66d", "flower": "#d9c8ff", "ground": "#9ba552", "accent": "#ffd58d",
         "entry": "Mushroom Lull glows amber and kind. Somewhere below, something enormous snores in tune.",
     },
     {
-        "key": "roost", "name": "Snoozle’s Roost", "min": 13, "max": 13,
+        "key": "roost", "name": "Snoozle’s Roost", "min": 13, "max": 13, "glyph": "dragon",
         "sky": "#fff0c8", "horizon": "#fff5d4", "fog": "#e9e4ac", "sun": "#ffe08a",
         "foliage": "#78bd5e", "tip": "#b9dd69", "flower": "#fff3b0", "ground": "#9ac765", "accent": "#ffeaa0",
         "entry": "The Roost glows like the inside of a lantern. Tuck in your scarf.",

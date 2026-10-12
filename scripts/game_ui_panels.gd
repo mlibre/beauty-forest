@@ -74,7 +74,11 @@ func _shelf(list: VBoxContainer, title: String, glyph_key: String, count: String
     if not worn_of.is_empty():
         heading.add_child(_label("· %s" % worn_of, 13, Color("#bcd2a8")))
     var grid := GridContainer.new()
-    grid.columns = 6
+    # Five picture-cards to a row: the cards grew (a bigger picture, a price
+    # pill, room for tier pips), and five of the wider cards still fill the
+    # shelf's whole width, so the extra column bought nothing but clipped
+    # edges on small windows.
+    grid.columns = 5
     grid.add_theme_constant_override("hseparation", 10)
     grid.add_theme_constant_override("vseparation", 10)
     grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -475,3 +479,11 @@ func close_panels() -> void:
     _beat_ring.visible = false
     _cancel_story()
     _reset_touch_joystick()
+    # A panel opening owns the whole screen; a "press E" hint about a world
+    # the player cannot currently touch is a stale promise left floating.
+    # The pill's vars live on the base class, so this hides it directly --
+    # show_context_hint() belongs to the fullest subclass and a base cannot
+    # call a method its subclass defines.
+    if _context_hint != null and is_instance_valid(_context_hint):
+        _context_hint.visible = false
+    _context_hint_verb = ""

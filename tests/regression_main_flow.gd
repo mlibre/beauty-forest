@@ -139,9 +139,15 @@ func _run() -> void:
     game.player.global_position += Vector3(6.0, 0.0, 0.0)
     # The hint moved from the hidden log strip to the toast, the one voice a
     # walk actually hears. Clear any queued toast first so the hint is the one
-    # thing on the label when it is read.
+    # thing on the label when it is read. The press arrives through the F
+    # alias -- the cart's own touch button is gone (E answers near the cart
+    # now), and F far from Peddle is exactly the "not near the cart" path.
     game.ui.clear_toast()
-    game._touch_shop()
+    var f_key := InputEventKey.new()
+    f_key.pressed = true
+    f_key.keycode = KEY_F
+    f_key.physical_keycode = KEY_F
+    game._unhandled_input(f_key)
     await frames(2)
     # The toast label is the witness, and the hint must be ON it: a toast that
     # is still queued behind an earlier one would leave the old message up and

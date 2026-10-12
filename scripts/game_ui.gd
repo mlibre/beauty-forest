@@ -150,11 +150,52 @@ func add_log(message: String) -> void:
 func add_cue(message: String, duration: float = 2.2) -> void:
     show_toast(message, duration)
 
-func show_story(title: String, body: String, duration: float = 3.8) -> void:
+## The bottom-centre hint pill, driven by the director's own proximity sense:
+## pass the verb the next press will speak ("Descend", "Peddle's cart"), or
+## "" to put the pill away. The walk screen is pictures-only at rest; this is
+## the one moment prose is allowed on it, and it leaves with the moment.
+func show_context_hint(verb: String) -> void:
+    if _context_hint == null or not is_instance_valid(_context_hint):
+        return
+    var wanted := verb.strip_edges()
+    if wanted.is_empty():
+        if _context_hint.visible:
+            _context_hint.visible = false
+            _context_hint_verb = ""
+        return
+    if _context_hint.visible and _context_hint_verb == wanted:
+        return
+    _context_hint_verb = wanted
+    _context_label.text = "E · %s" % wanted
+    _context_hint.visible = true
+    _fit_layout()
+
+## The touch action button's face follows the same context: the button IS the
+## E key on a touchscreen, so it re-labels itself to whatever the hero stands
+## beside. An empty verb returns it to its resting name.
+func set_action_label(verb: String) -> void:
+    if _touch_action_button == null or not is_instance_valid(_touch_action_button):
+        return
+    var wanted := verb.strip_edges()
+    var label := "SING ♥"
+    if not wanted.is_empty():
+        label = "%s ♥" % wanted.to_upper()
+    if _touch_action_button.text == label:
+        return
+    _touch_action_button.text = label
+
+func show_story(title: String, body: String, duration: float = 3.8, glyph: String = "") -> void:
     _cancel_story()
     var generation := _story_generation
     _story_title.text = title
     _story_body.text = body
+    # The vignette's picture, when the story carries one: the region's mark
+    # rides above the words, the way the intro's pages are illustrated.
+    if _story_glyph != null and is_instance_valid(_story_glyph):
+        var has_glyph := not glyph.is_empty()
+        _story_glyph.visible = has_glyph
+        if has_glyph:
+            _story_glyph.texture = GardenGlyphs.get_glyph(glyph)
     _story_card.visible = true
     _story_card.modulate.a = 0.0
     _story_tween = create_tween()
@@ -169,11 +210,32 @@ func show_story(title: String, body: String, duration: float = 3.8) -> void:
     )
 
 ## The storybook intro, one page at a time. The director owns the pacing and
-## the pages; the interface only draws what it is handed. `close_panels`
+## the pages; the interface only draws what it is handed — and draws it as a
+## little scene: the page's tint re-lights the glow plate and the picture,
+## the progress dots mark where the telling is, and the words arrive on a
+## short rise so a page turn feels like a page TURN. `close_panels`
 ## deliberately does NOT touch the intro — the intro lives above the menu
 ## card, and closing panels is a menu-world operation the director calls
 ## around it.
-func show_intro_page(page: Dictionary) -> void:
+func set_intro_page_count(count: int) -> void:
+    _intro_page_count = maxi(0, count)
+    if _intro_dots == null or not is_instance_valid(_intro_dots):
+        return
+    while _intro_dots.get_child_count() < _intro_page_count:
+        var dot := Panel.new()
+        dot.custom_minimum_size = Vector2(9, 9)
+        dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        var dot_style := StyleBoxFlat.new()
+        dot_style.bg_color = Color(1, 1, 1, 0.22)
+        dot_style.set_corner_radius_all(5)
+        dot.add_theme_stylebox_override("panel", dot_style)
+        _intro_dots.add_child(dot)
+    while _intro_dots.get_child_count() > _intro_page_count:
+        var child := _intro_dots.get_child(_intro_dots.get_child_count() - 1)
+        _intro_dots.remove_child(child)
+        child.queue_free()
+
+func show_intro_page(page: Dictionary, page_index: int = 0) -> void:
     if _intro_root == null or not is_instance_valid(_intro_root):
         return
     _menu_scrim.visible = false
@@ -181,9 +243,45 @@ func show_intro_page(page: Dictionary) -> void:
     _overlay_scrim.visible = false
     _hud.visible = false
     _intro_root.visible = true
+    var tint := page.get("tint") as Color if page.get("tint") is Color else Color("#ffe9a0")
     _intro_glyph.texture = GardenGlyphs.get_glyph(String(page.get("glyph", GardenGlyphs.MOTE)))
     _intro_title.text = String(page.get("title", ""))
     _intro_body.text = String(page.get("body", ""))
+    # The page's light: glow plate, picture and the lit dot all wear this
+    # page's color, so each spread of the book reads as its own place.
+    if _intro_glow != null and is_instance_valid(_intro_glow):
+        var glow_style := _intro_glow.get_theme_stylebox("panel") as StyleBoxFlat
+        if glow_style != null:
+            glow_style.bg_color = Color(tint.r, tint.g, tint.b, 0.22)
+        _intro_glow.queue_redraw()
+    _intro_glyph.modulate = tint.lerp(Color.WHITE, 0.35)
+    if _intro_dots != null and is_instance_valid(_intro_dots):
+        for index in range(_intro_dots.get_child_count()):
+            var dot := _intro_dots.get_child(index) as Panel
+            if dot == null:
+                continue
+            var dot_style := dot.get_theme_stylebox("panel") as StyleBoxFlat
+            if dot_style == null:
+                continue
+            var told := _intro_page_count > 0 and index <= page_index
+            dot_style.bg_color = Color(tint.r, tint.g, tint.b, 0.95 if index == page_index else 0.40) if told else Color(1, 1, 1, 0.22)
+            dot.custom_minimum_size = Vector2(13 if index == page_index else 9, 9)
+            dot.queue_redraw()
+        _intro_dots.reset_size()
+    # The page arrives: the picture blooms, the words rise into place. A
+    # page turn is one motion, not three popping parts.
+    if not _reduced_motion:
+        _intro_glyph.pivot_offset = _intro_glyph.custom_minimum_size * 0.5
+        _intro_glyph.scale = Vector2(0.82, 0.82)
+        _intro_glyph.modulate.a = 0.0
+        _intro_title.modulate.a = 0.0
+        _intro_body.modulate.a = 0.0
+        var turn := create_tween()
+        turn.set_parallel(true)
+        turn.tween_property(_intro_glyph, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+        turn.tween_property(_intro_glyph, "modulate:a", 1.0, 0.24)
+        turn.tween_property(_intro_title, "modulate:a", 1.0, 0.26).set_delay(0.08)
+        turn.tween_property(_intro_body, "modulate:a", 1.0, 0.26).set_delay(0.16)
     _settle_in(_intro_root)
 
 func hide_intro() -> void:

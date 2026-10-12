@@ -59,10 +59,35 @@ func _run() -> void:
     if not ok(game._intro_active and game._intro_page == 2, "a key press did not advance the story (page %d)" % game._intro_page):
         stop(null, suite_name)
         return
+    # The storybook is an illustrated book now: one progress dot per page,
+    # a tinted glow plate behind each picture, and every page carrying its
+    # own tint and glyph.
+    if not ok(game.ui._intro_dots.get_child_count() == game.INTRO_PAGES.size(),
+            "the progress dots did not grow one per page (%d dots for %d pages)" % [
+                game.ui._intro_dots.get_child_count(), game.INTRO_PAGES.size()]):
+        stop(null, suite_name)
+        return
+    if not ok(game.ui._intro_glow != null and is_instance_valid(game.ui._intro_glow),
+            "the page's glow plate never built"):
+        stop(null, suite_name)
+        return
+    var tints := {}
+    for page: Dictionary in game.INTRO_PAGES:
+        if page.has("tint") and page["tint"] is Color:
+            tints[page["title"]] = true
+    if not ok(tints.size() == game.INTRO_PAGES.size(), "a story page is missing its tint"):
+        stop(null, suite_name)
+        return
 
-    # The last turn lands on floor 1, PLAYING, storybook down.
-    game.ui.intro_advance_requested.emit()
-    await frames(4)
+    # The remaining turns land on floor 1, PLAYING, storybook down. The
+    # story is five pages now; turn until it ends rather than assuming a
+    # fixed count, so the contract is "the telling finishes" and not
+    # "the telling is exactly this long".
+    var turns := 0
+    while game._intro_active and turns < game.INTRO_PAGES.size() + 2:
+        game.ui.intro_advance_requested.emit()
+        await frames(2)
+        turns += 1
     if not ok(not game._intro_active, "the story never ended"):
         stop(null, suite_name)
         return

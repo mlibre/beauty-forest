@@ -41,9 +41,7 @@ signal mote_verse_requested(verse_key: String)
 signal touch_vector_changed(value: Vector2)
 signal touch_dash_requested
 signal touch_interact_requested
-signal touch_shop_requested
 signal touch_journal_requested
-signal touch_settings_requested
 signal touch_pause_requested
 signal settings_changed(settings: Dictionary)
 ## The story intro's two doors: tap the page (or any key) to turn it, and the
@@ -64,6 +62,18 @@ var _touch_joystick: TouchJoystick
 ## The on-screen touch buttons, kept in build order so the responsive layout
 ## can measure the block they actually occupy in the bottom-right corner.
 var _touch_buttons: Array[Button] = []
+## The one CONTEXTUAL action button. It is the touch E: its face re-labels
+## itself to whatever the hero is standing beside (sing, descend, wish,
+## cart), so a touch player never has to know which of five fixed buttons
+## is the right one -- the right button is always the same button.
+var _touch_action_button: Button
+## The bottom-centre hint pill: the key and the verb the key is about to
+## speak ("E · Descend"), shown only while the hero stands near something
+## that listens. The walk screen stays pictures-only at rest; this appears
+## exactly when a press would do something, and leaves with it.
+var _context_hint: PanelContainer
+var _context_label: Label
+var _context_hint_verb := ""
 var _overlay_scrim: ColorRect
 ## The title menu's own scrim. Lighter than the pause card's, because the
 ## menu is the first thing a player sees and the brief is a BRIGHT golden
@@ -103,6 +113,8 @@ var _shop_content: VBoxContainer
 var _story_card: PanelContainer
 var _story_title: Label
 var _story_body: Label
+## The vignette's picture, shown when a story names one.
+var _story_glyph: TextureRect
 var _beat_ring: Panel
 var _beat_inner: Panel
 var _warm_flash: ColorRect
@@ -114,6 +126,14 @@ var _intro_glyph: TextureRect
 var _intro_title: Label
 var _intro_body: Label
 var _intro_hint: Label
+## The page's tinted scene plate and the row of progress dots. The glow is
+## re-tinted and the dots re-lit by show_intro_page as the director turns
+## pages, so the storybook reads as a sequence of small illustrated scenes.
+var _intro_glow: Panel
+var _intro_dots: HBoxContainer
+## How many pages the current telling has; the director sets this when the
+## telling begins, because the story's length belongs to the story.
+var _intro_page_count := 0
 ## The interface's doorbell, wired once by the director at boot: a callable
 ## that speaks for button hovers and presses. The UI chain never reaches the
 ## audio director directly; when nothing is wired, the buttons stay silent.

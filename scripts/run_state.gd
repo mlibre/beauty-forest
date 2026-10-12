@@ -255,6 +255,14 @@ func _count_wisp_fact() -> void:
 func _near_merchant() -> bool:
     return merchant_exists and world != null and player != null and player.global_position.distance_to(world.merchant_position) < 2.8
 
+## Whether E beside Peddle opens the cart, as a hook: the answer is "no" this
+## deep in the chain because opening the shop is a mode transition the
+## director owns. main.gd overrides this to actually open it -- a base class
+## cannot call a method its subclass defines, so the hop up is the subclass's
+## to make, not the base's.
+func _try_open_nearby_shop() -> bool:
+    return false
+
 func _near_feeling(max_distance: float) -> Wisp:
     var best: Wisp
     var best_distance := max_distance

@@ -212,7 +212,7 @@ func _check_settings_hands_the_nap_and_ending_cards_back(game: Node) -> bool:
     game.mode = game.Mode.DEAD
     game.ui.show_death(game.floor_number, game.meta)
     await frames(2)
-    game.ui.touch_settings_requested.emit()
+    game.ui.settings_open_requested.emit()
     await frames(3)
     if not ok(game.mode == game.Mode.SETTINGS,
             "COMFORT did nothing on the nap card (mode %d)" % game.mode):
@@ -235,7 +235,7 @@ func _check_settings_hands_the_nap_and_ending_cards_back(game: Node) -> bool:
     game.mode = game.Mode.ENDING
     game.ui.show_ending(int(game.meta.get("dragons_sung", 0)), game.meta)
     await frames(2)
-    game.ui.touch_settings_requested.emit()
+    game.ui.settings_open_requested.emit()
     await frames(3)
     if not ok(game.mode == game.Mode.SETTINGS,
             "COMFORT did nothing on the ending card (mode %d)" % game.mode):

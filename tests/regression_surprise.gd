@@ -1,7 +1,9 @@
 extends "res://tests/support/test_case.gd"
 ## The floor-surprise wheel: every floor hides exactly one surprise, adjacent
 ## floors never repeat a kind, every kind builds on a real floor, and every
-## kind answers the hero — by E or by proximity — exactly once.
+## kind answers the hero — by E or by proximity — exactly once. Three of the
+## kinds are little optional adventures (a firefly chase, a star trail, an
+## echo shell): they pay sparkles or a heart and never block the stair.
 
 # Deps are pinned by path on purpose: a fresh clone ships no
 # editor-built global-class cache, and bare names would not parse
@@ -110,6 +112,42 @@ func _check_surprise_answers(game: Node, floor_number: int, key: String) -> bool
                 player.global_position = puff.global_position + Vector3(0.4, 0.05, 0)
                 game._tick_surprise(0.05)
             if not ok(bool(surprise.get_meta("surprise_used")), "popping every puff on floor %d granted nothing" % floor_number):
+                return false
+        "firefly_chase":
+            for index in range(3):
+                var fly := surprise.get_node_or_null("Fly%d" % index) as Node3D
+                if not ok(fly != null, "floor %d's chase is missing firefly %d" % [floor_number, index]):
+                    return false
+                player.global_position = fly.global_position + Vector3(0.4, 0.05, 0)
+                game._tick_surprise(0.05)
+            if not ok(bool(surprise.get_meta("surprise_used")), "catching every firefly on floor %d granted nothing" % floor_number):
+                return false
+        "star_trail":
+            # The trail answers only the NEXT star, in order — walk it wrong
+            # and it stays quiet, walk it right and it pays a heart.
+            var stars := surprise.get_node_or_null("Star4") as Node3D
+            if not ok(stars != null, "floor %d's trail is missing its last star" % floor_number):
+                return false
+            player.global_position = stars.global_position + Vector3(0.4, 0.05, 0)
+            game._tick_surprise(0.05)
+            if not ok(not bool(surprise.get_meta("surprise_used")),
+                    "floor %d's trail answered the LAST star first — the order is not taught" % floor_number):
+                return false
+            for index in range(5):
+                var star := surprise.get_node_or_null("Star%d" % index) as Node3D
+                if not ok(star != null, "floor %d's trail is missing star %d" % [floor_number, index]):
+                    return false
+                player.global_position = star.global_position + Vector3(0.4, 0.05, 0)
+                game._tick_surprise(0.05)
+            if not ok(bool(surprise.get_meta("surprise_used")), "walking every star on floor %d granted nothing" % floor_number):
+                return false
+        "echo_shell":
+            player.global_position = surprise.global_position + Vector3(1.2, 0.05, 0)
+            if not ok(game._surprise_interact(), "floor %d's echo shell did not answer E" % floor_number):
+                return false
+            if not ok(bool(surprise.get_meta("surprise_used")), "floor %d's echo shell did not mark itself used" % floor_number):
+                return false
+            if not ok(not game._surprise_interact(), "floor %d's echo shell answered twice" % floor_number):
                 return false
         _:
             return fail("floor %d carries an unknown surprise kind '%s'" % [floor_number, key])

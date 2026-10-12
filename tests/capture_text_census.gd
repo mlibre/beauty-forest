@@ -367,10 +367,11 @@ func _report(screen: String, node: Node) -> Dictionary:
 
 ## Every visible Label under `node`, minus the on-screen touch controls.
 ##
-## The touch cluster (SING / DASH / CART / BOOK / COMFORT / PAUSE) is built behind
+## The touch cluster (ACTION / DASH / BOOK / PAUSE -- the action button's face
+## re-labels itself to whatever the hero stands beside) is built behind
 ## `DisplayServer.is_touchscreen_available()`, so a desktop player never sees it.
 ## A headless run, though, reports that as TRUE -- the boolean has no display to
-## be truthful about -- so the census counted six buttons, 31 characters, on the
+## be truthful about -- so the census counted the buttons' characters on the
 ## walk screen and failed PLAYING's zero budget for chrome nobody reading this
 ## game on a keyboard ever sees.
 ##
