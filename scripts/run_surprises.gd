@@ -178,7 +178,10 @@ func _surprise_interact() -> bool:
             if near and not used:
                 _surprise.set_meta("surprise_used", true)
                 sparkles += 1
-                _learn_fact("A mossy doodle on floor %d taught it: “%s”" % [floor_number, String(BeautyLore.FACTS[randi() % BeautyLore.FACTS.size()])])
+                # The fact itself is picked and spoken inside _learn_fact; the
+                # reason here only ever feeds its curious-wisp branch, which a
+                # doodle is not, so it stays one short honest clause.
+                _learn_fact("A mossy doodle offered a fact")
                 audio.play_chord([783.99, 987.77], 0.5, 0.06)
                 _refresh_ui()
                 return true
