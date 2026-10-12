@@ -100,6 +100,46 @@ func _run() -> void:
     ok(music.current_stream() != null and music.current_stream().data != song.data,
         "two different regions rendered the same song")
 
+    # A volume change while a lullaby is sounding must adjust the level in
+    # place. The settings panel emits one settings_changed per slider tick, so
+    # a restart here turns every volume drag into a bar-zero stutter on a
+    # second voice. The voice index is the restart detector: the stream is a
+    # cached resource whose instance id survives a restart.
+    var playing_voice: int = music._active_voice
+    var playing_stream: int = music.current_stream().get_instance_id()
+    music.set_master(0.5, false)
+    await frames(2)
+    ok(music._active_voice == playing_voice and music.current_stream() != null
+        and music.current_stream().get_instance_id() == playing_stream,
+        "a volume change restarted the sounding lullaby")
+    ok(is_equal_approx(music._players[music._active_voice].volume_db, linear_to_db(0.25)),
+        "a volume change left the lullaby at its old level (%f)"
+            % music._players[music._active_voice].volume_db)
+
+    # The same promise mid-crossfade: a volume tick lands while two voices
+    # swap songs, and the old voice must still bow out instead of freezing
+    # audible forever.
+    music.play_region("mushroom-lull")
+    await frames(5)
+    var cross_voice: int = music._active_voice
+    var cross_stream: int = music.current_stream().get_instance_id()
+    music.set_master(0.4, false)
+    await frames(2)
+    ok(music._active_voice == cross_voice and music.current_stream() != null
+        and music.current_stream().get_instance_id() == cross_stream,
+        "a volume change mid-crossfade restarted the incoming lullaby")
+    ok(music._fade_tween != null and music._fade_tween.is_valid(),
+        "a volume change mid-crossfade left no fade to retire the old voice")
+    # The retire fade lasts 0.7s of tween time, and headless frames advance
+    # tween time by their real delta, so the wait is a real one-second tree
+    # timer -- a sequence step, not a timing budget.
+    await music.get_tree().create_timer(1.0).timeout
+    var stray_playing := false
+    for voice_player: AudioStreamPlayer in music._players:
+        if voice_player != music._players[music._active_voice] and voice_player.playing:
+            stray_playing = true
+    ok(not stray_playing, "a volume change mid-crossfade left the old voice audible forever")
+
     # The whole songbook, sung once. A melody degree out of range or a chord
     # shape a kernel cannot build only ever crashes at render time -- and
     # four of the eight songs are new enough that no other test sings them.

@@ -446,7 +446,31 @@ func _apply_output() -> void:
     # Audible again: whatever the forest was asked for, hum it.
     if not _want_key.is_empty():
         if _songs.has(_want_key):
-            _begin_voice(_want_key)
+            var player := _players[_active_voice]
+            if is_instance_valid(player) and player.playing \
+                    and player.stream == _songs[_want_key]:
+                # The wanted song is already sounding -- the path every slider
+                # tick takes, because the settings panel emits one
+                # settings_changed per value_changed. Rebeginning would jump
+                # the lullaby back to its first bar on a fresh voice once per
+                # tick, exactly the restart play_region refuses; the level
+                # belongs to the voice that already holds the song.
+                player.volume_db = _music_db()
+                var other := _players[(_active_voice + 1) % _players.size()]
+                if is_instance_valid(other) and other != player and other.playing \
+                        and other.stream != _songs[_want_key]:
+                    # A crossfade was cancelled mid-flight and stranded the
+                    # outgoing voice at a partial level; let it finish bowing
+                    # out from where it stands instead of freezing two songs.
+                    var serial := _serial
+                    _fade_tween = create_tween()
+                    _fade_tween.tween_property(other, "volume_db", SILENCE_DB, FADE_OUT_SECONDS)
+                    _fade_tween.tween_callback(func() -> void:
+                        if serial == _serial and is_instance_valid(other):
+                            other.stop()
+                    )
+            else:
+                _begin_voice(_want_key)
         elif _queue.is_empty():
             _schedule_render(_want_key)
     elif not _current_key.is_empty() and _songs.has(_current_key):
