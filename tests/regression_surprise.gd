@@ -65,6 +65,11 @@ func _run() -> void:
             await frames(1)
             stop(null, suite_name)
             return
+    # Reachability: a prop scattered into a wall cell comes home, a prop on
+    # a floor cell keeps its scatter, and the check fails for the reason it
+    # names (see the mutation note below).
+    _check_walled_in_props_come_home()
+
     # AudioServer drains stopped playbacks asynchronously (see the same note
     # in runtime_smoke.gd); quitting before it settles leaks ObjectDB refs.
     await frames(30)
@@ -153,3 +158,63 @@ func _check_surprise_answers(game: Node, floor_number: int, key: String) -> bool
             return fail("floor %d carries an unknown surprise kind '%s'" % [floor_number, key])
     print("SURPRISE_FLOOR_%02d kind=%s sparkles %d -> %d" % [floor_number, key, before_sparkles, int(game.sparkles)])
     return true
+
+
+## A synthetic six-by-six dungeon (FLOOR=1, WALL=0): a floor ring with one
+## wall block at (3,2). A prop pushed toward +X from cell (2,2) lands inside
+## the wall at (3,2), where the hero can never walk close enough to answer
+## it -- a chase that can never end. The pull-home is a pure static, so it
+## is held directly: the walled-in prop comes home, the floor-cell prop
+## keeps its scatter. Mutation evidence: comment the _keep_reachable call
+## in FloorSurprise.spawn and the first check fails by name.
+func _check_walled_in_props_come_home() -> void:
+    var dungeon := {
+        "width": 6, "height": 6,
+        "grid": PackedInt32Array([
+            0, 0, 0, 0, 0, 0,
+            0, 1, 1, 1, 1, 0,
+            0, 1, 1, 0, 1, 0,
+            0, 1, 1, 1, 1, 0,
+            0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0,
+        ]),
+    }
+    var parent := Node3D.new()
+    root.add_child(parent)
+    var surprise_root := Node3D.new()
+    surprise_root.position = Vector3(2, 0, 2)
+    parent.add_child(surprise_root)
+    var walled := Node3D.new()
+    walled.position = Vector3(1.7, 0.5, 0)
+    surprise_root.add_child(walled)
+    var free := Node3D.new()
+    free.position = Vector3(0.3, 0.4, 1.2)
+    surprise_root.add_child(free)
+    FloorSurprise._keep_reachable(surprise_root, dungeon)
+    # Reach is horizontal: the hero walks the floor plane, so height never
+    # kept a prop away and never will.
+    var reach := Vector2(walled.position.x, walled.position.z).length()
+    if not ok(reach <= 0.3,
+            "a prop inside the wall block stayed out of reach (reach %.2f)" % reach):
+        return
+    if not ok(is_equal_approx(free.position.x, 0.3) and is_equal_approx(free.position.z, 1.2),
+            "a prop on a floor cell lost its scatter (at %s)" % free.position):
+        return
+    # The live path: spawning on this dungeon never leaves a prop in a wall
+    # cell, whichever kind the wheel turns up.
+    var rng := RandomNumberGenerator.new()
+    rng.seed = 11
+    dungeon["rooms"] = [{"cx": 2, "cy": 2, "x": 1, "y": 1, "w": 2, "h": 2}]
+    var spawned := FloorSurprise.spawn(parent, dungeon, rng, 8, {})
+    if not ok(spawned != null, "the synthetic floor spawned no surprise"):
+        return
+    var home := Vector2(spawned.position.x, spawned.position.z)
+    for child in spawned.get_children():
+        var prop := child as Node3D
+        if prop == null:
+            continue
+        var world := home + Vector2(prop.position.x, prop.position.z)
+        if not ok(FloorSurprise._is_floor_cell(dungeon, world),
+                "a spawned prop stands inside a wall cell (at %s)" % world):
+            return
+    parent.queue_free()

@@ -98,8 +98,40 @@ static func spawn(parent: Node3D, dungeon: Dictionary, rng: RandomNumberGenerato
             _build_star_trail(root, rng)
         "echo_shell":
             _build_echo_shell(root)
+    # The scatter around the surprise's cell is blind to the forest the
+    # generator just drew: a bulb, a puff, a firefly or a star can land
+    # inside a grove trunk's collision box, where the hero can never walk
+    # close enough to answer it -- and an optional adventure that cannot be
+    # finished is a small lie. Pull walled-in props home to the surprise's
+    # own cell (a proven floor cell), keeping their height.
+    _keep_reachable(root, dungeon)
     parent.add_child(root)
     return root
+
+## Props whose world cell is not a floor cell come home: their horizontal
+## offset shrinks to a sliver of the surprise's own cell, which the spawner
+## chose from the floor. Both sampling conventions are checked (floor and
+## round), because a prop sitting exactly on a cell boundary reads as floor
+## to one and wall to the other -- and a prop that is reachable under only
+## one of them is a prop a bump or a nudge can take away.
+static func _keep_reachable(root: Node3D, dungeon: Dictionary) -> void:
+    var base := Vector2(root.position.x, root.position.z)
+    for child in root.get_children():
+        var prop := child as Node3D
+        if prop == null or prop == root:
+            continue
+        var world := base + Vector2(prop.position.x, prop.position.z)
+        if _is_floor_cell(dungeon, world):
+            continue
+        prop.position = Vector3(prop.position.x * 0.1, prop.position.y, prop.position.z * 0.1)
+
+## Whether a world-space position sits on a cell the hero can walk to, under
+## both sampling conventions (floor and round): a prop on a cell boundary is
+## reachable under one and lost under the other, and reachable is the only
+## honest answer.
+static func _is_floor_cell(dungeon: Dictionary, world: Vector2) -> bool:
+    return DungeonGenerator.is_floor(dungeon, int(floor(world.x)), int(floor(world.y))) \
+        and DungeonGenerator.is_floor(dungeon, int(round(world.x)), int(round(world.y)))
 
 static func _pbr(color: Color) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
