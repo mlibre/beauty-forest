@@ -66,7 +66,11 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v3
+      # No setup-android action: GitHub's ubuntu runners ship a preinstalled
+      # SDK (ANDROID_HOME points at it) with the build-tools and platform
+      # packages gradle needs, and the action itself has been the flaky leg
+      # of this job — it died inside its own install twice in a row, before
+      # Godot was even downloaded.
       - name: Install Godot 4.7.2 and templates
         run: |
           curl -sL -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
