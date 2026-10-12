@@ -5,6 +5,7 @@ extends "res://tests/support/test_case.gd"
 # Deps are pinned by path on purpose: a fresh clone ships no
 # editor-built global-class cache, and bare names would not parse
 # on first boot. regression_architecture holds this file to it.
+const MusicScores := preload("res://scripts/music_scores.gd")
 const AudioDirector := preload("res://scripts/audio_director.gd")
 const MusicDirector := preload("res://scripts/music_director.gd")
 
@@ -98,6 +99,39 @@ func _run() -> void:
     ok(ready_key == "roost", "the second song never finished rendering")
     ok(music.current_stream() != null and music.current_stream().data != song.data,
         "two different regions rendered the same song")
+
+    # The whole songbook, sung once. A melody degree out of range or a chord
+    # shape a kernel cannot build only ever crashes at render time -- and
+    # four of the eight songs are new enough that no other test sings them.
+    # Every song must render, attach, loop its whole length, and hold actual
+    # music at a level that stays soft.
+    for song_key: String in MusicScores.SONGS.keys():
+        # Songs the earlier checks already rendered are cached: play_region
+        # starts them at once and never re-announces a finished render, so
+        # awaiting song_ready there would wait forever (a green suite that
+        # proves nothing, or rather none of itself).
+        var cached: bool = music._songs.has(song_key)
+        music.play_region(song_key)
+        if not cached:
+            ready_key = await music.song_ready
+            if not ok(ready_key == song_key, "the songbook's %s never finished rendering (got %s)" % [song_key, ready_key]):
+                break
+        await frames(2)
+        var rendered: AudioStreamWAV = music.current_stream()
+        if not ok(rendered != null and rendered.data.size() > 0,
+                "the songbook's %s rendered empty" % song_key):
+            break
+        var expected := 60.0 * 4.0 * 8.0 / float(MusicScores.SONGS[song_key]["tempo"])
+        var actual := float(rendered.data.size()) / 2.0 / float(rendered.mix_rate)
+        if not ok(absf(actual - expected) < 0.1,
+                "%s is %.1fs; eight bars at %s bpm is %.1fs" % [song_key, actual, MusicScores.SONGS[song_key]["tempo"], expected]):
+            break
+        var book_peak := 0
+        for sample_index in range(0, rendered.data.size(), 2):
+            book_peak = maxi(book_peak, absi(rendered.data.decode_s16(sample_index)))
+        if not ok(book_peak > 8000 and book_peak <= 32767,
+                "%s rendered at peak %d -- silent or clipped" % [song_key, book_peak]):
+            break
     # The music box is deterministic: the same request twice yields the very
     # same bytes, so a save/load or a replay can never reshuffle the score.
     var twin := MusicDirector.new()
