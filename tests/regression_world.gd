@@ -33,7 +33,7 @@ func _run() -> void:
     await _check_arrived_marker_goes_dark(world)
     _check_objective_props_do_not_stack(world, dungeon)
     _check_camera_facing_visuals(world)
-    _check_web_render_calibration()
+    _check_web_render_calibration(world)
 
     var room: Dictionary = dungeon["rooms"][0]
     world.build_dragon(room, false)
@@ -197,7 +197,7 @@ func _check_rebuild_teardown(world: ForestWorld) -> void:
     ok(old_dragons == 0, "rebuilding should tear down the previous dragon")
     ok(old_chimes == 0, "rebuilding should tear down the previous chimes")
 
-func _check_web_render_calibration() -> void:
+func _check_web_render_calibration(world: ForestWorld) -> void:
     ## The web build runs gl_compatibility, which has no SSAO/SSIL and a softer
     ## glow, so the Forward+ numbers rendered the web walk brighter and harsher
     ## than the desktop one. The correction is a pure function of the renderer
@@ -244,6 +244,20 @@ func _check_web_render_calibration() -> void:
         "the web calibration must dim the bright sun-patch color")
     ok(float(ground.get_shader_parameter("pool_strength")) < 1.0,
         "the web calibration must shrink how much floor the sun pools light")
+
+    # The pure functions are half the contract; the build path is the other
+    # half. The floor the world actually builds must carry the AUTHORED moss
+    # dials on this headless renderer (neither forward_plus nor
+    # gl_compatibility), which fails if anyone ever applies the web
+    # calibration unconditionally -- the one way this check can fail, and
+    # the failure names the dial.
+    var moss := world.get_node_or_null("MossFloor") as MeshInstance3D
+    if not ok(moss != null and moss.material_override is ShaderMaterial,
+            "the built floor carries no moss material to hold dials on"):
+        return
+    var live := moss.material_override as ShaderMaterial
+    ok(is_equal_approx(float(live.get_shader_parameter("pool_strength")), 1.0),
+        "the live floor lost the authored sun-pool strength to an unconditional calibration")
 
 func _find_label(node: Node) -> Label3D:
     if node == null:
