@@ -361,6 +361,12 @@ func _show_overlay(for_menu: bool = false) -> void:
     _dismiss_beat_ring()
     _cancel_story()
     _reset_touch_joystick()
+    # Same transient as _present_panel's: the pill draws above the scrim, so
+    # the pause card (and every other overlay) must put it away itself rather
+    # than wait for the director's tenth-of-a-second tick to notice.
+    if _context_hint != null and is_instance_valid(_context_hint):
+        _context_hint.visible = false
+    _context_hint_verb = ""
     _menu_scrim.visible = for_menu
     _overlay_scrim.visible = not for_menu
     _overlay_card.visible = true
