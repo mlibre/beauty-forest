@@ -74,11 +74,16 @@ func _shelf(list: VBoxContainer, title: String, glyph_key: String, count: String
     if not worn_of.is_empty():
         heading.add_child(_label("· %s" % worn_of, 13, Color("#bcd2a8")))
     var grid := GridContainer.new()
-    # Five picture-cards to a row: the cards grew (a bigger picture, a price
-    # pill, room for tier pips), and five of the wider cards still fill the
-    # shelf's whole width, so the extra column bought nothing but clipped
-    # edges on small windows.
-    grid.columns = 5
+    # Picture-cards to a row, fitted to the window: a GridContainer never
+    # wraps, so a fixed column count either wasted the shelf on wide windows
+    # or clipped its last column off narrow ones -- five 138px cards plus
+    # separations need 730px, and a 480px window's shelf has ~370. The
+    # viewport decides, between two (the smallest shelf that still reads as
+    # a shelf) and five.
+    var card_pitch := 148.0
+    var window := get_viewport().get_visible_rect().size.x if get_viewport() != null else 1280.0
+    var shelf_width := minf(900.0, window * 0.94) - MODAL_MARGIN_X - 8.0
+    grid.columns = clampi(int(shelf_width / card_pitch), 2, 5)
     grid.add_theme_constant_override("hseparation", 10)
     grid.add_theme_constant_override("vseparation", 10)
     grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
