@@ -19,6 +19,11 @@ const SAMPLE_RATE := 22050
 const BARS := 8
 const BEATS_PER_BAR := 4
 const LOOP_PEAK := 0.80
+## The accompaniment sits well under the bells: a pad or bass that holds one
+## loudness forever reads as a constant background hum — noise, not music —
+## so both now swell and breathe under the melody instead of droning through it.
+const PAD_LEVEL := 0.36
+const BASS_LEVEL := 0.24
 const MUSIC_LEVEL := 0.5
 const SILENCE_DB := -80.0
 const MIN_AUDIBLE_VOLUME := 0.001
@@ -279,12 +284,14 @@ func _note_frequency(song_key: String, semitones: int, octave: int) -> float:
     return float(spec["root"]) * pow(2.0, float(semitones) / 12.0) * pow(2.0, float(octave))
 
 func _pad_kernel(song_key: String, chord_index: int) -> PackedFloat32Array:
-    ## A chord held for two bars with a raised-cosine attack and a long release
-    ## that wraps past the loop boundary into the next chord's attack — that
-    ## overlap is what makes the loop seamless and the harmony dreamy.
+    ## A chord that swells in, breathes slowly down across its two bars, and
+    ## lets go with a short release that wraps past the loop boundary into the
+    ## next chord's attack — that overlap is what keeps the loop seamless. The
+    ## rise-and-fall is the point: a pad at one loudness forever is a drone,
+    ## and a drone is what made the lullaby read as background noise.
     var spec: Dictionary = SONGS[song_key]
     var seconds := _bar_seconds(spec) * 2.0
-    var attack := 0.9
+    var attack := 1.3
     var release := 1.1
     var length := int(round((seconds + release) * float(SAMPLE_RATE)))
     var kernel := PackedFloat32Array()
@@ -300,14 +307,18 @@ func _pad_kernel(song_key: String, chord_index: int) -> PackedFloat32Array:
             var phase := t * frequency * TAU
             # A slightly detuned twin under each note: the slow beat between
             # them is the "two hands on one piano" warmth.
-            var voice := sin(phase) + sin(phase * 1.0035 + 0.4) * 0.6
+            var voice := sin(phase) + sin(phase * 1.0035 + 0.4) * 0.5
             kernel[sample] += voice * envelope
     var normalize := 1.0 / float(maxi(1, chord.size()))
     for sample in range(length):
-        kernel[sample] *= normalize * 0.5
+        kernel[sample] *= normalize * PAD_LEVEL
     return kernel
 
 func _pad_envelope(t: float, hold: float, attack: float, release: float) -> float:
+    ## Raised-cosine in, a slow bow down to a third of its peak by the end of
+    ## the hold (so the chord visibly exhales before the next one arrives),
+    ## raised-cosine out. Every piece lands on zero, so the wrapped seam
+    ## between chords stays click-free.
     if t < 0.0 or t > hold + release:
         return 0.0
     if t < attack:
@@ -315,9 +326,13 @@ func _pad_envelope(t: float, hold: float, attack: float, release: float) -> floa
     if t > hold:
         var into_release := (t - hold) / release
         return 0.5 + 0.5 * cos(into_release * PI)
-    return 1.0
+    var into_hold := (t - attack) / maxf(0.001, hold - attack)
+    return 0.30 + 0.70 * cos(into_hold * PI * 0.5)
 
 func _bass_kernel(song_key: String, chord_index: int) -> PackedFloat32Array:
+    ## The bass leans on the pad's envelope but is quieter and bows down even
+    ## sooner — a low note held at full strength is the most "constant hum"
+    ## voice there is, so it rises with each chord and settles under it.
     var spec: Dictionary = SONGS[song_key]
     var seconds := _bar_seconds(spec) * 2.0
     var release := 0.8
@@ -332,7 +347,7 @@ func _bass_kernel(song_key: String, chord_index: int) -> PackedFloat32Array:
         if envelope <= 0.0:
             continue
         var phase := t * frequency * TAU
-        kernel[sample] = (sin(phase) + sin(phase * 2.0) * 0.12) * envelope * 0.34
+        kernel[sample] = (sin(phase) + sin(phase * 2.0) * 0.12) * envelope * BASS_LEVEL
     return kernel
 
 func _bell_kernel(song_key: String, slot: int) -> PackedFloat32Array:

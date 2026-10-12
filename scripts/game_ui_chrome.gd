@@ -223,7 +223,73 @@ func _build_interface() -> void:
     _warm_flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     _warm_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _root.add_child(_warm_flash)
+    _build_intro()
     _build_touch_controls()
+
+## The storybook intro: one page at a time over the still-bright menu forest.
+## A tap turns the page, the Skip plate ends the telling; the world behind it
+## never stops being the forest the pages are describing.
+func _build_intro() -> void:
+    _intro_root = Control.new()
+    _intro_root.name = "StoryIntro"
+    _intro_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    _intro_root.mouse_filter = Control.MOUSE_FILTER_STOP
+    _intro_root.visible = false
+    _root.add_child(_intro_root)
+    var dim := ColorRect.new()
+    dim.name = "IntroDim"
+    dim.color = Color(0.04, 0.09, 0.06, 0.42)
+    dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _intro_root.add_child(dim)
+    var page := PanelContainer.new()
+    page.name = "IntroPage"
+    page.add_theme_stylebox_override("panel", _button_style(Color(0.10, 0.20, 0.13, 0.96), Color("#ffe29a"), 24))
+    page.set_anchors_preset(Control.PRESET_CENTER)
+    page.custom_minimum_size = Vector2(520, 0)
+    page.grow_horizontal = Control.GROW_DIRECTION_BOTH
+    page.grow_vertical = Control.GROW_DIRECTION_BOTH
+    page.mouse_filter = Control.MOUSE_FILTER_STOP
+    _intro_root.add_child(page)
+    var column := VBoxContainer.new()
+    column.add_theme_constant_override("separation", 10)
+    column.custom_minimum_size = Vector2(440, 0)
+    var page_margin := _margin(28, 26, 28, 24)
+    page.add_child(page_margin)
+    page_margin.add_child(column)
+    _intro_glyph = TextureRect.new()
+    _intro_glyph.custom_minimum_size = Vector2(72, 72)
+    _intro_glyph.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    _intro_glyph.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    _intro_glyph.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+    _intro_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    column.add_child(_intro_glyph)
+    _intro_title = _label("", 28, Color("#ffe6a0"))
+    _intro_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    column.add_child(_intro_title)
+    _intro_body = _label("", 17, Color("#eef3d8"))
+    _intro_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    _intro_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    column.add_child(_intro_body)
+    column.add_child(_spacer(4))
+    _intro_hint = _centered_label("tap to continue  ·  Esc skips", 12, Color("#9fb892"))
+    column.add_child(_intro_hint)
+    # The one plate on the intro that ends it: bottom-right, honest word.
+    var skip := _menu_button("Skip", false, GardenGlyphs.STAIRS)
+    skip.custom_minimum_size = Vector2(110, 44)
+    skip.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+    skip.position = Vector2(-128, -62)
+    skip.tooltip_text = "Straight to the walk."
+    skip.pressed.connect(func(): intro_skip_requested.emit())
+    _intro_root.add_child(skip)
+    _intro_root.gui_input.connect(func(event: InputEvent):
+        if event is InputEventMouseButton and event.pressed:
+            intro_advance_requested.emit()
+    )
+    page.gui_input.connect(func(event: InputEvent):
+        if event is InputEventMouseButton and event.pressed:
+            intro_advance_requested.emit()
+    )
 
 func _build_touch_controls() -> void:
     var touch_root := Control.new()

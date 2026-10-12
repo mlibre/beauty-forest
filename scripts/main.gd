@@ -7,6 +7,24 @@ extends "res://scripts/run_world.gd"
 
 const InputActions := preload("res://scripts/input_actions.gd")
 
+## The story the Play button tells before the first floor loads: three pages
+## over the menu forest while the camera glides down from the canopy. Any key
+## or tap turns a page; Esc or Skip goes straight to the walk.
+const INTRO_PAGES: Array = [
+    {"glyph": "dragon", "title": "The rumor", "body": "Far below, a whole dragon family has forgotten how to sleep."},
+    {"glyph": "lantern", "title": "The lantern", "body": "Your lantern sings by itself. You just wander."},
+    {"glyph": "heart", "title": "The promise", "body": "Sing every lost soul home. No hurry, no losing."},
+]
+const INTRO_PAGE_SECONDS := 3.4
+const INTRO_GLIDE_SECONDS := 3.0
+## The camera starts high in the canopy and settles to its walk offset.
+const CAMERA_INTRO_OFFSET := Vector3(0.0, 26.0, 19.0)
+
+var _intro_active := false
+var _intro_page := -1
+var _intro_timer := 0.0
+var _intro_cam_t := 1.0
+
 func _ready() -> void:
     randomize()
     _rng.randomize()
@@ -59,6 +77,9 @@ func _ready() -> void:
 
 func _connect_ui() -> void:
     ui.start_requested.connect(_on_start_requested)
+    ui.play_pressed.connect(_begin_intro)
+    ui.intro_advance_requested.connect(_advance_intro)
+    ui.intro_skip_requested.connect(_finish_intro)
     ui.style_picked.connect(_on_style_picked)
     ui.resume_requested.connect(_resume_game)
     ui.restart_requested.connect(_on_restart_requested)
@@ -85,6 +106,52 @@ func _connect_ui() -> void:
     ui.touch_pause_requested.connect(_touch_pause)
     ui.settings_changed.connect(func(value): _apply_settings(value, true))
 
+## The story intro glides the camera down from the canopy while its pages
+## play, then holds rock-steady at the walk offset — the same "glides and
+## settles" contract as the walk camera, just with a longer approach. The
+## state and the override live together here on the director, because the
+## base-class camera has no idea the intro exists.
+func _update_camera(delta: float) -> void:
+    if _intro_active and player != null and is_instance_valid(player):
+        _intro_cam_t = minf(1.0, _intro_cam_t + delta / INTRO_GLIDE_SECONDS)
+        var eased := _intro_cam_t * _intro_cam_t * (3.0 - 2.0 * _intro_cam_t)
+        camera.global_position = player.global_position + CAMERA_INTRO_OFFSET.lerp(CAMERA_OFFSET, eased)
+        camera.look_at(player.global_position + Vector3.UP * 0.78, Vector3.UP)
+        return
+    super(delta)
+
+## The menu's Play button: tell the story first, then start the fresh walk.
+## start_requested bypasses this on purpose — it IS the walk, wherever it
+## comes from (tests, keys, a returning save); the story is a menu courtesy.
+func _begin_intro() -> void:
+    if mode != Mode.MENU or _intro_active:
+        return
+    _intro_active = true
+    _intro_page = 0
+    _intro_timer = INTRO_PAGE_SECONDS
+    _intro_cam_t = 0.0
+    ui.close_panels()
+    ui.show_intro_page(INTRO_PAGES[0])
+
+func _advance_intro() -> void:
+    if not _intro_active:
+        return
+    _intro_page += 1
+    if _intro_page >= INTRO_PAGES.size():
+        _finish_intro()
+        return
+    _intro_timer = INTRO_PAGE_SECONDS
+    ui.show_intro_page(INTRO_PAGES[_intro_page])
+
+func _finish_intro() -> void:
+    if not _intro_active:
+        return
+    _intro_active = false
+    _intro_page = -1
+    _intro_cam_t = 1.0
+    ui.hide_intro()
+    _on_start_requested(selected_style)
+
 func _advance_pause_state() -> void:
     # The one state machine both the Escape key and the touch pause button run,
     # so the two can never disagree about what PAUSE means: pause from the walk,
@@ -97,6 +164,17 @@ func _advance_pause_state() -> void:
         _resume_game()
 
 func _unhandled_input(event: InputEvent) -> void:
+    # The intro owns every key while it is being told: any key turns the page,
+    # Escape ends the telling and starts the walk at once. Mouse taps never
+    # reach here — the intro layer speaks gui_input and already advanced.
+    if _intro_active:
+        if event is InputEventKey and event.pressed:
+            if event.keycode == KEY_ESCAPE:
+                _finish_intro()
+            else:
+                _advance_intro()
+        get_viewport().set_input_as_handled()
+        return
     if event.is_action_pressed("bf_pause"):
         _advance_pause_state()
         get_viewport().set_input_as_handled()
@@ -168,7 +246,12 @@ func _unhandled_input(event: InputEvent) -> void:
 func _process(delta: float) -> void:
     _update_camera(delta)
     _update_mote(delta)
+    if _intro_active:
+        _intro_timer -= delta
+        if _intro_timer <= 0.0:
+            _advance_intro()
     if mode == Mode.PLAYING:
+        _tick_surprise(delta)
         play_seconds += delta
         invulnerable_time = maxf(0.0, invulnerable_time - delta)
         _mote_line_timer -= delta
@@ -499,6 +582,14 @@ func _close_modal() -> void:
 ## the hero loses the controls, and the menu is rebuilt from current `meta` so
 ## the record line reads true even after a run.
 func _show_menu() -> void:
+    # A menu requested from anywhere (settings close, pause card, boot) ends a
+    # running story telling; the menu owns the screen the moment it is asked
+    # for, and a half-told intro must never survive underneath it.
+    if _intro_active:
+        _intro_active = false
+        _intro_page = -1
+        _intro_cam_t = 1.0
+        ui.hide_intro()
     mode = Mode.MENU
     _set_world_processing(true)
     player.set_control_enabled(false)

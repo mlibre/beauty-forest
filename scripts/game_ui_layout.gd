@@ -357,40 +357,19 @@ func _show_overlay(for_menu: bool = false) -> void:
     _overlay_card.visible = true
     _overlay_card.modulate.a = 1.0
     _fit_layout()
-    if for_menu:
-        # The menu card skips the settle and goes straight to breathing: it is
-        # the one screen meant to feel alive before anything happens.
-        _breathe_menu()
-    else:
-        _stop_menu_breath()
-        _settle_in(_overlay_card)
+    _settle_in(_overlay_card)
 
 ## A card arrives like a leaf settling: a quick fade, then perfectly still.
-## Instant when reduced motion is on -- gentler means calmer, not uglier.
+## Still means still — no card breathes, no scrim shimmers; the menu's life is
+## the forest behind it (wisps, leaves, light), never the panel itself. A
+## one-shot settle is the only motion a card ever gets, and it is instant when
+## reduced motion is on — gentler means calmer, not uglier.
 func _settle_in(card: Control) -> void:
     if _reduced_motion:
         return
     card.modulate.a = 0.0
     var settle := card.create_tween()
     settle.tween_property(card, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-
-## The title card breathes, slowly, forever: one gentle loop, no bounce, no
-## attention grab. Stopped the moment any other screen owns the card.
-func _breathe_menu() -> void:
-    _stop_menu_breath()
-    if _reduced_motion:
-        return
-    _menu_breath = create_tween()
-    _menu_breath.set_loops()
-    _menu_breath.tween_property(_overlay_card, "modulate:a", 0.93, 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-    _menu_breath.tween_property(_overlay_card, "modulate:a", 1.0, 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-
-func _stop_menu_breath() -> void:
-    if _menu_breath != null and _menu_breath.is_valid():
-        _menu_breath.kill()
-    _menu_breath = null
-    if is_instance_valid(_overlay_card):
-        _overlay_card.modulate.a = 1.0
 
 func _dismiss_beat_ring() -> void:
     ## The beat ring is a live gameplay affordance ("press E on the gold") and

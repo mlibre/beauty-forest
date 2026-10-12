@@ -28,6 +28,11 @@ func _run() -> void:
         await _frames(12)
         ui.close_panels()
         ui.set_text_chrome_visible(false)
+        # A floor may greet the walker with a transient toast (the surprise
+        # announcement, a returning-visit line, a petal shower). The walk's
+        # zero budget counts the screen AT REST -- chrome, not moments -- so
+        # dismiss whatever the floor just said before measuring.
+        ui.clear_toast()
         await _frames(4)
         _walking_screen_is_live(ui)
         var walked := _report("PLAYING", ui._root)
@@ -123,6 +128,7 @@ func _run() -> void:
         # FACE (the old figure lived on a desktop-only hover, which is to say it
         # lived nowhere for a touch player) and one closing line.
         ui.close_panels()
+        ui.clear_toast()
         ui.show_draft([
                 {"key": "warmth", "glyph": "heart", "word": "More Warmth", "sub": "+20 lantern warmth, fills now"},
                 {"key": "song", "glyph": "chime", "word": "Stronger Song", "sub": "+4 song power, soothes faster"},
@@ -159,7 +165,9 @@ func _run() -> void:
         # With the blind spots closed, these are the numbers, each measured on a real
         # screen and repeated across runs:
         #   PLAYING    0   the rule in AGENTS.md
-        #   MENU     360   298: title, subtitle, 3 promise captions, 6 buttons, record
+        #   MENU     120    88: title, one subtitle, three quiet promise
+        #                 glyphs (captions moved to hovers), six short buttons
+        #                 and the record as three icon chips with no words
         #   PAUSE    820   705 + one drawn floor-mood line (see below)
         #   SHOP     700   601: 34 ware names, 4 shelf headings, sparkle count
         #   NAP      250   200: the cozy-nap card (two floor rows + one warm line)
@@ -255,7 +263,7 @@ const CUE_BUDGET := 32
 ## that covers only the screens somebody remembered to point it at is half a gate.
 const BUDGETS := {
         "PLAYING": 0,
-        "MENU": 360,
+        "MENU": 120,
         "PAUSE": 820,
         "SHOP": 700,
         "NAP": 250,

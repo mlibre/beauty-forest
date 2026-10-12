@@ -168,6 +168,28 @@ func show_story(title: String, body: String, duration: float = 3.8) -> void:
         _story_tween = null
     )
 
+## The storybook intro, one page at a time. The director owns the pacing and
+## the pages; the interface only draws what it is handed. `close_panels`
+## deliberately does NOT touch the intro — the intro lives above the menu
+## card, and closing panels is a menu-world operation the director calls
+## around it.
+func show_intro_page(page: Dictionary) -> void:
+    if _intro_root == null or not is_instance_valid(_intro_root):
+        return
+    _menu_scrim.visible = false
+    _overlay_card.visible = false
+    _overlay_scrim.visible = false
+    _hud.visible = false
+    _intro_root.visible = true
+    _intro_glyph.texture = GardenGlyphs.get_glyph(String(page.get("glyph", GardenGlyphs.MOTE)))
+    _intro_title.text = String(page.get("title", ""))
+    _intro_body.text = String(page.get("body", ""))
+    _settle_in(_intro_root)
+
+func hide_intro() -> void:
+    if _intro_root != null and is_instance_valid(_intro_root):
+        _intro_root.visible = false
+
 func set_beat(active: bool, gold: bool) -> void:
     _beat_ring.visible = active
     if not active:

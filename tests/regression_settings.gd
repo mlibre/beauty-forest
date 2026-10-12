@@ -178,9 +178,9 @@ func _check_settings_back_button_names_where_it_goes(game: Node) -> bool:
         await frames(3)
         var label := ""
         for candidate in game.ui._shop_frame.find_children("*", "Button", true, false):
-            if (candidate as Button).text.begins_with("♥  Back to"):
+            if (candidate as Button).text.begins_with("Back to"):
                 label = (candidate as Button).text
-        if not ok(label == "♥  Back to %s" % wanted[origin],
+        if not ok(label == "Back to %s" % wanted[origin],
                 "from the %s the settings Back button says %s" % [origin, label if label != "" else "nothing"]):
             return false
         # Pressing Restore must not re-point the button at a hardcoded screen.
@@ -190,9 +190,9 @@ func _check_settings_back_button_names_where_it_goes(game: Node) -> bool:
         await frames(3)
         label = ""
         for candidate in game.ui._shop_frame.find_children("*", "Button", true, false):
-            if (candidate as Button).text.begins_with("♥  Back to"):
+            if (candidate as Button).text.begins_with("Back to"):
                 label = (candidate as Button).text
-        if not ok(label == "♥  Back to %s" % wanted[origin],
+        if not ok(label == "Back to %s" % wanted[origin],
                 "Restore from the %s re-pointed the Back button to %s" % [origin, label if label != "" else "nothing"]):
             return false
         game.ui.settings_closed.emit()
@@ -219,9 +219,9 @@ func _check_settings_hands_the_nap_and_ending_cards_back(game: Node) -> bool:
         return false
     var label := ""
     for candidate in game.ui._shop_frame.find_children("*", "Button", true, false):
-        if (candidate as Button).text.begins_with("♥  Back to"):
+        if (candidate as Button).text.begins_with("Back to"):
             label = (candidate as Button).text
-    if not ok(label == "♥  Back to the nap card",
+    if not ok(label == "Back to the nap card",
             "from the nap card the settings Back button says %s" % [label if label != "" else "nothing"]):
         return false
     game.ui.close_settings()

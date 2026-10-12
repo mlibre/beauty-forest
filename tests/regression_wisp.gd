@@ -60,7 +60,72 @@ func _run() -> void:
         stop(null, suite_name)
         return
 
+    # Happiness is the whole arc of a wisp: sad on arrival, warmer with every
+    # step of help, and the face has to carry it — frown to smile, corners
+    # below centre to above it.
+    if not await _check_happiness_climbs_with_each_help():
+        stop(null, suite_name)
+        return
+
     finish(null, "BEAUTY_FOREST_WISP_REGRESSION")
+
+## The mouth corners are the two mouth dots that sit off-centre; their average
+## height, in unscaled units, is the frown-to-smile read.
+func _corner_lift(wisp: Wisp) -> float:
+    var total := 0.0
+    var count := 0
+    for child: Node in wisp.find_children("*", "MeshInstance3D", true, false):
+        var mesh := child as MeshInstance3D
+        if mesh == null:
+            continue
+        if is_equal_approx(absf(mesh.position.x), 0.055) and is_equal_approx(mesh.position.z, -0.39):
+            total += mesh.position.y
+            count += 1
+    if count != 2:
+        return NAN
+    return total * 0.5 / wisp.visual_scale
+
+func _check_happiness_climbs_with_each_help() -> bool:
+    var wisp := Wisp.new()
+    root.add_child(wisp)
+    wisp.setup("Shambler", 1)
+    if not ok(is_equal_approx(wisp.happiness, 0.0),
+            "a fresh wisp must arrive sad, happiness was %f" % wisp.happiness):
+        wisp.free()
+        await frames(1)
+        return false
+    var sad_lift := _corner_lift(wisp)
+    if not ok(not is_nan(sad_lift) and sad_lift < 0.79,
+            "a sad wisp's mouth corners must hang below centre (lift %f)" % sad_lift):
+        wisp.free()
+        await frames(1)
+        return false
+    # Each soothing pulse is one step of help, so happiness climbs one bite at
+    # a time — five pulses, five rises, no plateau until the soul is sung home.
+    var bite := wisp.max_health / 6.0
+    var previous := wisp.happiness
+    for _step in range(5):
+        wisp.take_damage(bite)
+        if not ok(wisp.happiness > previous,
+                "a step of help must raise happiness (%f -> %f)" % [previous, wisp.happiness]):
+            wisp.free()
+            await frames(1)
+            return false
+        previous = wisp.happiness
+    var happy_lift := _corner_lift(wisp)
+    if not ok(not is_nan(happy_lift) and happy_lift > sad_lift,
+            "the mouth must smile as happiness climbs (sad %f -> helped %f)" % [sad_lift, happy_lift]):
+        wisp.free()
+        await frames(1)
+        return false
+    if not ok(absf(wisp.happiness - 5.0 / 6.0) < 0.01,
+            "five sixths of the song gone should be five sixths happy (%f)" % wisp.happiness):
+        wisp.free()
+        await frames(1)
+        return false
+    wisp.free()
+    await frames(1)
+    return true
 
 func _check_boss_light_respects_still_forest() -> bool:
     for enabled in [false, true]:

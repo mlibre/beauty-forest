@@ -17,6 +17,10 @@ const TouchJoystick := preload("res://scripts/touch_joystick.gd")
 ## GameUIScreens and driven by GameUI, which extend this chain.
 
 signal start_requested(style_key: String)
+## The menu's own Play button. Deliberately separate from start_requested:
+## a fresh walk pressed from the title opens the story intro first, while a
+## direct start_requested (deep links, tests, the keys) starts immediately.
+signal play_pressed
 signal style_picked(style_key: String)
 signal resume_requested
 signal restart_requested(continue_deeper: bool)
@@ -42,6 +46,10 @@ signal touch_journal_requested
 signal touch_settings_requested
 signal touch_pause_requested
 signal settings_changed(settings: Dictionary)
+## The story intro's two doors: tap the page (or any key) to turn it, and the
+## Skip plate to end the telling and start the walk at once.
+signal intro_advance_requested
+signal intro_skip_requested
 
 var _root: Control
 var _hud: Control
@@ -99,12 +107,17 @@ var _beat_ring: Panel
 var _beat_inner: Panel
 var _warm_flash: ColorRect
 var _settings: Dictionary = {}
+## The storybook intro, built once at boot and shown only while the director
+## tells it. The menu card hides underneath; the forest stays visible.
+var _intro_root: Control
+var _intro_glyph: TextureRect
+var _intro_title: Label
+var _intro_body: Label
+var _intro_hint: Label
 ## The interface's doorbell, wired once by the director at boot: a callable
 ## that speaks for button hovers and presses. The UI chain never reaches the
 ## audio director directly; when nothing is wired, the buttons stay silent.
 var ui_sound: Callable = Callable()
-## The title card's slow breathing loop; null everywhere else.
-var _menu_breath: Tween
 var _selected_style := "standard"
 var _toast_queue: Array[Dictionary] = []
 var _toast_active := false
@@ -159,24 +172,8 @@ func _process(delta: float) -> void:
     if _root == null or _overlay_card == null:
         return
     _time += delta
-    if not _reduced_motion:
+    if _beat_ring.visible:
         _beat_ring.pivot_offset = _beat_ring.size * 0.5
-        var breath := 1.0 + sin(_time * 1.8) * 0.012
-        _overlay_card.scale = Vector2(breath, breath)
-        _overlay_card.pivot_offset = _overlay_card.size * 0.5
-        # Menus stay alive: the scrim shimmers almost imperceptibly and the
-        # story card floats on its own breath. Scale/alpha only — no rect
-        # moves, so the responsive layout measurements keep holding.
-        if is_instance_valid(_overlay_scrim) and _overlay_scrim.visible:
-            _overlay_scrim.modulate = Color(1, 1, 1) * (0.97 + sin(_time * 1.1) * 0.03)
-        if is_instance_valid(_story_card) and _story_card.visible:
-            var story_breath := 1.0 + sin(_time * 2.1 + 1.3) * 0.008
-            _story_card.scale = Vector2(story_breath, story_breath)
-            _story_card.pivot_offset = _story_card.size * 0.5
-        if is_instance_valid(_shop_card) and _shop_card.visible:
-            var shop_breath := 1.0 + sin(_time * 1.6 + 0.6) * 0.006
-            _shop_card.scale = Vector2(shop_breath, shop_breath)
-            _shop_card.pivot_offset = _shop_card.size * 0.5
     if _minimap.is_visible_in_tree():
         _minimap.queue_redraw()
 
@@ -232,7 +229,7 @@ func _centered_label(text: String, size: int, color: Color) -> Label:
 func _centered_button(text: String, primary: bool, callback: Callable) -> CenterContainer:
     var center := CenterContainer.new()
     var button := _button(text, primary)
-    button.custom_minimum_size = Vector2(360, 48)
+    button.custom_minimum_size = Vector2(320, 48)
     button.pressed.connect(callback)
     center.add_child(button)
     return center
@@ -314,8 +311,8 @@ func _icon(glyph_key: String, side: float, tint: Color = Color.WHITE) -> Texture
 func _button(text: String, primary: bool) -> Button:
     var button := Button.new()
     button.text = text
-    button.custom_minimum_size = Vector2(150, 44)
-    var radius := 18
+    button.custom_minimum_size = Vector2(150, 46)
+    var radius := 16
     button.add_theme_stylebox_override("normal", _button_style(Color(0.49, 0.34, 0.12, 0.95) if primary else Color(0.12, 0.25, 0.16, 0.94), Color("#ffe39a") if primary else Color("#9dbb80"), radius))
     button.add_theme_stylebox_override("hover", _button_style(Color(0.62, 0.44, 0.16, 1.0) if primary else Color(0.18, 0.34, 0.20, 1.0), Color("#fff1bd"), radius))
     button.add_theme_stylebox_override("pressed", _button_style(Color(0.35, 0.25, 0.10, 1.0), Color("#fff0b0"), radius))
@@ -330,6 +327,16 @@ func _button(text: String, primary: bool) -> Button:
         button.pressed.connect(func() -> void: ui_sound.call("press"))
     return button
 
+## A button that leads with a picture: one glyph from the game's own icon
+## language beside a one-word label. The menu speaks in these — a row of
+## pictures the eye picks between before the reader in the player wakes up.
+func _menu_button(text: String, primary: bool, glyph_key: String) -> Button:
+    var button := _button(text, primary)
+    button.icon = GardenGlyphs.get_glyph(glyph_key)
+    button.expand_icon = true
+    button.add_theme_constant_override("icon_max_width", 26)
+    return button
+
 func _button_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
     var style := StyleBoxFlat.new()
     style.bg_color = fill
@@ -341,10 +348,10 @@ func _button_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
     style.shadow_color = Color(0.03, 0.08, 0.05, 0.30)
     style.shadow_size = 7
     style.shadow_offset = Vector2(0, 3)
-    style.content_margin_left = 14
-    style.content_margin_right = 14
-    style.content_margin_top = 8
-    style.content_margin_bottom = 8
+    style.content_margin_left = 16
+    style.content_margin_right = 16
+    style.content_margin_top = 9
+    style.content_margin_bottom = 9
     return style
 
 func _card(fill: Color, border: Color, radius: int, border_width: int = 2) -> PanelContainer:
@@ -418,17 +425,6 @@ func _clear(node: Node) -> void:
 func apply_settings(settings: Dictionary) -> void:
     _settings = settings.duplicate(true)
     _reduced_motion = bool(_settings.get("reduced_motion", false))
-    if _reduced_motion:
-        # Freeze the menu breathing at rest so enabling Still Forest never
-        # leaves a card parked mid-breath.
-        if is_instance_valid(_overlay_card):
-            _overlay_card.scale = Vector2.ONE
-        if is_instance_valid(_story_card):
-            _story_card.scale = Vector2.ONE
-        if is_instance_valid(_shop_card):
-            _shop_card.scale = Vector2.ONE
-        if is_instance_valid(_overlay_scrim):
-            _overlay_scrim.modulate = Color.WHITE
     _high_contrast = bool(_settings.get("high_contrast", false))
     _text_scale = clampf(float(_settings.get("text_scale", 1.0)), 0.75, 2.0)
     _root.theme.default_font_size = int(round(18.0 * _text_scale))

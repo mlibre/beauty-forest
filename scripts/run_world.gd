@@ -8,6 +8,16 @@ extends "res://scripts/run_ceremonies.gd"
 ## blessing per floor and the pool never becomes a heal fountain.
 var _wish_floor := 0
 
+# Deps are pinned by path on purpose: a fresh clone ships no
+# editor-built global-class cache, and bare names would not parse
+# on first boot. regression_architecture holds this file to it.
+const FloorSurprise := preload("res://scripts/floor_surprise.gd")
+## This floor's one surprise — spawned with the floor, polled while walking.
+var _surprise: Node3D
+## Seconds spent standing inside the star glade; the glade grants its warmth
+## to a hero who stops for a breath, so the timer lives with the walker.
+var _glade_time := 0.0
+
 func _update_camera(delta: float) -> void:
     if player == null or not is_instance_valid(player):
         return
@@ -66,10 +76,13 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
     dragon_finale = false
     _soothes_this_floor = 0
     _mote_joy = 0.0
+    _surprise = null
+    _glade_time = 0.0
     floor_modifier = BeautyContent.random_modifier(BeautyContent.story_floor(floor_number)) if not menu_stage else {}
 
     if not menu_stage:
         _spawn_wisps()
+        _spawn_surprise()
         var story := BeautyContent.story_floor(floor_number)
         merchant_exists = story in [2, 4, 7, 10] and not BeautyContent.is_dragon_floor(floor_number)
         dragon_exists = BeautyContent.is_dragon_floor(floor_number)
@@ -149,6 +162,134 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
             ui.show_toast("Peddle’s cart is nearby. Press F when you’re ready to browse.")
         if _has_feeling_floor():
             ui.show_toast("A Big Feeling wanders this floor. Wait for its GOLD halo, then press E nearby and sing with it.")
+        if _surprise != null:
+            # One soft announcement, the same voice that names the cart: the
+            # surprise is something you wander INTO, so it is named once and
+            # never chased.
+            ui.show_toast("You spot %s — %s" % [String(_surprise.get_meta("surprise_name")), FloorSurprise.kind_for_floor(floor_number)["line"]], 3.2)
+
+## Every floor hides one small surprise (see FloorSurprise). Spawned after the
+## wisps so the occupied-cell set already holds their homes; the surprise is
+## placed like anything else that belongs to the floor, far from the spawn.
+func _spawn_surprise() -> void:
+    var occupied: Dictionary = {}
+    for wisp: Wisp in wisps:
+        if is_instance_valid(wisp):
+            occupied[Vector2i(int(round(wisp.global_position.x)), int(round(wisp.global_position.z)))] = true
+    _surprise = FloorSurprise.spawn(world, dungeon, _rng, floor_number, occupied)
+
+## The surprise's proximity senses, polled while walking: standing in the star
+## glade warms, walking through puffs pops them, leaning into a lantern bloom
+## lights it. Interact-kind surprises are answered from _try_interact.
+func _tick_surprise(delta: float) -> void:
+    if _surprise == null or not is_instance_valid(_surprise):
+        return
+    match String(_surprise.get_meta("surprise_key")):
+        "star_glade":
+            if player.global_position.distance_to(_surprise.global_position) < 2.4 and not _surprise.get_meta("surprise_used"):
+                _glade_time += delta
+                if _glade_time >= 2.5:
+                    _surprise.set_meta("surprise_used", true)
+                    hp = minf(hp_max, hp + 15.0)
+                    CozyVFX.ring(world, _surprise.global_position + Vector3.UP * 0.4, Color("#fff3a0"), 2.6, 1.0)
+                    audio.play_chord([659.25, 783.99, 987.77], 0.7, 0.07)
+                    ui.show_toast("The stars lend you their light. +15 warmth.", 3.0)
+                    _refresh_ui()
+        "lantern_bloom":
+            if not _surprise.get_meta("surprise_used"):
+                var lit := 0
+                for index in range(5):
+                    var bulb := _surprise.get_node_or_null("Bulb%d" % index) as MeshInstance3D
+                    if bulb == null:
+                        continue
+                    if String(bulb.get_meta("lit", "")) == "yes":
+                        lit += 1
+                        continue
+                    if player.global_position.distance_to(bulb.global_position) < 1.8:
+                        bulb.material_override = FloorSurprise.glow(Color("#ffe2a0"), 2.0)
+                        bulb.set_meta("lit", "yes")
+                        lit += 1
+                        audio.play_tone(523.25 + float(index) * 78.0, 0.30, 0.06, 1)
+                        CozyVFX.burst(world, bulb.global_position, Color("#ffe9a8"), 12, 0.9, 0.8)
+                if lit >= 5:
+                    _surprise.set_meta("surprise_used", true)
+                    sparkles += 3
+                    audio.play_chord([523.25, 659.25, 783.99], 0.8, 0.08)
+                    ui.show_toast("Every lantern is lit — the bloom hums thanks. +3 sparkles.", 3.0)
+                    _refresh_ui()
+        "balloon_puffs":
+            var popped := 0
+            for index in range(4):
+                var puff := _surprise.get_node_or_null("Puff%d" % index) as MeshInstance3D
+                if puff == null or not puff.visible:
+                    popped += 1
+                    continue
+                if player.global_position.distance_to(puff.global_position) < 1.4:
+                    puff.visible = false
+                    popped += 1
+                    sparkles += 1
+                    audio.play_tone(880.0 + float(index) * 110.0, 0.20, 0.055, 1)
+                    CozyVFX.burst(world, puff.global_position, Color("#ffd1dc"), 14, 1.0, 0.7)
+                    _refresh_ui()
+            if popped >= 4 and not _surprise.get_meta("surprise_used"):
+                _surprise.set_meta("surprise_used", true)
+                sparkles += 2
+                audio.play_chord([659.25, 880.0], 0.5, 0.07)
+                ui.show_toast("Every puff is popped — the seeds drift down. +2 sparkles.", 3.0)
+                _refresh_ui()
+
+## The surprise's E-answers, tried before the generic wander cue. Returns
+## true when the press belonged to the surprise, so the caller stops there.
+func _surprise_interact() -> bool:
+    if _surprise == null or not is_instance_valid(_surprise):
+        return false
+    var key := String(_surprise.get_meta("surprise_key"))
+    var used: bool = _surprise.get_meta("surprise_used")
+    var near := player.global_position.distance_to(_surprise.global_position) < 2.6
+    match key:
+        "picnic":
+            if near and not used:
+                _surprise.set_meta("surprise_used", true)
+                sparkles += 2
+                audio.play_chord([523.25, 659.25, 783.99], 0.6, 0.075)
+                CozyVFX.burst(world, _surprise.global_position + Vector3.UP * 0.5, Color("#fff3c8"), 20, 1.1, 1.0)
+                ui.show_toast("The picnic wisps share their snacks. +2 sparkles.", 3.0)
+                _refresh_ui()
+                return true
+        "singing_ring":
+            if near and not used:
+                _surprise.set_meta("surprise_used", true)
+                for step in range(4):
+                    audio.play_tone(523.25 * pow(1.26, float(step)), 0.45, 0.055, 1)
+                floor_modifier["note_range"] = float(floor_modifier.get("note_range", 1.0)) * 1.2
+                CozyVFX.ring(world, _surprise.global_position + Vector3.UP * 0.4, Color("#e3b66d"), 3.0, 1.1)
+                ui.show_toast("The ring hums along — song-notes fly farther this floor.", 3.2)
+                return true
+        "comet_log":
+            if near and not used:
+                _surprise.set_meta("surprise_used", true)
+                audio.play_tone(1318.5, 0.9, 0.05, 1)
+                var comet_from := _surprise.global_position + Vector3(-5.0, 7.0, -2.0)
+                for step in range(7):
+                    CozyVFX.burst(world, comet_from + Vector3(float(step) * 1.2, -float(step) * 0.8, 0.0), Color("#fff3a0"), 8, 0.8, 0.6)
+                var heart := HeartPickup.new()
+                world.add_child(heart)
+                heart.setup(_surprise.global_position + Vector3(0.8, 0.8, 0), 12.0, 1.0, true)
+                heart.heart_collected.connect(_on_heart_collected)
+                heart.heart_expired.connect(_on_heart_expired)
+                ui.show_toast("A comet! It saw you looking, and sent a thank-you heart.", 3.4)
+                return true
+        "mossy_doodle":
+            if near and not used:
+                _surprise.set_meta("surprise_used", true)
+                sparkles += 1
+                _learn_fact("A mossy doodle on floor %d taught it: “%s”" % [floor_number, String(BeautyLore.FACTS[randi() % BeautyLore.FACTS.size()])])
+                audio.play_chord([783.99, 987.77], 0.5, 0.06)
+                _refresh_ui()
+                return true
+        _:
+            pass
+    return false
 
 ## A handful of wisps for the title backdrop.
 ##
@@ -163,6 +304,10 @@ func _spawn_menu_wisps() -> void:
         var cell := DungeonGenerator.random_floor_cell(dungeon, _rng, Vector2(spawn_room["cx"], spawn_room["cy"]), 6.0, occupied)
         occupied[cell] = true
         var wisp := _new_wisp(cell, BeautyContent.pick_wisp_type(1), 1)
+        # The title's backdrop souls drift contentedly mid-warmth: the walk's
+        # truth is "sad until helped", but the first screen should promise the
+        # middle of that journey, not its loneliest moment.
+        wisp.set_happiness(0.55)
         wisp.set_meta("attack_cooldown", _rng.randf_range(0.2, 1.1))
         wisp.set_meta("said_grumble", false)
 
@@ -241,6 +386,9 @@ func _try_interact() -> void:
         if pool and player.global_position.distance_to(pool.global_position) < 2.6:
             _make_a_wish()
             return
+    # The floor's own surprise answers before the generic cue does.
+    if _surprise_interact():
+        return
     var near_chime := _nearest_chime()
     if near_chime != null:
         ui.add_cue("chimes drift close — no button")

@@ -26,10 +26,16 @@ var alive := true
 var soothed := false
 var damage_claimed := false
 var reduced_motion := false
+## How helped this soul feels, 0 (sadly lost) to 1 (sung home). Every step of
+## help the hero gives — each soothing pulse, each song-note — raises it, and
+## the face, the glow and the halo all warm with it. Sad at first is the whole
+## design: nobody arrives happy, happiness is something the walk gives.
+var happiness := 0.0
 var _boss_window := 0.0
 var _slow_time := 0.0
 var _slow_multiplier := 1.0
 var _hurt_time := 0.0
+var _joy_time := 0.0
 var _seed := 0.0
 var _orbit_approach := true
 var _visual: Node3D
@@ -39,6 +45,12 @@ var _halo_material: StandardMaterial3D
 var _halo: MeshInstance3D
 var _aura_material: StandardMaterial3D
 var _big_light: OmniLight3D
+## The face: two pupils and three mouth dots, re-laid by happiness. The mouth
+## corners travel from a frown below centre to a smile above it; nothing else
+## in the build moves.
+var _pupils: Array[MeshInstance3D] = []
+var _mouth_dots: Array[MeshInstance3D] = []
+var _brows: Array[MeshInstance3D] = []
 
 func setup(p_type_key: String, p_floor_number: int, p_is_big: bool = false, p_feeling: Dictionary = {}) -> void:
     type_key = p_type_key
@@ -133,10 +145,12 @@ func _build() -> void:
         pupil.material_override = _emissive(Color("#6b5131"), 0.8)
         pupil.position = Vector3(side * 0.135 * visual_scale, 0.91 * visual_scale, -0.378 * visual_scale)
         _visual.add_child(pupil)
+        _pupils.append(pupil)
     for point_index in range(3):
         var smile := _sphere(0.020 * visual_scale, Color("#493029"))
-        smile.position = Vector3((point_index - 1) * 0.055 * visual_scale, (0.79 - abs(point_index - 1) * -0.018) * visual_scale, -0.39 * visual_scale)
+        smile.position = Vector3((point_index - 1) * 0.055 * visual_scale, 0.79 * visual_scale, -0.39 * visual_scale)
         _visual.add_child(smile)
+        _mouth_dots.append(smile)
 
     _halo = MeshInstance3D.new()
     var halo_mesh := TorusMesh.new()
@@ -157,6 +171,8 @@ func _build() -> void:
     _visual.add_child(_halo)
 
     _add_type_prop(color)
+    # Nobody arrives happy. The face is laid sad before the first frame.
+    _apply_happiness()
     if is_big:
         _big_light = OmniLight3D.new()
         _big_light.light_color = color
@@ -180,6 +196,7 @@ func _add_type_prop(base_color: Color) -> void:
                 brow.position = Vector3(side * 0.14 * visual_scale, 1.03 * visual_scale, -0.35 * visual_scale)
                 brow.rotation.z = side * -0.16
                 _visual.add_child(brow)
+                _brows.append(brow)
         "Crawler":
             for side in [-1.0, 1.0]:
                 var stalk := _cylinder(0.014 * visual_scale, 0.28 * visual_scale, prop_color)
@@ -268,6 +285,8 @@ func tick_behavior(delta: float, player_position: Vector3, aggro_range: float, s
             _slow_multiplier = 1.0
     if _hurt_time > 0.0:
         _hurt_time = maxf(0.0, _hurt_time - delta)
+    if _joy_time > 0.0:
+        _joy_time = maxf(0.0, _joy_time - delta)
     if is_big:
         _boss_window -= delta
         if _boss_window < -2.2:
@@ -310,13 +329,17 @@ func tick_behavior(delta: float, player_position: Vector3, aggro_range: float, s
             _spawn_pop = minf(1.0, _spawn_pop + delta * 2.8)
             var eased := 1.0 - pow(1.0 - _spawn_pop, 3.0)
             bob_scale *= lerpf(0.25, 1.0, eased)
+        # Every step of help lands as a little bounce of relief. Still Forest
+        # keeps the pop out — the face already carries the message.
+        if not reduced_motion:
+            bob_scale += _joy_time * 0.35
         _visual.scale = Vector3(bob_scale, bob_scale, bob_scale)
     if _halo and not is_big and not reduced_motion:
         _halo.rotation.y += delta * 0.9
     if _body_material:
-        _body_material.set_shader_parameter("glow", (0.34 if shielded else 0.10) + _hurt_time * 0.20)
+        _body_material.set_shader_parameter("glow", (0.34 if shielded else 0.10) + _hurt_time * 0.20 + happiness * 0.06)
     if _aura_material:
-        var aura_alpha := 0.09 + (0.06 if shielded else 0.0) + (0.03 if is_feeling else 0.0)
+        var aura_alpha := 0.09 + (0.06 if shielded else 0.0) + (0.03 if is_feeling else 0.0) + happiness * 0.05
         if curious and not reduced_motion:
             # A curious wisp's glow twinkles faintly, like it is already
             # excited about the fact it cannot wait to share.
@@ -328,6 +351,36 @@ func tick_behavior(delta: float, player_position: Vector3, aggro_range: float, s
         # channel here that a player who asked for stillness would still see.
         var breathe := 0.0 if reduced_motion else sin(Time.get_ticks_msec() * 0.002 + _seed) * 0.06
         _big_light.light_energy = (2.2 if not is_feeling else 1.7) * (0.94 + breathe)
+
+## How happy this soul looks right now: the mouth corners lift from a frown
+## below centre to a smile above it, sad brows straighten, and the halo warms
+## from pale blue to lantern gold as the walk helps. State, not motion — it
+## reads even with Still Forest on.
+func set_happiness(value: float) -> void:
+    var next := clampf(value, 0.0, 1.0)
+    if is_equal_approx(next, happiness):
+        return
+    happiness = next
+    _apply_happiness()
+
+func _apply_happiness() -> void:
+    var corner_lift := lerpf(-0.020, 0.018, happiness)
+    for index in range(_mouth_dots.size()):
+        if not is_instance_valid(_mouth_dots[index]):
+            continue
+        var dot := _mouth_dots[index]
+        dot.position.y = (0.79 + corner_lift * float(absi(index - 1))) * visual_scale
+    for pupil: MeshInstance3D in _pupils:
+        if is_instance_valid(pupil):
+            pupil.position.y = lerpf(0.895, 0.91, happiness) * visual_scale
+    for brow: MeshInstance3D in _brows:
+        if is_instance_valid(brow):
+            var side := signf(brow.position.x)
+            brow.rotation.z = side * lerpf(-0.30, -0.16, happiness)
+    if _halo_material and not is_big:
+        var color := Color("#d6efff").lerp(Color("#ffe2a0"), happiness)
+        _halo_material.albedo_color = color
+        _halo_material.emission = color
 
 func is_boss_vulnerable() -> bool:
     return is_big and _boss_window > 0.0
@@ -358,6 +411,12 @@ func take_damage(amount: float) -> void:
         return
     health = maxf(0.0, health - maxf(0.0, amount))
     _hurt_time = 0.35
+    # Every hit of help is a step toward home: the lantern's song does not
+    # hurt, it cheers — so each one raises the soul's happiness and lands as
+    # a small bounce of relief.
+    if max_health > 0.0:
+        set_happiness(1.0 - health / max_health)
+        _joy_time = 0.30
     if health <= 0.0:
         alive = false
 

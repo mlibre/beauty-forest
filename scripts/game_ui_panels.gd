@@ -304,7 +304,7 @@ func show_shop(state: Dictionary) -> void:
         _ware_card(verse_shelf, mote_option, sparkles, selected, false, true, false,
             func(): mote_verse_requested.emit(key))
 
-    _shop_frame.add_child(_centered_button("♥  Done — back to the walk", true, func(): close_shop()))
+    _shop_frame.add_child(_centered_button("Back to the walk", true, func(): close_shop()))
     _fit_layout()
     _focus_first_enabled(_shop_frame)
 
@@ -369,7 +369,7 @@ func show_settings(settings: Dictionary, return_name: String = "the walk") -> vo
     # Reopening from Reset must carry the same destination as the panel the
     # player is already looking at, or the button would silently re-point itself
     # at "the walk" after being pressed from the menu or the cart.
-    _shop_frame.add_child(_centered_button("♥  Back to %s" % return_name, true, func(): close_settings()))
+    _shop_frame.add_child(_centered_button("Back to %s" % return_name, true, func(): close_settings()))
     _fit_layout()
     _focus_first_enabled(_shop_frame)
 
@@ -467,7 +467,6 @@ func close_settings() -> void:
 ## menu's light scrim under a panel, stacking two darkening rects on top of
 ## each other -- so `close_panels` clears all of them by name.
 func close_panels() -> void:
-    _stop_menu_breath()
     _menu_scrim.visible = false
     _shop_scrim.visible = false
     _shop_card.visible = false

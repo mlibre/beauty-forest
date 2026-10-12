@@ -12,71 +12,43 @@ func show_menu(meta: Dictionary) -> void:
     var title := _label("Beauty Forest", 46, Color("#ffe6a0"))
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _overlay_content.add_child(title)
-    var subtitle := _label("a gentle walk — no hurry, no losing ♥", 20, Color("#dcebbd"))
-    subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    _overlay_content.add_child(subtitle)
+    _overlay_content.add_child(_centered_label("a gentle walk", 18, Color("#dcebbd")))
     _overlay_content.add_child(_spacer(4))
-    # The three things a new player has to know are SHOWN, not described: the
-    # title promises a gentle walk, the style shelf says how gentle, and the
-    # first floor's lantern sings by itself with no attack button to find. The
-    # paragraph that used to sit here ("Your lantern sings all by itself. You
-    # just wander, cuddle lost wisps home, and pick kind gifts. There is no
-    # attack button. Leaving anytime is always okay.") and the numbered "How it
-    # feels: 1 wander 2 lantern sings 3 choose a kind gift" line explained all
-    # of that in 37 words -- a wall of prose on the first screen, for mechanics
-    # the player discovers in the first ten seconds anyway. The one thing prose
-    # carried that pictures do not -- that leaving is always okay -- is a hover.
-    #
-    # Instead: a picture of how it plays. Three glyphs in a row, each saying one
-    # thing, so the menu shows its own promise rather than describing it.
+    # The menu shows, never tells. One row of three pictures stands where a
+    # paragraph of promises used to be; what each picture means is one hover
+    # away, and the first ten seconds of play teach it better than words did.
     var promises := HBoxContainer.new()
     promises.alignment = BoxContainer.ALIGNMENT_CENTER
-    promises.add_theme_constant_override("separation", 26)
+    promises.add_theme_constant_override("separation", 30)
     for promise: Array in [
-        ["lantern", "it sings itself"],
-        ["boots", "you just wander"],
-        ["heart", "gifts, never fights"],
+        ["lantern", "The lantern sings all by itself — there is no attack button."],
+        ["boots", "You just wander. No hurry, no losing."],
+        ["heart", "Gifts, never fights. Leaving is always okay."],
     ]:
-        var picture := VBoxContainer.new()
-        picture.add_theme_constant_override("separation", 4)
-        var mark := _icon(String(promise[0]), 42, Color("#ffe497"))
+        var mark := _icon(String(promise[0]), 38, Color("#ffe497"))
         mark.tooltip_text = String(promise[1])
-        var word := _centered_label(String(promise[1]), 13, Color("#d8e9bd"))
-        picture.add_child(mark)
-        picture.add_child(word)
-        promises.add_child(picture)
+        promises.add_child(mark)
     _overlay_content.add_child(promises)
-    _overlay_content.add_child(_spacer(6))
+    _overlay_content.add_child(_spacer(8))
+    # PLAY. One word, one picture, the biggest plate on the card.
+    var start_button := _menu_button("Play", true, GardenGlyphs.LANTERN)
+    start_button.custom_minimum_size = Vector2(320, 58)
+    start_button.tooltip_text = "Start a gentle walk. You can leave anytime."
+    start_button.pressed.connect(func(): play_pressed.emit())
+    var start_center := CenterContainer.new()
+    start_center.add_child(start_button)
+    _overlay_content.add_child(start_center)
+    _overlay_content.add_child(_spacer(4))
     # Flow (not HBox): on narrow windows the three style buttons wrap onto a
-    # second row instead of overflowing the card.
-    #
-    # It must EXPAND to the card width, not shrink to its minimum. Sized to its
-    # minimum (SIZE_SHRINK_CENTER) the container is exactly as wide as the
-    # widest button, so three of them can never share a row: it wrapped one per
-    # row, and the menu needed 798px of height in a 564px panel, hiding the
-    # "Wander into the forest" button below the fold on a default window.
+    # second row instead of overflowing the card. Each style is ONE picture
+    # and its name — the old two-line buttons ("gentle / bumps hurt less")
+    # made the shelf read like a form. The full description is a hover.
     var styles := HFlowContainer.new()
     styles.alignment = FlowContainer.ALIGNMENT_CENTER
     styles.last_wrap_alignment = FlowContainer.LAST_WRAP_ALIGNMENT_CENTER
     styles.add_theme_constant_override("hseparation", 10)
     styles.add_theme_constant_override("vseparation", 10)
     _overlay_content.add_child(styles)
-    # Short second lines only, and they are captions under a picture rather
-    # than a sentence beside it: the longer copy ("Extra cozy · bumps hurt
-    # less") pushed each button past 280px wide, so the flow container wrapped
-    # the three style choices onto three separate rows and the menu needed 798px
-    # of height inside a 564px panel -- which put the "Wander into the forest"
-    # button, the single most important thing on the screen, below the fold on a
-    # default 1280x720 window. The full description is one hover away.
-    #
-    # Each choice leads with a glyph so the shelf reads as three pictures you
-    # pick between, not three sentences you read. The heart marks the picked
-    # one, which is what the old "♥ " prefix was doing with a character.
-    var menu_style_descriptions := {
-        "gentle": "bumps hurt less",
-        "standard": "just right",
-        "bold": "more soul-light",
-    }
     var menu_style_marks := {
         "gentle": GardenGlyphs.SOUL,
         "standard": GardenGlyphs.LANTERN,
@@ -85,70 +57,65 @@ func show_menu(meta: Dictionary) -> void:
     for key in ["gentle", "standard", "bold"]:
         var style: Dictionary = BeautyContent.STYLE_DATA[key]
         var picked: bool = key == _selected_style
-        var button := _button("%s%s\n%s" % [("♥ " if picked else ""), style["name"], String(menu_style_descriptions[key])], picked)
-        button.custom_minimum_size = Vector2(212, 66)
-        button.icon = GardenGlyphs.get_glyph(String(menu_style_marks[key]))
-        button.expand_icon = true
+        var button := _menu_button(String(style["name"]), picked, String(menu_style_marks[key]))
+        button.custom_minimum_size = Vector2(158, 50)
         # A picked choice is not just tinted: the heart rides on the picture so
         # "which one is mine" is answerable without reading three names.
         if picked:
             var seal := _icon(GardenGlyphs.HEART, 16, Color("#ffd9e0"))
-            seal.position = Vector2(button.custom_minimum_size.x - 20.0, 2.0)
+            seal.position = Vector2(button.custom_minimum_size.x - 22.0, 2.0)
             button.add_child(seal)
-        button.tooltip_text = "%s — %s. Then press Wander below." % [String(style["name"]), String(style["description"])]
+        button.tooltip_text = "%s — %s" % [String(style["name"]), String(style["description"])]
         button.pressed.connect(func():
             _selected_style = key
             style_picked.emit(key)
             show_menu(meta)
         )
         styles.add_child(button)
-    var start_button := _button("♥  Wander into the forest", true)
-    # 300, not 340: a Button's minimum is max(custom_minimum_size, its text),
-    # and the floor can never be shrunk by the reflow pass. At 340 the start
-    # button alone demanded 368px of a 361px column on a 480px-wide window, so
-    # the menu card grew past the window and could no longer be centred.
-    start_button.custom_minimum_size = Vector2(300, 54)
-    start_button.tooltip_text = "Start a gentle walk. You can leave anytime."
-    start_button.pressed.connect(func(): start_requested.emit(_selected_style))
-    var start_center := CenterContainer.new()
-    start_center.add_child(start_button)
-    _overlay_content.add_child(start_center)
-    # The record line was "Visits N · Deepest floor N · Wisps guided home N" with
-    # the whole control scheme welded onto its second line -- 148 characters,
-    # the single largest block of text on the menu, and a sentence the pause card
-    # was already painting in _keys_reference(). The same controls, said twice in
-    # one game, in the one place a player most likely to read only half of it.
-    #
-    # It lives on the pause card now, which is also where it belongs: those are
-    # walk-screen controls, the player opens that card deliberately, and AGENTS.md
-    # keeps full run state there rather than on the title screen.
-    var record := "Visits %d  ·  Deepest floor %d  ·  Wisps guided home %d" % [
-        int(meta.get("runs", 0)), int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0))]
-    var record_label := _label(record, 13, Color("#cbdcb7"))
-    record_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    record_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    record_label.custom_minimum_size = Vector2(820, 0)
-    record_label.add_theme_constant_override("line_spacing", 5)
-    _overlay_content.add_child(record_label)
-    var leave := _button("Not now — keep my spot warm ♥", false)
-    leave.custom_minimum_size = Vector2(300, 44)
-    leave.tooltip_text = "No pressure. The forest waits for you."
-    leave.pressed.connect(func(): quit_requested.emit())
-    var leave_center := CenterContainer.new()
-    leave_center.add_child(leave)
-    _overlay_content.add_child(leave_center)
-    # The menu's own key line advertises "Comfort options: C", but nothing here
-    # emitted settings_open_requested, so C (and any player who reads the line)
-    # had no way to reach the gentler-forest panel before starting: zero entry
-    # points on this screen. Offer it here, next to the leave button it pairs
-    # with, and let the director hand the menu back on close.
-    var comfort := _button("Comfort options ♥", false)
-    comfort.custom_minimum_size = Vector2(300, 44)
-    comfort.tooltip_text = "Reduce hits, calm the wobble, and turn up the contrast before you begin."
+    _overlay_content.add_child(_spacer(4))
+    # Options and Leave share a row of two half-width plates. "Leave" is the
+    # honest word; the old caption ("Not now — keep my spot warm ♥") hid a
+    # quit button inside a sentence, and a quit button that reads as a poem is
+    # neither of those things. Flow, not HBox: on a 480px window the pair
+    # wraps into two centred rows instead of inflating the card past the wall.
+    var doors := HFlowContainer.new()
+    doors.alignment = FlowContainer.ALIGNMENT_CENTER
+    doors.last_wrap_alignment = FlowContainer.LAST_WRAP_ALIGNMENT_CENTER
+    doors.add_theme_constant_override("hseparation", 10)
+    doors.add_theme_constant_override("vseparation", 10)
+    var comfort := _menu_button("Comfort options", false, GardenGlyphs.HEART)
+    comfort.custom_minimum_size = Vector2(236, 46)
+    comfort.tooltip_text = "Reduce hits, calm motion, and turn up the contrast — anytime."
     comfort.pressed.connect(func(): settings_open_requested.emit())
-    var comfort_center := CenterContainer.new()
-    comfort_center.add_child(comfort)
-    _overlay_content.add_child(comfort_center)
+    doors.add_child(comfort)
+    var leave := _menu_button("Leave", false, GardenGlyphs.CAMP)
+    leave.custom_minimum_size = Vector2(146, 46)
+    leave.tooltip_text = "No pressure. The forest keeps your spot warm."
+    leave.pressed.connect(func(): quit_requested.emit())
+    doors.add_child(leave)
+    _overlay_content.add_child(doors)
+    _overlay_content.add_child(_spacer(6))
+    # The record: three pictures and their numbers, no words. What a number
+    # counts is one hover away; on the screen, the shape of the walk reads at
+    # a glance — boots walked, stairs reached, wisps hugged home.
+    var record := HBoxContainer.new()
+    record.alignment = BoxContainer.ALIGNMENT_CENTER
+    record.add_theme_constant_override("separation", 18)
+    for chip: Array in [
+        ["boots", int(meta.get("runs", 0)), "Visits — walks begun"],
+        [GardenGlyphs.STAIRS, int(meta.get("best_floor", 0)), "Deepest floor reached"],
+        [GardenGlyphs.WISP, int(meta.get("wisps_soothed", 0)), "Wisps guided home"],
+    ]:
+        var chip_box := HBoxContainer.new()
+        chip_box.add_theme_constant_override("separation", 6)
+        chip_box.add_child(_icon(String(chip[0]), 20, Color("#cbdcb7")))
+        var count := _label(str(int(chip[1])), 15, Color("#cbdcb7"))
+        chip_box.add_child(count)
+        var chip_tip := String(chip[2])
+        count.tooltip_text = chip_tip
+        (chip_box.get_child(0) as Control).tooltip_text = chip_tip
+        record.add_child(chip_box)
+    _overlay_content.add_child(record)
     _fit_layout()
     # Refit AFTER building: the panels are authored at comfortable desktop
     # widths, and _refit_content can only clamp children that already exist.
@@ -168,7 +135,7 @@ func show_draft(offers: Array, level: int, fact: String = "") -> void:
     _hud.visible = true
     set_text_chrome_visible(true)
     _show_overlay()
-    _overlay_content.add_child(_centered_label("Level %d — Mote offers three gifts" % level, 34, Color("#ffe6a0")))
+    _overlay_content.add_child(_centered_label("Level %d — pick a gift" % level, 34, Color("#ffe6a0")))
     if not fact.is_empty():
         _overlay_content.add_child(_centered_label("Mote learned: “%s”" % fact, 15, Color("#cbdcb7")))
     _overlay_content.add_child(_spacer(8))
@@ -202,7 +169,7 @@ func show_draft(offers: Array, level: int, fact: String = "") -> void:
             arrive.tween_property(column, "modulate:a", 1.0, 0.24).set_delay(0.08 + index * 0.07) \
                 .set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
     _overlay_content.add_child(cards)
-    _overlay_content.add_child(_centered_label("The forest waits — tap a card, or press 1 · 2 · 3.", 15, Color("#cbdcb7")))
+    _overlay_content.add_child(_centered_label("tap a card  ·  or press 1 · 2 · 3", 14, Color("#cbdcb7")))
     _fit_layout()
     _focus_first_enabled(_overlay_content)
 
@@ -214,19 +181,19 @@ func show_pause(meta: Dictionary) -> void:
     # charm list and the control keys. Read on purpose, not while walking.
     set_text_chrome_visible(true)
     _show_overlay()
-    _overlay_content.add_child(_centered_label("Take a breath ♥", 38, Color("#ffe6a0")))
-    _overlay_content.add_child(_centered_label("Paused — the forest waits for you. Nothing hurries here.", 17, Color("#dce9c2")))
+    _overlay_content.add_child(_centered_label("Paused ♥", 38, Color("#ffe6a0")))
+    _overlay_content.add_child(_centered_label("The forest waits for you.", 16, Color("#dce9c2")))
     _overlay_content.add_child(_spacer(10))
     _overlay_content.add_child(_walker_summary())
     _overlay_content.add_child(_spacer(14))
-    _overlay_content.add_child(_centered_button("♥  Keep wandering", true, func(): resume_requested.emit()))
-    _overlay_content.add_child(_centered_button("Comfort options ♥", false, func(): settings_open_requested.emit()))
-    _overlay_content.add_child(_centered_button("Start a fresh walk", false, func(): restart_requested.emit(false)))
+    _overlay_content.add_child(_centered_button("Keep wandering", true, func(): resume_requested.emit()))
+    _overlay_content.add_child(_centered_button("Comfort options", false, func(): settings_open_requested.emit()))
+    _overlay_content.add_child(_centered_button("Fresh walk", false, func(): restart_requested.emit(false)))
     # The title used to be a one-visit room: nothing anywhere returned to it,
     # so the style trails and the front door were reachable exactly once per
     # app launch. This is the way back.
-    _overlay_content.add_child(_centered_button("Rest at the title ♥", false, func(): menu_requested.emit()))
-    _overlay_content.add_child(_centered_button("Leave for now ♥", false, func(): quit_requested.emit()))
+    _overlay_content.add_child(_centered_button("Title screen", false, func(): menu_requested.emit()))
+    _overlay_content.add_child(_centered_button("Leave", false, func(): quit_requested.emit()))
     _overlay_content.add_child(_spacer(10))
     _overlay_content.add_child(_keys_reference())
     _overlay_content.add_child(_centered_label("Deepest floor %d  ·  Wisps hugged home %d  ·  Fun facts %d" % [int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0)), int(meta.get("facts", 0))], 14, Color("#bdcea9")))
@@ -365,8 +332,8 @@ func show_death(floor_number: int, meta: Dictionary) -> void:
     _overlay_content.add_child(_spacer(4))
     _overlay_content.add_child(_centered_label("Every wisp you hugged home is still warm.", 16, Color("#fff0c8")))
     _overlay_content.add_child(_spacer(18))
-    _overlay_content.add_child(_centered_button("♥  Wake up & wander again", true, func(): restart_requested.emit(false)))
-    _overlay_content.add_child(_centered_button("Rest a little longer", false, func(): quit_requested.emit()))
+    _overlay_content.add_child(_centered_button("Wander again", true, func(): restart_requested.emit(false)))
+    _overlay_content.add_child(_centered_button("Leave", false, func(): quit_requested.emit()))
     _overlay_content.add_child(_centered_label("Visits %d" % int(meta.get("runs", 0)), 14, Color("#bdcea9")))
     _fit_layout()
     _focus_first_enabled(_overlay_content)
@@ -392,10 +359,10 @@ func show_ending(dragons: int, meta: Dictionary) -> void:
         [GardenGlyphs.BOOK, "%d" % int(meta.get("facts", 0))],
     ]))
     _overlay_content.add_child(_spacer(18))
-    var deeper := _centered_button("♥  Wander deeper", true, func(): restart_requested.emit(true))
+    var deeper := _centered_button("Wander deeper", true, func(): restart_requested.emit(true))
     deeper.tooltip_text = "The forest grew one floor deeper, just for you."
     _overlay_content.add_child(deeper)
-    _overlay_content.add_child(_centered_button("Until next time ♥", false, func(): quit_requested.emit()))
+    _overlay_content.add_child(_centered_button("Until next time", false, func(): quit_requested.emit()))
     _fit_layout()
     _focus_first_enabled(_overlay_content)
 
@@ -419,6 +386,6 @@ func show_journal(meta: Dictionary, facts_learned: Array, stickers: Array) -> vo
             list.add_child(_label("✦ " + BeautyContent.sticker_name(sticker), 16, Color("#ffe8a2")))
     list.add_child(_section_label("YOUR KINDNESS SO FAR ♥"))
     list.add_child(_label("Walks: %d    Deepest floor: %d    Wisps hugged home: %d    Dragons tucked in: %d" % [int(meta.get("runs", 0)), int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0)), int(meta.get("dragons_sung", 0))], 16, Color("#dce9c4")))
-    _shop_frame.add_child(_centered_button("♥  Close my book", true, func(): close_journal()))
+    _shop_frame.add_child(_centered_button("Close the book", true, func(): close_journal()))
     _fit_layout()
     _focus_first_enabled(_shop_frame)
