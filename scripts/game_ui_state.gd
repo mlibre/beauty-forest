@@ -134,6 +134,11 @@ var _intro_dots: HBoxContainer
 ## How many pages the current telling has; the director sets this when the
 ## telling begins, because the story's length belongs to the story.
 var _intro_page_count := 0
+## The current page-turn's bloom. A fast reader can turn pages faster than a
+## turn finishes, and two tweens writing the same picture each frame means
+## the older one wins the last word -- the next page's picture never shrinks
+## in at all. One home, killed on every turn.
+var _intro_turn_tween: Tween
 ## The interface's doorbell, wired once by the director at boot: a callable
 ## that speaks for button hovers and presses. The UI chain never reaches the
 ## audio director directly; when nothing is wired, the buttons stay silent.

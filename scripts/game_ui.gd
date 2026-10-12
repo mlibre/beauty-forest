@@ -269,14 +269,19 @@ func show_intro_page(page: Dictionary, page_index: int = 0) -> void:
             dot.queue_redraw()
         _intro_dots.reset_size()
     # The page arrives: the picture blooms, the words rise into place. A
-    # page turn is one motion, not three popping parts.
+    # page turn is one motion, not three popping parts -- and never two at
+    # once, because a fast reader turns pages faster than a bloom finishes.
+    if _intro_turn_tween != null and _intro_turn_tween.is_valid():
+        _intro_turn_tween.kill()
+    _intro_turn_tween = null
     if not _reduced_motion:
         _intro_glyph.pivot_offset = _intro_glyph.custom_minimum_size * 0.5
         _intro_glyph.scale = Vector2(0.82, 0.82)
         _intro_glyph.modulate.a = 0.0
         _intro_title.modulate.a = 0.0
         _intro_body.modulate.a = 0.0
-        var turn := create_tween()
+        _intro_turn_tween = create_tween()
+        var turn := _intro_turn_tween
         turn.set_parallel(true)
         turn.tween_property(_intro_glyph, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
         turn.tween_property(_intro_glyph, "modulate:a", 1.0, 0.24)
