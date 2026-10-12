@@ -7,6 +7,7 @@ extends CanvasLayer
 const BeautyContent := preload("res://scripts/beauty_content.gd")
 const BeautyData := preload("res://scripts/beauty_data.gd")
 const CozyMinimap := preload("res://scripts/cozy_minimap.gd")
+const CozyTheme := preload("res://scripts/cozy_theme.gd")
 const CozyVitals := preload("res://scripts/cozy_vitals.gd")
 const GardenGlyphs := preload("res://scripts/garden_glyphs.gd")
 const TouchJoystick := preload("res://scripts/touch_joystick.gd")
@@ -98,6 +99,10 @@ var _beat_ring: Panel
 var _beat_inner: Panel
 var _warm_flash: ColorRect
 var _settings: Dictionary = {}
+## The interface's doorbell, wired once by the director at boot: a callable
+## that speaks for button hovers and presses. The UI chain never reaches the
+## audio director directly; when nothing is wired, the buttons stay silent.
+var ui_sound: Callable = Callable()
 ## The title card's slow breathing loop; null everywhere else.
 var _menu_breath: Tween
 var _selected_style := "standard"
@@ -272,6 +277,10 @@ func _label(text: String, size: int, color: Color) -> Label:
     label.text = text
     label.add_to_group("game_ui_scaled_labels")
     label.set_meta("base_font_size", size)
+    if size >= 24:
+        # Headings wear the storybook face; 24px is also where the warm-dark
+        # outline starts, so picture and protection arrive together.
+        label.theme_type_variation = "HeadingLabel"
     label.add_theme_font_size_override("font_size", int(round(float(size) * _text_scale)))
     label.add_theme_color_override("font_color", color)
     label.add_theme_color_override("font_shadow_color", Color(0.08, 0.13, 0.08, 0.65))
@@ -306,13 +315,19 @@ func _button(text: String, primary: bool) -> Button:
     var button := Button.new()
     button.text = text
     button.custom_minimum_size = Vector2(150, 44)
-    button.add_theme_stylebox_override("normal", _button_style(Color(0.49, 0.34, 0.12, 0.95) if primary else Color(0.12, 0.25, 0.16, 0.94), Color("#ffe39a") if primary else Color("#9dbb80"), 14))
-    button.add_theme_stylebox_override("hover", _button_style(Color(0.62, 0.44, 0.16, 1.0) if primary else Color(0.18, 0.34, 0.20, 1.0), Color("#fff1bd"), 14))
-    button.add_theme_stylebox_override("pressed", _button_style(Color(0.35, 0.25, 0.10, 1.0), Color("#fff0b0"), 14))
-    button.add_theme_stylebox_override("focus", _button_style(Color(0.25, 0.42, 0.24, 0.98), Color("#fff4c4"), 14))
+    var radius := 18
+    button.add_theme_stylebox_override("normal", _button_style(Color(0.49, 0.34, 0.12, 0.95) if primary else Color(0.12, 0.25, 0.16, 0.94), Color("#ffe39a") if primary else Color("#9dbb80"), radius))
+    button.add_theme_stylebox_override("hover", _button_style(Color(0.62, 0.44, 0.16, 1.0) if primary else Color(0.18, 0.34, 0.20, 1.0), Color("#fff1bd"), radius))
+    button.add_theme_stylebox_override("pressed", _button_style(Color(0.35, 0.25, 0.10, 1.0), Color("#fff0b0"), radius))
+    button.add_theme_stylebox_override("focus", _button_style(Color(0.25, 0.42, 0.24, 0.98), Color("#fff4c4"), radius))
+    button.add_theme_stylebox_override("disabled", _button_style(Color(0.16, 0.24, 0.17, 0.82), Color("#8fa27c"), radius))
     button.add_theme_color_override("font_color", Color("#fff3cc"))
     button.add_theme_color_override("font_hover_color", Color.WHITE)
     button.add_theme_color_override("font_pressed_color", Color.WHITE)
+    button.add_theme_color_override("font_disabled_color", Color("#c6d2b4"))
+    if ui_sound.is_valid():
+        button.mouse_entered.connect(func() -> void: ui_sound.call("hover"))
+        button.pressed.connect(func() -> void: ui_sound.call("press"))
     return button
 
 func _button_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
@@ -321,6 +336,11 @@ func _button_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
     style.border_color = border
     style.set_border_width_all(2)
     style.set_corner_radius_all(radius)
+    # A soft grounded shadow lifts every plate off the world without a hard
+    # edge — depth by warmth, not by outline.
+    style.shadow_color = Color(0.03, 0.08, 0.05, 0.30)
+    style.shadow_size = 7
+    style.shadow_offset = Vector2(0, 3)
     style.content_margin_left = 14
     style.content_margin_right = 14
     style.content_margin_top = 8

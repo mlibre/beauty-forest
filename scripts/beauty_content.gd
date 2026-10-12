@@ -92,7 +92,7 @@ const STYLE_DATA := {
 const WISP_TYPES := {
     "Shambler": {
         "hp": 24.0, "speed": 2.1, "damage": 8.0, "soul": 6.0, "scale": 1.0, "color": "#7fae6a",
-        "grumbles": ["I lost my hat down here.", "Is it Tuesday?", "The dusk is very opinionated. In a cozy way."],
+        "grumbles": ["I lost my hat down here.", "Is it Tuesday?", "The dusk is very opinionated. In a friendly way."],
         "farewells": ["Ah. That is better.", "Thank you! I left the stove on!", "Tell my cactus I love it."],
     },
     "Crawler": {
@@ -128,7 +128,7 @@ const WISP_TYPES := {
     "Mossbell": {
         "hp": 55.0, "speed": 1.6, "damage": 12.0, "soul": 15.0, "scale": 1.3, "color": "#c79df0",
         "grumbles": ["Dong. Sorry. That just happens now.", "I ring very slowly. It is called ambience.", "Moss takes ages to grow. I can wait."],
-        "farewells": ["A final soft chime, just for you.", "The ringing fades. The cozy stays."],
+        "farewells": ["A final soft chime, just for you.", "The ringing fades. The quiet stays."],
     },
     "Lantern Moth": {
         "hp": 16.0, "speed": 2.2, "damage": 5.0, "soul": 9.0, "scale": 0.8, "color": "#f7c98a", "flighty": true, "lingers": true,
@@ -278,7 +278,7 @@ const STICKERS := {
     "dragon_friend": {"name": "Dragon Friend", "line": "sang Snoozle to sleep"},
     "big_hug": {"name": "Big Hug", "line": "soothed a Very Big Wisp"},
     "pacifist": {"name": "Not A Single Bump", "line": "cleared a floor untouched"},
-    "shopper": {"name": "Peddle’s Favorite", "line": "bought something cozy"},
+    "shopper": {"name": "Peddle’s Favorite", "line": "bought something lovely"},
     "fact_finder": {"name": "Curious Mind", "line": "learned ten facts from Mote"},
     "feeling_friend": {"name": "Feeling Friend", "line": "sat with a Big Feeling"},
     "curious": {"name": "Curious Companion", "line": "listened to a curious wisp"},

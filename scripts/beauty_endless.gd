@@ -73,7 +73,7 @@ const FEELING_FAREWELLS := [
     "If you ever need a big soft thing to stand near you, whistle warmly.",
     "I will tell the moss about you. The moss tells everyone, you know.",
     "Ahh. Warm again. Tell the stairs I said thank you.",
-    "I was never lost, exactly. I was just very far from somewhere cozy. Like now, but better.",
+    "I was never lost, exactly. I was just very far from home. Like now, but better.",
 ]
 
 ## Story beats composed per chapter, one per story position. `%s` is the region

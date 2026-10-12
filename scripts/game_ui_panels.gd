@@ -196,7 +196,7 @@ func show_shop(state: Dictionary) -> void:
     heading.add_theme_constant_override("separation", 10)
     _shop_frame.add_child(heading)
     heading.add_child(_icon(GardenGlyphs.CART, 26, Color("#ffe49b")))
-    var title := _label("Peddle’s cozy cart ♥", 26, Color("#ffe49b"))
+    var title := _label("Peddle’s cart ♥", 26, Color("#ffe49b"))
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     heading.add_child(title)
     # The purse is a sparkle and a number, not "12 to spend" -- the icon beside
@@ -230,7 +230,7 @@ func show_shop(state: Dictionary) -> void:
     # second number is the ROOM -- a deeper walk opens more sockets, and saying
     # so on the cart is what turns a full shelf from a dead end into an
     # invitation to go further down.
-    var charm_shelf := _shelf(list, "COZY CHARMS", "scarf", "%d/%d" % [
+    var charm_shelf := _shelf(list, "WORN CHARMS", "scarf", "%d/%d" % [
         equipped.size(), capacity])
     for charm: Dictionary in BeautyContent.CHARMS:
         var key := String(charm["key"])
@@ -318,7 +318,7 @@ func show_settings(settings: Dictionary, return_name: String = "the walk") -> vo
     _settings = settings.duplicate(true)
     _present_panel()
     _shop_frame.add_child(_label("Make it yours ♥", 30, Color("#ffe49b")))
-    _shop_frame.add_child(_label("Cozy choices. Change anything, anytime. Leaving is always okay.", 14, Color("#dce9c4")))
+    _shop_frame.add_child(_label("Change anything, anytime. Leaving is always okay.", 14, Color("#dce9c4")))
     _shop_frame.add_child(_separator())
     var list := _panel_list(8)
 
@@ -339,7 +339,7 @@ func show_settings(settings: Dictionary, return_name: String = "the walk") -> vo
         _emit_settings()
     )
     list.add_child(contrast)
-    list.add_child(_section_label("COZY COMFORT ♥"))
+    list.add_child(_section_label("SOFTNESS ♥"))
     # "Bump softness" reads as a quantity of softness, so dragging right should
     # add softness. The stored value is a damage multiplier, so it did the exact
     # opposite: a player reaching for gentler bumps dragged right and set
@@ -349,7 +349,7 @@ func show_settings(settings: Dictionary, return_name: String = "the walk") -> vo
     list.add_child(_inverted_slider_row("Bump softness", "damage_taken", 0.25, 3.0, "×%.2f"))
     list.add_child(_slider_row("Extra song time", "rhythm_window", 0.25, 3.0, 0.05, "×%.2f"))
     list.add_child(_slider_row("Wisp speed", "wisp_speed", 0.25, 3.0, 0.05, "×%.2f"))
-    list.add_child(_section_label("COZY SOUNDS ♥"))
+    list.add_child(_section_label("SOUND ♥"))
     list.add_child(_slider_row("Volume", "volume", 0.0, 1.0, 0.05, "%d%%", 100.0))
     var mute := CheckButton.new()
     mute.text = "Hush all sound"

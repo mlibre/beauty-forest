@@ -124,7 +124,7 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
 
     camera.global_position = player.global_position + CAMERA_OFFSET
     camera.look_at(player.global_position + Vector3.UP * 0.78, Vector3.UP)
-    audio.start_ambient(String(region.get("ambient", region["key"])))
+    music.play_region(String(region.get("ambient", region["key"])))
     ui.set_map(dungeon, player.global_position)
     _refresh_ui()
     if not menu_stage:
@@ -139,7 +139,7 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
         # second greeting would put a sentence over the walk itself.
         if floor_number > 1 and floor_number == int(region.get("min", 1)):
             ui.show_toast(String(region["entry"]), 3.6)
-        ui.add_log("Mote: “Today’s forecast: %s — %s.”" % [String(floor_modifier.get("name", "cozy air")), String(floor_modifier.get("description", "the woods are humming"))])
+        ui.add_log("Mote: “Today’s forecast: %s — %s.”" % [String(floor_modifier.get("name", "soft air")), String(floor_modifier.get("description", "the woods are humming"))])
         # A milestone cheer: every tenth floor the forest throws petals, so a
         # long walk has something to look forward to that is not a threat.
         if floor_number > 1 and floor_number % 10 == 0:

@@ -169,25 +169,29 @@ func _check_homing_note_reaches_a_very_big_wisp(game: Node) -> bool:
     return true
 
 func _check_ambience_returns_after_a_non_finale_dragon(game: Node) -> bool:
-    ## Singing Snoozle to sleep silences the grove so the lullaby reads clearly,
-    ## but on a non-finale floor the hero keeps wandering. Nothing re-armed the
-    ## ambience, so the rest of the run played silent until a pause or descent.
+    ## Singing Snoozle to sleep hushes the music box so the win chime reads
+    ## clearly, but on a non-finale floor the hero keeps wandering. Nothing
+    ## re-armed the song, so the rest of the run played silent until a pause
+    ## or descent.
     game._start_run(5)
-    await frames(6)
-    if not ok(game.audio._ambient_player.playing, "floor 5 should arrive with ambience playing"):
+    var landed: String = await game.music.song_ready
+    await frames(2)
+    if not ok(game.music._players[game.music._active_voice].playing,
+            "floor 5 should arrive with its lullaby playing (landed on %s)" % landed):
         return false
     game._win_dragon()
     await frames(6)
-    if not ok(game.audio._ambient_player.playing and game.audio._ambient_should_play,
-            "the grove stayed silent after Snoozle snoozed, though the walk continues"):
+    if not ok(game.music._players[game.music._active_voice].playing,
+            "the forest stayed silent after Snoozle snoozed, though the walk continues"):
         return false
-    # The finale hands the audio over to the ending, so it must stay quiet.
+    # The finale hands the moment over to the ending, so the music must bow
+    # out and stay bowed out past its own 0.7s fade.
     game._start_run(13)
-    await frames(6)
+    await frames(4)
     game._win_dragon()
-    await frames(6)
-    if not ok(not game.audio._ambient_should_play,
-            "the finale ending should keep the grove hushed"):
+    await create_timer(1.2).timeout
+    if not ok(not game.music._players[game.music._active_voice].playing,
+            "the finale ending should keep the forest hushed"):
         return false
     game._start_run(1)
     await frames(4)

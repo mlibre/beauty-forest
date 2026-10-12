@@ -12,17 +12,17 @@ func show_menu(meta: Dictionary) -> void:
     var title := _label("Beauty Forest", 46, Color("#ffe6a0"))
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _overlay_content.add_child(title)
-    var subtitle := _label("a cozy walk — no hurry, no losing ♥", 20, Color("#dcebbd"))
+    var subtitle := _label("a gentle walk — no hurry, no losing ♥", 20, Color("#dcebbd"))
     subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _overlay_content.add_child(subtitle)
     _overlay_content.add_child(_spacer(4))
     # The three things a new player has to know are SHOWN, not described: the
-    # title says the forest is cozy, the style shelf says how gentle, and the
+    # title promises a gentle walk, the style shelf says how gentle, and the
     # first floor's lantern sings by itself with no attack button to find. The
     # paragraph that used to sit here ("Your lantern sings all by itself. You
     # just wander, cuddle lost wisps home, and pick kind gifts. There is no
     # attack button. Leaving anytime is always okay.") and the numbered "How it
-    # feels: 1 wander 2 lantern sings 3 choose a cozy gift" line explained all
+    # feels: 1 wander 2 lantern sings 3 choose a kind gift" line explained all
     # of that in 37 words -- a wall of prose on the first screen, for mechanics
     # the player discovers in the first ten seconds anyway. The one thing prose
     # carried that pictures do not -- that leaving is always okay -- is a hover.
@@ -137,18 +137,18 @@ func show_menu(meta: Dictionary) -> void:
     var leave_center := CenterContainer.new()
     leave_center.add_child(leave)
     _overlay_content.add_child(leave_center)
-    # The menu's own key line advertises "Cozy options: C", but nothing here
+    # The menu's own key line advertises "Comfort options: C", but nothing here
     # emitted settings_open_requested, so C (and any player who reads the line)
     # had no way to reach the gentler-forest panel before starting: zero entry
     # points on this screen. Offer it here, next to the leave button it pairs
     # with, and let the director hand the menu back on close.
-    var cozy := _button("Cozy options ♥", false)
-    cozy.custom_minimum_size = Vector2(300, 44)
-    cozy.tooltip_text = "Reduce hits, calm the wobble, and turn up the contrast before you begin."
-    cozy.pressed.connect(func(): settings_open_requested.emit())
-    var cozy_center := CenterContainer.new()
-    cozy_center.add_child(cozy)
-    _overlay_content.add_child(cozy_center)
+    var comfort := _button("Comfort options ♥", false)
+    comfort.custom_minimum_size = Vector2(300, 44)
+    comfort.tooltip_text = "Reduce hits, calm the wobble, and turn up the contrast before you begin."
+    comfort.pressed.connect(func(): settings_open_requested.emit())
+    var comfort_center := CenterContainer.new()
+    comfort_center.add_child(comfort)
+    _overlay_content.add_child(comfort_center)
     _fit_layout()
     # Refit AFTER building: the panels are authored at comfortable desktop
     # widths, and _refit_content can only clamp children that already exist.
@@ -220,7 +220,7 @@ func show_pause(meta: Dictionary) -> void:
     _overlay_content.add_child(_walker_summary())
     _overlay_content.add_child(_spacer(14))
     _overlay_content.add_child(_centered_button("♥  Keep wandering", true, func(): resume_requested.emit()))
-    _overlay_content.add_child(_centered_button("Cozy options ♥", false, func(): settings_open_requested.emit()))
+    _overlay_content.add_child(_centered_button("Comfort options ♥", false, func(): settings_open_requested.emit()))
     _overlay_content.add_child(_centered_button("Start a fresh walk", false, func(): restart_requested.emit(false)))
     # The title used to be a one-visit room: nothing anywhere returned to it,
     # so the style trails and the front door were reachable exactly once per
@@ -299,7 +299,7 @@ func _walker_summary() -> Control:
 func _keys_reference() -> Control:
     var box := VBoxContainer.new()
     box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    var keys := _label("Wander: WASD / arrows / stick  ·  Dash: Shift  ·  Hug, sing, wish & descend: E  ·  Cart: F  ·  Memories: J  ·  Cozy options: C  ·  Pause: Esc", 13, Color("#cbdcb7"))
+    var keys := _label("Wander: WASD / arrows / stick  ·  Dash: Shift  ·  Hug, sing, wish & descend: E  ·  Cart: F  ·  Memories: J  ·  Comfort options: C  ·  Pause: Esc", 13, Color("#cbdcb7"))
     keys.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     box.add_child(keys)
     return box
@@ -346,7 +346,7 @@ func show_death(floor_number: int, meta: Dictionary) -> void:
     _hud.visible = false
     _beat_ring.visible = false
     _show_overlay()
-    _overlay_content.add_child(_centered_label("You took a cozy nap ♥", 42, Color("#ffe6a0")))
+    _overlay_content.add_child(_centered_label("You took a soft nap ♥", 42, Color("#ffe6a0")))
     # "Mote tucked your lantern into a mossy pocket. No one is cross. The forest
     # will be here when you wake." was 95 characters of reassurance. It is also
     # the only thing on this screen saying the run is not a failure -- so it

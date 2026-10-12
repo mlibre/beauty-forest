@@ -56,12 +56,12 @@ func _check_the_settings_door_has_one_name(game: Node) -> void:
 		var button := node as Button
 		if button == null:
 			continue
-		if "Cozy options" in button.text:
+		if "Comfort options" in button.text:
 			named += 1
 		elif "gentler" in button.text:
 			wrong += 1
 	ok(named == 1 and wrong == 0,
-			"the pause card's settings door is not singularly named: cozy=%d gentler=%d" % [named, wrong])
+			"the pause card's settings door is not singularly named: comfort=%d gentler=%d" % [named, wrong])
 
 func _check_vitals_follow_the_accessibility_settings() -> void:
 	## The vitals ring, sparkle count and charm sockets drew with whatever flags

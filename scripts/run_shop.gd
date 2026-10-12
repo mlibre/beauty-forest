@@ -174,6 +174,8 @@ func _apply_settings(value: Dictionary, persist: bool) -> void:
     if audio:
         audio.set_volume(float(settings.get("volume", 0.8)))
         audio.set_muted(bool(settings.get("muted", false)))
+    if music:
+        music.set_master(float(settings.get("volume", 0.8)), bool(settings.get("muted", false)))
     if world and is_instance_valid(world):
         world.set_reduced_motion(bool(settings.get("reduced_motion", false)))
     for wisp: Wisp in wisps:

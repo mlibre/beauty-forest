@@ -186,6 +186,10 @@ Official: <https://docs.godotengine.org/en/4.7/tutorials/scripting/scene_tree.ht
   `queue_free()` is deferred, so it usually stays valid through the same frame's deferred calls; a hard `free()` does not. Same rule for SceneTreeTimer callbacks and `tween_callback` lambdas.
 - Capture `self` implicitly by touching a member; that is safe only while the node lives. For work that must outlive the node, bind a method on a long-lived owner or disconnect on teardown.
 
+## Static vars (verified 4.7.2)
+
+A `static var` on a script outlives every node. Never let one hold a `Callable` that captured an engine Object (directly, or via a lambda that touched a member like `audio`): the capture pins the instance in the ObjectDB, every test that frees the game leaks it, and destruction of the stale static at process exit corrupts the native heap ("corrupted size vs. prev_size in fastbins" / "double free or corruption" after `ALL CHECKS OK`). Route such callbacks through an instance member whose lifetime matches the node instead (this project: `GameUI.ui_sound`, set by the director at boot). Also seen: a `--check-only` parse is not enough to catch this; only a full battery run at process exit shows it.
+
 ## Common 3.x traps (4.7)
 
 `Spatial`→`Node3D`, `KinematicBody`→`CharacterBody3D`, `export var`→`@export var`, `onready var`→`@onready var`, `yield`→`await`, `instance()`→`instantiate()`, `connect("s",t,"m")`→`signal.connect(callable)`. Packed-array element assignment no longer triggers whole-property setter (4.7). Overriding typed-return base method requires explicit return.

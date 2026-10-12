@@ -58,7 +58,7 @@ func _run() -> void:
     game._pause_game()
     game.ui.settings_open_requested.emit()
     await frames(2)
-    ok(game.mode == game.Mode.SETTINGS, "COZY from the pause menu did not open the settings")
+    ok(game.mode == game.Mode.SETTINGS, "COMFORT from the pause menu did not open the settings")
     game._on_settings_closed()
     ok(game.mode == game.Mode.PAUSED, "closing the settings left the game in %s" % str(game.mode))
     game._resume_game()

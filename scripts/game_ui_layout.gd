@@ -54,7 +54,7 @@ func _fit_layout() -> void:
         # one that was requested.
         var map_rect := _effective_rect(_minimap)
         # The bottom-right corner is the touch cluster's, and parking the map
-        # there meant SING/DASH/CART/BOOK/COZY painted straight over it on every
+        # there meant SING/DASH/CART/BOOK/COMFORT painted straight over it on every
         # touchscreen. Try the corner, then straight above the cluster, then
         # beside it; the map yields rather than hide underneath the buttons.
         var corner := Vector2(

@@ -33,6 +33,7 @@ func _run() -> void:
     await _check_arrived_marker_goes_dark(world)
     _check_objective_props_do_not_stack(world, dungeon)
     _check_camera_facing_visuals(world)
+    _check_web_render_calibration()
 
     var room: Dictionary = dungeon["rooms"][0]
     world.build_dragon(room, false)
@@ -195,6 +196,30 @@ func _check_rebuild_teardown(world: ForestWorld) -> void:
     ok(physics_bodies == 1, "rebuilding a floor should leave one collision body")
     ok(old_dragons == 0, "rebuilding should tear down the previous dragon")
     ok(old_chimes == 0, "rebuilding should tear down the previous chimes")
+
+func _check_web_render_calibration() -> void:
+    ## The web build runs gl_compatibility, which has no SSAO/SSIL and a softer
+    ## glow, so the Forward+ numbers rendered the web walk brighter and harsher
+    ## than the desktop one. The correction is a pure function of the renderer
+    ## name, so a headless run can hold every dial exactly.
+    const Scenery := preload("res://scripts/world_scenery.gd")
+    var environment := Environment.new()
+    environment.ambient_light_energy = 0.48
+    environment.glow_intensity = 0.58
+    Scenery._calibrate_for_renderer(environment, "forward_plus")
+    ok(is_equal_approx(environment.ambient_light_energy, 0.48),
+        "the desktop renderer must keep the authored environment untouched")
+    ok(is_equal_approx(environment.glow_intensity, 0.58),
+        "the desktop renderer must keep the authored glow untouched")
+    Scenery._calibrate_for_renderer(environment, "gl_compatibility")
+    ok(environment.ambient_light_energy < 0.48,
+        "the web calibration must rein the ambient light in (SSAO/SSIL are missing there)")
+    ok(environment.glow_intensity > 0.58,
+        "the web calibration must strengthen the glow that compatibility lands softer")
+    ok(environment.adjustment_enabled, "the web calibration never enabled its color grade")
+    ok(environment.adjustment_contrast < 1.0, "the web grade must soften the contrast")
+    ok(environment.adjustment_brightness < 1.0, "the web grade must ease the brightness")
+    ok(environment.adjustment_saturation > 1.0, "the web grade must hand the warmth back")
 
 func _find_label(node: Node) -> Label3D:
     if node == null:

@@ -422,7 +422,7 @@ func _nap() -> void:
     mode = Mode.DEAD
     _set_world_processing(false)
     player.set_control_enabled(false)
-    audio.stop_ambient()
+    music.stop_music()
     meta["best_floor"] = maxi(int(meta.get("best_floor", 0)), floor_number)
     _award_sticker("first_nap")
     BeautyData.save_meta(meta)

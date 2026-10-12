@@ -29,16 +29,29 @@ func _ready() -> void:
     audio = AudioDirector.new()
     audio.name = "CozyAudio"
     add_child(audio)
+    music = MusicDirector.new()
+    music.name = "ForestMusic"
+    add_child(music)
 
     ui = GameUI.new()
     ui.name = "CozyInterface"
     add_child(ui)
     _connect_ui()
+    # The interface's doorbell: one soft voice for hovers and presses, spoken
+    # through the theme so the UI chain never needs the audio director.
+    ui.ui_sound = func(kind: String) -> void:
+        if kind == "hover":
+            audio.play_tone(659.25, 0.05, 0.012, 1)
+        else:
+            audio.play_tone(493.88, 0.07, 0.020, 1)
     _apply_settings(settings, false)
 
     _load_floor(1, true)
     ui.set_selected_style(selected_style)
     _show_menu()
+    # The forest hums from the title screen on: the menu is the first thing a
+    # player sees, and a quiet lullaby is the promise the walk keeps.
+    music.play_region("sunlit-roots")
     # Boot marker: proves the whole script graph parsed and _ready finished.
     # regression_cold_boot boots a cache-less copy of this project and waits
     # for exactly this line, so a broken parse can never pass as a quiet boot.
@@ -334,7 +347,7 @@ func _resume_game() -> void:
     _set_world_processing(true)
     player.set_control_enabled(_gameplay_controls_enabled())
     if not ending_pending:
-        audio.start_ambient(String(region.get("ambient", region["key"])))
+        music.play_region(String(region.get("ambient", region["key"])))
 
 func _on_style_picked(style_key: String) -> void:
     # A trail picked on the menu must be the trail that starts, whichever way
@@ -375,6 +388,8 @@ func quit_gracefully() -> void:
     _quitting = true
     if audio:
         audio.shutdown()
+    if music:
+        music.shutdown()
     var tree := get_tree()
     if tree == null:
         return

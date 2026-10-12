@@ -6,6 +6,7 @@ extends "res://tests/support/test_case.gd"
 # editor-built global-class cache, and bare names would not parse
 # on first boot. regression_architecture holds this file to it.
 const AudioDirector := preload("res://scripts/audio_director.gd")
+const MusicDirector := preload("res://scripts/music_director.gd")
 
 var _exit_stream_states: Array[bool] = []
 var _watched_players: Array[AudioStreamPlayer] = []
@@ -47,97 +48,93 @@ func _run() -> void:
     director.set_volume(0.25)
     ok(is_equal_approx(first_voice.volume_db, linear_to_db(0.25)), "volume change did not update active SFX")
 
-    # Muting during an ambient fade must cancel that fade, not let it finish
-    # audibly after the hush.
-    director.set_muted(false)
-    director.set_volume(0.8)
-    director.start_ambient("sunlit-roots")
-    await create_timer(0.2).timeout
-    director.set_muted(true)
-    await create_timer(1.35).timeout
-    ok(director._ambient_player.volume_db <= -79.0, "mute during ambient fade was overwritten")
-
-    # A live volume change must supersede a fade targeting the old gain.
-    director.set_muted(false)
-    director.set_volume(0.8)
-    director.start_ambient("sunlit-roots")
-    await create_timer(0.2).timeout
-    director.set_volume(0.25)
-    await create_timer(1.35).timeout
-    ok(is_equal_approx(director._ambient_player.volume_db, linear_to_db(0.25 * 0.34)), "ambient volume change was overwritten by the old fade")
-
-    # A muted start must not fade back to an audible ambient level.
-    director.set_muted(true)
-    director.start_ambient("sunlit-roots")
-    await create_timer(1.35).timeout
-    ok(director._ambient_player.volume_db <= -79.0, "ambient start faded in while muted")
-
-    # Muting during an ambient stop must not cancel the stop and leave a
-    # silent player running after unmute.
-    director.set_muted(false)
-    director.set_volume(0.8)
-    director.start_ambient("sunlit-roots")
-    await create_timer(0.2).timeout
-    director.stop_ambient()
-    await create_timer(0.1).timeout
-    director.set_muted(true)
+    # --- The music box: region lullabies replaced the old noise bed. ---
+    var music := MusicDirector.new()
+    root.add_child(music)
     await frames(1)
-    director.set_muted(false)
-    ok(not director._ambient_player.playing, "mute during ambient stop left a silent player running")
-
-    # Stopping and immediately starting must not let the old stop callback kill
-    # the newly selected ambient stream.
-    director.set_muted(false)
-    director.start_ambient("sunlit-roots")
+    # A request must never render the whole song inside the calling frame: the
+    # generator is time-sliced because building 600k samples of PCM at once
+    # hitched the frame that asked for it.
+    music.play_region("mushroom-lull")
+    ok(music.current_stream() == null, "play_region rendered a whole song inside one frame")
+    var ready_key: String = await music.song_ready
+    ok(ready_key == "mushroom-lull", "song_ready carried the wrong key: %s" % ready_key)
+    var song: AudioStreamWAV = music.current_stream()
+    if not ok(song != null, "the finished lullaby never attached to a voice"):
+        await frames(30)
+        finish(null, "BEAUTY_FOREST_AUDIO")
+        return
+    ok(song.format == AudioStreamWAV.FORMAT_16_BITS, "lullaby stream was not 16-bit PCM")
+    ok(song.mix_rate == 22050, "lullaby stream used an unexpected mix rate")
+    ok(not song.stereo, "lullaby stream unexpectedly used stereo")
+    ok(song.loop_mode == AudioStreamWAV.LOOP_FORWARD and song.loop_begin == 0
+        and song.loop_end == song.data.size() / 2, "the lullaby does not loop its whole length")
+    var expected_seconds := 60.0 * 4.0 * 8.0 / 63.0
+    var actual_seconds := float(song.data.size()) / 2.0 / float(song.mix_rate)
+    ok(absf(actual_seconds - expected_seconds) < 0.1,
+        "the lullaby is %.1fs; eight bars at 63 bpm is %.1fs" % [actual_seconds, expected_seconds])
+    # It must hold actual music, at a level that stays soft.
+    var peak := 0
+    for sample_index in range(0, song.data.size(), 2):
+        peak = maxi(peak, absi(song.data.decode_s16(sample_index)))
+    ok(peak > 8000, "the rendered lullaby is nearly silent (peak %d)" % peak)
+    ok(peak <= 32767, "the rendered lullaby clipped")
+    # The seam: a wrap-mixed loop keeps sounding through the boundary; a
+    # faded-out tail ends in silence and clicks on every repeat.
+    var seam_peak := 0
+    var seam_start: int = song.data.size() - 2048
+    for sample_index in range(seam_start, song.data.size(), 2):
+        seam_peak = maxi(seam_peak, absi(song.data.decode_s16(sample_index)))
+    ok(seam_peak > 800, "the loop seam fades to silence instead of wrapping (peak %d)" % seam_peak)
+    # Re-asking for the region that is already playing must not restart it.
+    var before_stream: int = music.current_stream().get_instance_id()
+    music.play_region("mushroom-lull")
+    await frames(2)
+    ok(music.current_stream().get_instance_id() == before_stream,
+        "a repeated play_region restarted the lullaby")
+    # A second region must arrive as a genuinely different song.
+    music.play_region("roost")
+    ready_key = await music.song_ready
+    ok(ready_key == "roost", "the second song never finished rendering")
+    ok(music.current_stream() != null and music.current_stream().data != song.data,
+        "two different regions rendered the same song")
+    # The music box is deterministic: the same request twice yields the very
+    # same bytes, so a save/load or a replay can never reshuffle the score.
+    var twin := MusicDirector.new()
+    root.add_child(twin)
     await frames(1)
-    director.stop_ambient()
-    director.start_ambient("pollen-halls")
-    await create_timer(0.4).timeout
-    ok(director._ambient_player.playing, "stale ambient stop callback stopped the new ambience")
-
-    # Hush should also avoid synthesizing/cache-growing one-off sounds.
-    var before_cache: int = director._cache.size()
-    director.set_muted(true)
-    for _index in range(8):
-        director.play_song_launch()
-    director.play_footstep()
-    ok(director._cache.size() == before_cache, "muted events still synthesized/cached sounds")
-    # Entering an uncached region used to build its whole ambient bed inside the
-    # frame that changed region: 128k samples at 16kHz, ~110ms, against a 6.9ms
-    # steady-state frame -- a 15x hitch on each region's first entry, four times
-    # a run. The bed holds no content above 400Hz, so the rate came down to 8kHz.
-    #
-    # Measure the WORK, not the wall clock. A wall-clock budget was tried first
-    # and flaked under CPU contention (91ms against an 80ms budget) -- it was
-    # measuring the test machine, not the generator. Sample count is the property
-    # that actually determines the cost, and it is deterministic.
-    var fresh := AudioDirector.new()
+    twin.play_region("mushroom-lull")
+    await twin.song_ready
+    var twin_stream: AudioStreamWAV = twin.current_stream()
+    ok(twin_stream != null and twin_stream.data == song.data,
+        "the lullaby is not deterministic; something in the music box rolls dice")
+    twin.shutdown()
+    twin.queue_free()
+    # A mute must hush the music, and an unmute must bring it back.
+    music.set_master(0.8, true)
+    await frames(2)
+    ok(not music._players[music._active_voice].playing, "mute left the lullaby running")
+    music.set_master(0.8, false)
+    await frames(2)
+    ok(music._players[music._active_voice].playing, "unmute did not bring the lullaby back")
+    # An interrupted render must poison nothing: ask, interrupt, ask again.
+    var fresh := MusicDirector.new()
     root.add_child(fresh)
     await frames(1)
-    var worst_samples := 0
-    for region_key: String in ["sunlit-roots", "pollen-halls", "mushroom-lull", "roost"]:
-        fresh.start_ambient(region_key)
-        var bed_now: AudioStreamWAV = fresh._ambient_player.stream
-        worst_samples = maxi(worst_samples, bed_now.data.size() / 2)
-        await frames(1)
-    var bed: AudioStreamWAV = fresh._ambient_player.stream
-    ok(worst_samples <= 64000,
-        "an ambient bed generated %d samples; at 8kHz the whole cost is 64000" % worst_samples)
-    # Nyquist must stay well clear of the loudest partial (2x the 130.81Hz root).
-    ok(bed != null and bed.mix_rate <= 8000,
-        "the ambient bed is generated at %s Hz; every partial in it is below 400Hz" % (
-            str(bed.mix_rate) if bed != null else "nothing"))
-    ok(bed != null and bed.mix_rate >= 4000,
-        "the ambient bed sample rate dropped too far; check the Nyquist margin over the loudest partial")
-    # The bed must still be eight seconds of audio, whatever the rate.
-    ok(bed != null and is_equal_approx(float(bed.data.size()) / 2.0 / float(bed.mix_rate), 8.0),
-        "the ambient bed is no longer eight seconds long")
-    fresh.stop_ambient()
+    fresh.play_region("pollen-halls")
+    await frames(3)
+    fresh.play_region("roost")
+    await fresh.song_ready
+    var fresh_stream: AudioStreamWAV = fresh.current_stream()
+    ok(fresh_stream != null and fresh_stream.data.size() > 0,
+        "an interrupted render left a broken song behind")
+    fresh.shutdown()
     fresh.queue_free()
+    music.shutdown()
 
     # Randomized launch pitch must not create a new cached PCM stream per note.
     director.set_muted(false)
-    before_cache = director._cache.size()
+    var before_cache: int = director._cache.size()
     for _index in range(20):
         director.play_song_launch()
     ok(director._cache.size() <= before_cache + 1, "randomized launches grew the PCM cache")
@@ -199,9 +196,12 @@ func _run() -> void:
     # tree; otherwise short smoke teardown leaves AudioStreamPlaybackWAV refs.
     for player in director._sfx_players:
         _watch_player_exit(player)
-    _watch_player_exit(director._ambient_player)
+    for player in music._players:
+        _watch_player_exit(player)
     root.remove_child(director)
     director.free()
+    root.remove_child(music)
+    music.free()
     ok(_exit_stream_states.size() == _watched_players.size(), "not all active players reached teardown")
     for cleared in _exit_stream_states:
         ok(cleared, "an audio player retained its stream during teardown")

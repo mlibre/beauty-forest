@@ -14,6 +14,7 @@ const ForestWorld := preload("res://scripts/forest_world.gd")
 const GameUI := preload("res://scripts/game_ui.gd")
 const GardenGlyphs := preload("res://scripts/garden_glyphs.gd")
 const HeroRig := preload("res://scripts/hero_rig.gd")
+const MusicDirector := preload("res://scripts/music_director.gd")
 const Player := preload("res://scripts/player.gd")
 const SongNote := preload("res://scripts/song_note.gd")
 const Wisp := preload("res://scripts/wisp.gd")
@@ -44,6 +45,7 @@ var player: Player
 var camera: Camera3D
 var ui: GameUI
 var audio: AudioDirector
+var music: MusicDirector
 var mote: Node3D
 var mote_core: MeshInstance3D
 var mote_light: OmniLight3D
@@ -377,7 +379,7 @@ func _update_waypoint() -> void:
         tint = Color("#ffd56e")
         urgency = 0.35 if _near_merchant() else 0.2
         has_target = true
-        objective = "Wander to Peddle's cart and browse the cozy things"
+        objective = "Wander to Peddle's cart and browse the lovely things"
     elif stair_visible:
         target = world.stair_position
         urgency = 0.0

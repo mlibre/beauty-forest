@@ -3,7 +3,9 @@ extends Node
 
 ## Procedural WebAudio-like synthesis for Godot. No external audio files are
 ## required: chimes, pads, footsteps, and soft impact sounds are generated as
-## PCM at runtime and mixed through a small polyphonic pool.
+## PCM at runtime and mixed through a small polyphonic pool. The region
+## lullabies live one file over, in MusicDirector — this file only speaks when
+## something happens.
 
 const SILENCE_DB := -80.0
 const MIN_AUDIBLE_VOLUME := 0.001
@@ -12,22 +14,13 @@ const SFX_POOL_SIZE := 10
 
 var master_volume := 0.80
 var muted := false
-var _ambient_player: AudioStreamPlayer
 var _sfx_players: Array[AudioStreamPlayer] = []
-var _ambient_tween: Tween
-var _ambient_should_play := false
-var _ambient_serial := 0
 var _next_sfx_voice := 0
 var _last_footstep := 0.0
 var _cache: Dictionary = {}
 var _shut_down := false
 
 func _ready() -> void:
-    _ambient_player = AudioStreamPlayer.new()
-    _ambient_player.name = "AmbientPad"
-    _ambient_player.bus = &"Master"
-    _ambient_player.tree_exiting.connect(_on_player_tree_exiting.bind(_ambient_player))
-    add_child(_ambient_player)
     for index in range(SFX_POOL_SIZE):
         var player := AudioStreamPlayer.new()
         player.name = "Sfx%d" % index
@@ -46,14 +39,8 @@ func _on_player_tree_exiting(player: AudioStreamPlayer) -> void:
         player.stream = null
 
 func _silence_voices() -> void:
-    # Hush the ambient loop and every SFX voice without touching state that
-    # belongs to teardown or shutdown specifically.
-    _ambient_should_play = false
-    _ambient_serial += 1
-    _cancel_ambient_tween()
-    if is_instance_valid(_ambient_player):
-        _ambient_player.stop()
-        _ambient_player.stream = null
+    # Hush every SFX voice without touching state that belongs to teardown or
+    # shutdown specifically.
     for player: AudioStreamPlayer in _sfx_players:
         if is_instance_valid(player):
             player.stop()
@@ -61,7 +48,6 @@ func _silence_voices() -> void:
 
 func _exit_tree() -> void:
     _silence_voices()
-    _ambient_player = null
     _sfx_players.clear()
     _next_sfx_voice = 0
     _cache.clear()
@@ -82,26 +68,9 @@ func _is_silent() -> bool:
 func _sfx_volume_db() -> float:
     return linear_to_db(maxf(0.0001, master_volume))
 
-func _ambient_volume_db() -> float:
-    return linear_to_db(maxf(0.0001, master_volume * 0.34))
-
 func _apply_output_state() -> void:
     if not is_inside_tree():
         return
-    if is_instance_valid(_ambient_player):
-        if _is_silent():
-            # A fade started before mute can otherwise finish after the hush
-            # and make the ambience audible again. If a stop was already
-            # requested, finish it immediately rather than leaving a silent
-            # player running forever.
-            _cancel_ambient_tween()
-            _ambient_player.volume_db = SILENCE_DB
-            if not _ambient_should_play:
-                _ambient_player.stop()
-        elif _ambient_should_play:
-            # Slider changes must supersede a fade targeting the old gain.
-            _cancel_ambient_tween()
-            _ambient_player.volume_db = _ambient_volume_db()
     for player: AudioStreamPlayer in _sfx_players:
         if not is_instance_valid(player):
             continue
@@ -111,63 +80,8 @@ func _apply_output_state() -> void:
         else:
             player.volume_db = _sfx_volume_db()
 
-func _cancel_ambient_tween() -> void:
-    if _ambient_tween != null and _ambient_tween.is_valid():
-        _ambient_tween.kill()
-    _ambient_tween = null
-
 func _can_play_sfx() -> bool:
     return is_inside_tree() and not _shut_down and not _is_silent() and not _sfx_players.is_empty()
-
-func start_ambient(region_key: String) -> void:
-    if _shut_down:
-        return
-    if not is_inside_tree() or not is_instance_valid(_ambient_player):
-        return
-    _cancel_ambient_tween()
-    _ambient_serial += 1
-    _ambient_should_play = true
-    var root := 110.0
-    if region_key == "pollen-halls":
-        root = 123.47
-    elif region_key == "mushroom-lull":
-        root = 98.0
-    elif region_key == "roost":
-        root = 130.81
-    var cache_key := "ambient_%s" % region_key
-    if not _cache.has(cache_key):
-        _cache[cache_key] = _make_ambient(root)
-    _ambient_player.stream = _cache[cache_key]
-    if not _ambient_player.playing:
-        _ambient_player.play()
-    if _is_silent():
-        _ambient_player.volume_db = SILENCE_DB
-        return
-    _ambient_player.volume_db = SILENCE_DB
-    _ambient_tween = create_tween()
-    _ambient_tween.tween_property(_ambient_player, "volume_db", _ambient_volume_db(), 1.2)
-
-func _finish_ambient_stop(serial: int) -> void:
-    if serial != _ambient_serial or not is_instance_valid(_ambient_player):
-        return
-    _ambient_tween = null
-    _ambient_player.stop()
-
-func stop_ambient() -> void:
-    if not is_inside_tree() or not is_instance_valid(_ambient_player):
-        return
-    _ambient_should_play = false
-    _ambient_serial += 1
-    _cancel_ambient_tween()
-    var current := _ambient_player.volume_db
-    if not _ambient_player.playing or current <= SILENCE_DB + 1.0:
-        _ambient_player.volume_db = SILENCE_DB
-        _ambient_player.stop()
-        return
-    var serial := _ambient_serial
-    _ambient_tween = create_tween()
-    _ambient_tween.tween_property(_ambient_player, "volume_db", SILENCE_DB, 0.25)
-    _ambient_tween.tween_callback(_finish_ambient_stop.bind(serial))
 
 func shutdown() -> void:
     ## Hush every voice and drop cached PCM so the audio server can release
@@ -350,43 +264,4 @@ func _make_tone(frequencies: Array[float], duration: float, volume: float, brigh
     stream.mix_rate = sample_rate
     stream.stereo = false
     stream.data = bytes
-    return stream
-
-func _make_ambient(root: float) -> AudioStreamWAV:
-    var duration := 8.0
-    # 8kHz, not 16kHz. Every partial in this bed is below 400Hz -- the root
-    # (98-130Hz), its 1.5x and 2x harmonics, and a 0.19Hz LFO -- plus a
-    # low-passed noise term. Measured with Goertzel over the shipped 16kHz bed:
-    # energy above 500Hz is 0.0073% of the energy below it, so a 16kHz bed was
-    # spending 116ms of a frame generating numbers no ear can distinguish, and
-    # costing a 15x frame hitch on every region's first entry (4 regions = 4
-    # hitches per run). 8kHz keeps a 4kHz Nyquist, 9x above the loudest partial,
-    # and halves the work: 57ms. The lower rates measured faster still, but 8kHz
-    # keeps a real margin above the noise term's own top end.
-    var sample_rate := 8000
-    var sample_count := int(duration * float(sample_rate))
-    var bytes := PackedByteArray()
-    bytes.resize(sample_count * 2)
-    var rng := RandomNumberGenerator.new()
-    rng.seed = int(root * 1000.0)
-    var noise_state := 0.0
-    for sample in range(sample_count):
-        var t := float(sample) / float(sample_rate)
-        noise_state = lerpf(noise_state, rng.randf_range(-1.0, 1.0), 0.035)
-        var pad := sin(t * root * TAU) * 0.38
-        pad += sin(t * root * 1.5 * TAU + 0.7) * 0.22
-        pad += sin(t * root * 2.0 * TAU + 1.8) * 0.12
-        var slow := 0.72 + sin(t * 0.19) * 0.10
-        var sample_value := (pad * slow + noise_state * 0.12) * 0.32
-        var crossfade := minf(1.0, minf(t, duration - t) / 0.7)
-        sample_value *= crossfade
-        bytes.encode_s16(sample * 2, int(clampf(sample_value, -1.0, 1.0) * 32767.0))
-    var stream := AudioStreamWAV.new()
-    stream.format = AudioStreamWAV.FORMAT_16_BITS
-    stream.mix_rate = sample_rate
-    stream.stereo = false
-    stream.data = bytes
-    stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-    stream.loop_begin = 0
-    stream.loop_end = sample_count - 1
     return stream

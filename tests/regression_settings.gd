@@ -28,7 +28,7 @@ func _run() -> void:
     if not await _check_settings_back_button_names_where_it_goes(game):
         return
 
-    # The pause card's own keys line promises "Cozy options: C" -- painted on
+    # The pause card's own keys line promises "Comfort options: C" -- painted on
     # the very card where the key answered nothing. The key must open the
     # panel from the pause card exactly like its button does, and closing it
     # must hand the pause card back.
@@ -56,7 +56,7 @@ func _run() -> void:
     finish(game, "BEAUTY_FOREST_SETTINGS")
 
 func _check_settings_open_from_every_modal(game: Node) -> bool:
-    ## The COZY button stays lit and enabled while Peddle's cart or the memory
+    ## The COMFORT button stays lit and enabled while Peddle's cart or the memory
     ## book is open, so pressing it has to do something. _open_settings used to
     ## early-return in SHOP and JOURNAL, so the press vanished with no log line
     ## and no panel — and settings was unreachable from either modal.
@@ -77,7 +77,7 @@ func _check_settings_open_from_every_modal(game: Node) -> bool:
         game._open_settings()
         await frames(3)
         if not ok(game.mode == game.Mode.SETTINGS,
-                "COZY did nothing while the %s was open (mode stayed %d)" % [origin, game.mode]):
+                "COMFORT did nothing while the %s was open (mode stayed %d)" % [origin, game.mode]):
             return false
         # The cart, the memory book and the settings panel deliberately share
         # one card, which gets refilled -- so what must change is the CONTENT,
@@ -106,10 +106,10 @@ func _check_settings_open_from_every_modal(game: Node) -> bool:
     return true
 
 func _check_settings_open_from_the_menu(game: Node) -> bool:
-    ## The menu's own key line advertises "Cozy options: C", but nothing on that
+    ## The menu's own key line advertises "Comfort options: C", but nothing on that
     ## screen emitted settings_open_requested and _unhandled_input returned
     ## before the bf_settings branch in every non-playing mode -- so the only way
-    ## in was to start a run, pause it, and find COZY from there. A player who
+    ## in was to start a run, pause it, and find COMFORT from there. A player who
     ## wants the gentler forest had to be inside a run to ask for it.
     if not await _open_settings_from_the_menu(game, "the button"):
         return false
@@ -128,9 +128,9 @@ func _open_settings_from_the_menu(game: Node, way: String) -> bool:
     if way == "the button":
         var cozy: Button = null
         for candidate in game.ui._overlay_content.find_children("*", "Button", true, false):
-            if (candidate as Button).text.contains("Cozy options"):
+            if (candidate as Button).text.contains("Comfort options"):
                 cozy = candidate as Button
-        if not ok(cozy != null, "the menu offered no way into the cozy-options panel"):
+        if not ok(cozy != null, "the menu offered no way into the comfort-options panel"):
             return false
         cozy.pressed.emit()
     else:
@@ -200,7 +200,7 @@ func _check_settings_back_button_names_where_it_goes(game: Node) -> bool:
     return true
 
 func _check_settings_hands_the_nap_and_ending_cards_back(game: Node) -> bool:
-    ## The COZY button sits above the overlay scrim, so on a touchscreen it
+    ## The COMFORT button sits above the overlay scrim, so on a touchscreen it
     ## answers from the nap and ending cards too -- and leaving settings used
     ## to run close_panels(), which hides exactly the overlay card those modes
     ## still live on: a touch player closed the panel into an empty frozen
@@ -215,7 +215,7 @@ func _check_settings_hands_the_nap_and_ending_cards_back(game: Node) -> bool:
     game.ui.touch_settings_requested.emit()
     await frames(3)
     if not ok(game.mode == game.Mode.SETTINGS,
-            "COZY did nothing on the nap card (mode %d)" % game.mode):
+            "COMFORT did nothing on the nap card (mode %d)" % game.mode):
         return false
     var label := ""
     for candidate in game.ui._shop_frame.find_children("*", "Button", true, false):
@@ -238,7 +238,7 @@ func _check_settings_hands_the_nap_and_ending_cards_back(game: Node) -> bool:
     game.ui.touch_settings_requested.emit()
     await frames(3)
     if not ok(game.mode == game.Mode.SETTINGS,
-            "COZY did nothing on the ending card (mode %d)" % game.mode):
+            "COMFORT did nothing on the ending card (mode %d)" % game.mode):
         return false
     game.ui.close_settings()
     await frames(3)

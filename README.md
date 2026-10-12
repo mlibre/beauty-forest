@@ -3,9 +3,11 @@
 A cozy walk through an enchanted forest at golden dusk. Your lantern does the
 singing — you do the wandering.
 
-Everything you see is grown by the game itself: the forest, the wisps, the
-music, the hero, the dragon at the bottom. No asset packs, no downloads, no
-install — just the game, grown fresh on every machine that runs it.
+Everything you see and hear is grown by the game itself: the forest, the
+wisps, the music, the hero, the dragon at the bottom. The only files it ships
+are two open-licensed typefaces (Baloo 2 and Nunito, under `assets/fonts/`);
+no asset packs, no downloads, no install — just the game, grown fresh on
+every machine that runs it.
 
 ## Play it
 
@@ -40,6 +42,9 @@ install — just the game, grown fresh on every machine that runs it.
 - **Make a wish.** The wishing pool grants one small wish a floor: toss a
   sparkle in, catch the warmth that comes back up.
 - **Hum along.** Lantern songs are free, and every one you find stays on.
+- **Listen.** Every region of the forest hums its own lullaby — soft chords,
+  a music-box melody, no hurry to any of it — grown note by note when you
+  arrive, and it bows out politely for the quiet moments.
 - **Rest when you like.** A run ends with a nap card or a dragon tucked in —
   nobody is ever cross, the pause card can walk you back to the title, and
   leaving is always okay.
@@ -53,7 +58,7 @@ install — just the game, grown fresh on every machine that runs it.
 | **E / gamepad A**              | take the stairwell, start a Big Feeling's song, catch a GOLD beat, or make a wish |
 | **F**                          | browse Peddle's cart when the cart is near                           |
 | **J**                          | Mote's memory book — fun facts and stickers                          |
-| **C**                          | cozy options                                                         |
+| **C**                          | comfort options                                                      |
 | **Esc**                        | pause (and the one place with numbers in it)                         |
 | **F11**                        | fullscreen                                                           |
 
@@ -86,7 +91,7 @@ wearing a very big coat" — and the rest are tiny cues during a fight, like
 *Wait for the GOLD halo*, which only ever point at something you can already
 see.
 
-## Cozy options
+## Comfort options
 
 Press **C** anywhere: high contrast, gentler wisp speeds, a wider rhythm
 window, a quieter forest. Change anything, any time — nothing is a test,
@@ -105,7 +110,10 @@ godot --headless --path . --export-release "Android" builds/android/BeautyForest
 ```
 
 The web build is single-threaded on purpose, so it runs on any static host
-(including GitHub Pages) without cross-origin headers.
+(including GitHub Pages) without cross-origin headers. It also renders
+through the engine's compatibility renderer, which lacks SSAO/SSIL — the
+world calibrates its own environment for that at boot, so the web walk reads
+like the desktop one instead of brighter and flatter.
 
 CI (`.github/workflows/`) does all of this on GitHub's machines:
 

@@ -36,8 +36,16 @@ func _run() -> void:
     if not _check(game.audio != null, "game booted without an audio director"):
         return
     game.audio.play_tone(440.0, 2.0, 0.1, 0)
-    var voice: AudioStreamPlayer = game.audio._sfx_players[0]
-    if not _check(voice.playing, "test setup: tone did not start"):
+    # The tone lands on whichever pool voice is free — while the walk is
+    # PLAYING, the lantern's own song launches may already occupy voices, so
+    # the test finds the voice its tone actually landed on instead of
+    # assuming the pool's first seat.
+    var voice: AudioStreamPlayer = null
+    for candidate in game.audio._sfx_players:
+        if candidate.playing:
+            voice = candidate
+            break
+    if not _check(voice != null and voice.playing, "test setup: tone did not start"):
         return
 
     game.notification(Node.NOTIFICATION_WM_CLOSE_REQUEST)
@@ -49,14 +57,17 @@ func _run() -> void:
         return
     if not _check(voice.stream == null, "close request left a player holding its stream"):
         return
-    if not _check(game.audio._ambient_player.stream == null, "close request left the ambience attached"):
+    if not _check(game.music._shut_down, "close request did not shut the music down"):
         return
+    for music_voice in game.music._players:
+        if not _check(music_voice.stream == null, "close request left the music attached"):
+            return
 
     # Repeated close requests must collapse into the single pending quit.
     game.notification(Node.NOTIFICATION_WM_CLOSE_REQUEST)
     # New voices must stay hushed while the drain window is open.
     game.audio.play_tone(440.0, 0.5, 0.1, 0)
-    game.audio.start_ambient("sunlit-roots")
+    game.music.play_region("sunlit-roots")
     for player in game.audio._sfx_players:
         if not _check(not player.playing, "a new voice started during shutdown"):
             return

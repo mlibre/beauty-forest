@@ -143,7 +143,7 @@ func _win_dragon() -> void:
     meta["best_floor"] = maxi(int(meta.get("best_floor", 0)), floor_number)
     _award_sticker("dragon_friend")
     BeautyData.save_meta(meta)
-    audio.stop_ambient()
+    music.stop_music()
     audio.play_sleep()
     CozyVFX.burst(world, world.dragon_position + Vector3.UP * 2.2, Color("#ffe6a0"), 64, 2.8, 1.8)
     # Snoozle is tucked in: the floor has no dragon objective anymore. Leaving
@@ -161,7 +161,7 @@ func _win_dragon() -> void:
         # Snoozle's lullaby silences the grove so the song reads clearly, but
         # the hero keeps playing on this floor. Bring the ambience back, or the
         # coziest moment in the game leaves the rest of the run muted.
-        audio.start_ambient(String(region.get("ambient", region.get("key", "sunlit-roots"))))
+        music.play_region(String(region.get("ambient", region.get("key", "sunlit-roots"))))
         ui.show_story("DEEPER STILL", "Snoozle snoozes on, warm and enormous. But Mote tugs your sleeve: there are cousins below, and the forest grows deeper than any map.", 4.2)
         ui.add_log("Mote: “Snoozle sleeps soundly. The stair is glowing now.”")
 

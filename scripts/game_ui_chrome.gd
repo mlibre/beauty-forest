@@ -38,9 +38,9 @@ func _build_interface() -> void:
     # The walk-screen control hint used to stand here, and the pause card painted
     # a longer version of the same sentence inside its own card (see
     # _keys_reference). Both were visible at once: "WASD wander · Shift dash · J
-    # journal · C cozy options" along the bottom of the world, and "Wander: WASD /
+    # journal · C comfort options" along the bottom of the world, and "Wander: WASD /
     # arrows / stick · Dash: Shift · Hug, sing & descend: E · Cart: F · Memories:
-    # J · Cozy options: C · Pause: Esc" on the card you opened to pause. Fifty-five
+    # J · Comfort options: C · Pause: Esc" on the card you opened to pause. Fifty-five
     # characters of the smaller one are a strict subset of the larger, so a
     # player who opened the card -- the one who asked for the reference -- read
     # the same controls twice. It lives in _keys_reference now, once.
@@ -257,7 +257,7 @@ func _build_touch_controls() -> void:
     use_button.pressed.connect(func(): touch_interact_requested.emit())
     touch_root.add_child(use_button)
     var dash_button := _touch_button("DASH", Color("#a9d9ff"), Vector2(-170, -180))
-    dash_button.tooltip_text = "A quick cozy hop. Same as Shift."
+    dash_button.tooltip_text = "A quick soft hop. Same as Shift."
     dash_button.pressed.connect(func(): touch_dash_requested.emit())
     touch_root.add_child(dash_button)
     var shop_button := _touch_button("CART ♥", Color("#f5b58c"), Vector2(-280, -118))
@@ -268,7 +268,7 @@ func _build_touch_controls() -> void:
     journal_button.tooltip_text = "Your memories and stickers. Same as J."
     journal_button.pressed.connect(func(): touch_journal_requested.emit())
     touch_root.add_child(journal_button)
-    var options_button := _touch_button("COZY", Color("#d7c8ff"), Vector2(-280, -56))
+    var options_button := _touch_button("COMFORT", Color("#d7c8ff"), Vector2(-280, -56))
     options_button.tooltip_text = "Make things gentler. Same as C."
     options_button.pressed.connect(func(): touch_settings_requested.emit())
     touch_root.add_child(options_button)

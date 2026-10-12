@@ -4,7 +4,7 @@ extends "res://tests/support/test_case.gd"
 ## Split out of regression_main_flow.gd, which is about run-state transitions.
 ##
 ## The touchscreen cluster is the reason this suite exists. It offers SING, DASH,
-## CART, BOOK and COZY -- and nothing that pauses. A touch-only player could sing
+## CART, BOOK and COMFORT -- and nothing that pauses. A touch-only player could sing
 ## and shop but never open the pause card, read the run summary or take the
 ## button that says "back to the menu"; this project maps no back gesture either,
 ## so Escape was unreachable on a phone.

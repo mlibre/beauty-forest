@@ -74,6 +74,7 @@ func _build_environment() -> void:
     environment.ssil_enabled = true
     environment.ssil_intensity = 0.75
     environment.ssil_normal_rejection = 0.6
+    _calibrate_for_renderer(environment, RenderingServer.get_current_rendering_method())
     world_environment.environment = environment
     add_child(world_environment)
 
@@ -100,6 +101,26 @@ func _build_environment() -> void:
     fill.shadow_enabled = false
     fill.rotation_degrees = Vector3(-28, 142, 0)
     add_child(fill)
+
+## One environment, two renderers. Forward+ (desktop) runs SSAO 1.25 and SSIL
+## 0.75, which darken every crease and bounce soft light between leaves; the
+## web build runs gl_compatibility, which silently drops both and lands glow
+## softer — so the identical numbers rendered the web walk measurably brighter
+## and harsher than the desktop one. The correction below is a pure function of
+## the renderer name so tests/regression_world can hold it exactly on a machine
+## that cannot render either target. Adjustments are the last dial because the
+## compatibility renderer ignores them on some driver stacks: the ambient and
+## glow corrections carry the fix on their own.
+static func _calibrate_for_renderer(environment: Environment, rendering_method: String) -> void:
+    if rendering_method != "gl_compatibility":
+        return
+    environment.ambient_light_energy = 0.40
+    environment.glow_intensity = 0.70
+    environment.glow_bloom = 0.18
+    environment.adjustment_enabled = true
+    environment.adjustment_brightness = 0.97
+    environment.adjustment_contrast = 0.97
+    environment.adjustment_saturation = 1.05
 
 func _build_ground_and_collisions() -> void:
     var width := int(dungeon["width"])
