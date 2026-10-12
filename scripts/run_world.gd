@@ -139,7 +139,7 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
     camera.look_at(player.global_position + Vector3.UP * 0.78, Vector3.UP)
     # Odd floors hum each region's variation, so a long walk hears two songs
     # per region instead of one loop forever (see MusicDirector.floor_song).
-    music.play_region(music.floor_song(String(region.get("ambient", region["key"])), floor_number))
+    music.play_region(MusicScores.floor_song(String(region.get("ambient", region["key"])), floor_number))
     ui.set_map(dungeon, player.global_position)
     _refresh_ui()
     if not menu_stage:

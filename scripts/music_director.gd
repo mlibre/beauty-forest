@@ -4,9 +4,9 @@ extends Node
 ## The forest's own music box. Every region hums a real composed lullaby —
 ## soft chord pads, a warm bass, and a sparse pentatonic bell melody —
 ## synthesized here as PCM and looped seamlessly. No audio files ship with the
-## game; eight hand-tuned songs (two per region mood: each region's own plus a
-## deeper-cut variation the forest trades between floors) are built from note
-## kernels so the whole library costs a few megabytes, not a download.
+## game; eight hand-tuned songs (two per region mood, see MusicScores) are
+## built from note kernels so the library costs a few megabytes, not a
+## download.
 ##
 ## Generation is time-sliced: a full song renders across many frames inside a
 ## ~6ms/frame budget, because building 600k samples of PCM in one frame was
@@ -16,6 +16,7 @@ extends Node
 
 signal song_ready(song_key: String)
 
+const MusicScores := preload("res://scripts/music_scores.gd")
 const SAMPLE_RATE := 22050
 const BARS := 8
 const BEATS_PER_BAR := 4
@@ -31,85 +32,6 @@ const MIN_AUDIBLE_VOLUME := 0.001
 const FADE_IN_SECONDS := 1.6
 const FADE_OUT_SECONDS := 0.7
 const FRAME_BUDGET_USEC := 6000
-## Semitone tables for the two moods the forest sings in.
-const MAJOR_PENTATONIC := [0, 2, 4, 7, 9]
-const MINOR_PENTATONIC := [0, 3, 5, 7, 10]
-
-## One song per region mood, all in the family of the old ambient roots
-## (sunlit-roots 110Hz, pollen-halls 123.47, mushroom-lull 98, roost 130.81)
-## so the walk's regions keep their own colors — plus one VARIATION per mood
-## (dewlight-spark, pollen-waltz, mossy-nocturne, lullaby-coda), so a long
-## walk through one region hears two songs instead of one loop forever. Each
-## song: a key root, a tempo, four triads as semitones over the root (two
-## bars each), the pentatonic scale the bells play, a hand-written melody —
-## scale degrees 0-4, +10 for an octave lift, -1 for a rest, two slots per
-## bar — and the octave the bells ring in.
-const SONGS := {
-    "sunlit-roots": {
-        "root": 220.0, "tempo": 72.0, "melody_octave": 2,
-        "scale": MAJOR_PENTATONIC,
-        "chords": [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]],
-        "melody": [2, 4, 3, 2, 1, 3, 2, -1, 1, 2, 3, 4, 12, 11, 0, -1],
-    },
-    "dewlight-spark": {
-        "root": 246.94, "tempo": 76.0, "melody_octave": 2,
-        "scale": MAJOR_PENTATONIC,
-        "chords": [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]],
-        "melody": [4, -1, 12, -1, 3, 2, 4, -1, 2, 3, 1, 2, 0, -1, 0, -1],
-    },
-    "pollen-halls": {
-        "root": 146.83, "tempo": 78.0, "melody_octave": 2,
-        "scale": MAJOR_PENTATONIC,
-        "chords": [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]],
-        "melody": [4, 1, 2, 3, 4, 2, 1, -1, 0, 2, 3, 4, 2, 0, 2, -1],
-    },
-    "pollen-waltz": {
-        "root": 174.61, "tempo": 84.0, "melody_octave": 2,
-        "scale": MAJOR_PENTATONIC,
-        "chords": [[0, 4, 7], [5, 9, 12], [9, 12, 16], [7, 11, 14]],
-        "melody": [2, 2, 3, 4, 4, -1, 3, 2, 1, 1, 2, 3, 2, -1, 0, -1],
-    },
-    "mushroom-lull": {
-        "root": 164.81, "tempo": 63.0, "melody_octave": 2,
-        "scale": MINOR_PENTATONIC,
-        "chords": [[0, 3, 7], [8, 12, 15], [3, 7, 10], [10, 14, 17]],
-        "melody": [2, 3, 2, 1, 0, 2, 1, -1, 3, 4, 3, 2, 1, 0, 2, -1],
-    },
-    "mossy-nocturne": {
-        "root": 146.83, "tempo": 58.0, "melody_octave": 2,
-        "scale": MINOR_PENTATONIC,
-        "chords": [[0, 3, 7], [8, 12, 15], [3, 7, 10], [10, 14, 17]],
-        "melody": [0, -1, -1, 2, -1, 1, 0, -1, 3, -1, 2, -1, 1, -1, -1, -1],
-    },
-    "roost": {
-        "root": 130.81, "tempo": 66.0, "melody_octave": 2,
-        "scale": MAJOR_PENTATONIC,
-        "chords": [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]],
-        "melody": [4, -1, 3, -1, 2, -1, 1, 0, 3, -1, 2, -1, 1, -1, 0, -1],
-    },
-    "lullaby-coda": {
-        "root": 155.56, "tempo": 60.0, "melody_octave": 2,
-        "scale": MAJOR_PENTATONIC,
-        "chords": [[0, 4, 7], [5, 9, 12], [9, 12, 16], [7, 11, 14]],
-        "melody": [2, -1, 3, -1, 4, -1, 12, -1, 3, -1, 2, -1, 1, -1, 0, -1],
-    },
-}
-
-## Which song a floor hums: odd floors trade each region's own lullaby for
-## its variation, so walking one region for several floors still hears two
-## songs. Unknown regions (and even floors) land on the region's own song,
-## which falls back to the sunlit one inside play_region.
-func floor_song(region_key: String, floor_number: int) -> String:
-    var variations := {
-        "sunlit-roots": "dewlight-spark",
-        "pollen-halls": "pollen-waltz",
-        "mushroom-lull": "mossy-nocturne",
-        "roost": "lullaby-coda",
-    }
-    if posmod(floor_number, 2) == 1 and SONGS.has(String(variations.get(region_key, ""))):
-        return String(variations[region_key])
-    return region_key
-
 var master_volume := 0.80
 var muted := false
 var _players: Array[AudioStreamPlayer] = []
@@ -177,7 +99,7 @@ func play_region(key: String) -> void:
     ## can call this freely. The song crossfades in when its render finishes.
     if _shut_down:
         return
-    var song_key := key if SONGS.has(key) else "sunlit-roots"
+    var song_key := key if MusicScores.SONGS.has(key) else "sunlit-roots"
     if _want_key == song_key and (_current_key == song_key or not _queue.is_empty()):
         return
     if _current_key == song_key and _queue.is_empty():
@@ -270,7 +192,7 @@ func _schedule_render(song_key: String) -> void:
     _pcm.resize(_buffer.size() * 2)
     _kernels.clear()
     _gain = 1.0
-    var spec: Dictionary = SONGS[song_key]
+    var spec: Dictionary = MusicScores.SONGS[song_key]
     var chords: Array = spec["chords"]
     for chord_index in range(chords.size()):
         _queue.append({"step": "pad", "chord": chord_index, "key": song_key})
@@ -315,14 +237,14 @@ func _run_job(job: Dictionary) -> void:
             _finish_render(song_key)
 
 func _loop_samples(song_key: String) -> int:
-    return int(round(_bar_seconds(SONGS[song_key]) * float(BARS) * float(SAMPLE_RATE)))
+    return int(round(_bar_seconds(MusicScores.SONGS[song_key]) * float(BARS) * float(SAMPLE_RATE)))
 
 func _bar_seconds(spec: Dictionary) -> float:
     ## Four beats at the song's tempo — one chord-holding bar.
     return 60.0 * float(BEATS_PER_BAR) / float(spec["tempo"])
 
 func _note_frequency(song_key: String, semitones: int, octave: int) -> float:
-    var spec: Dictionary = SONGS[song_key]
+    var spec: Dictionary = MusicScores.SONGS[song_key]
     return float(spec["root"]) * pow(2.0, float(semitones) / 12.0) * pow(2.0, float(octave))
 
 func _pad_kernel(song_key: String, chord_index: int) -> PackedFloat32Array:
@@ -331,7 +253,7 @@ func _pad_kernel(song_key: String, chord_index: int) -> PackedFloat32Array:
     ## next chord's attack — that overlap is what keeps the loop seamless. The
     ## rise-and-fall is the point: a pad at one loudness forever is a drone,
     ## and a drone is what made the lullaby read as background noise.
-    var spec: Dictionary = SONGS[song_key]
+    var spec: Dictionary = MusicScores.SONGS[song_key]
     var seconds := _bar_seconds(spec) * 2.0
     var attack := 1.3
     var release := 1.1
@@ -375,7 +297,7 @@ func _bass_kernel(song_key: String, chord_index: int) -> PackedFloat32Array:
     ## The bass leans on the pad's envelope but is quieter and bows down even
     ## sooner — a low note held at full strength is the most "constant hum"
     ## voice there is, so it rises with each chord and settles under it.
-    var spec: Dictionary = SONGS[song_key]
+    var spec: Dictionary = MusicScores.SONGS[song_key]
     var seconds := _bar_seconds(spec) * 2.0
     var release := 0.8
     var length := int(round((seconds + release) * float(SAMPLE_RATE)))
@@ -397,7 +319,7 @@ func _bell_kernel(song_key: String, slot: int) -> PackedFloat32Array:
     ## ring with two quiet upper partials. Bars overlap the loop seam through
     ## the same wrapped placement the pads use, so a note rung on the last bar
     ## decays into the first one.
-    var spec: Dictionary = SONGS[song_key]
+    var spec: Dictionary = MusicScores.SONGS[song_key]
     var seconds := 1.9
     var length := int(round(seconds * float(SAMPLE_RATE)))
     var kernel := PackedFloat32Array()
@@ -417,7 +339,7 @@ func _bell_kernel(song_key: String, slot: int) -> PackedFloat32Array:
     return kernel
 
 func _mix_bar(song_key: String, bar: int) -> void:
-    var spec: Dictionary = SONGS[song_key]
+    var spec: Dictionary = MusicScores.SONGS[song_key]
     var bar_samples := int(round(_bar_seconds(spec) * float(SAMPLE_RATE)))
     var chord_index := mini(bar / 2, 3)
     var at := bar * bar_samples

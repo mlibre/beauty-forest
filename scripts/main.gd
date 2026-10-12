@@ -440,7 +440,7 @@ func _resume_game() -> void:
     _set_world_processing(true)
     player.set_control_enabled(_gameplay_controls_enabled())
     if not ending_pending:
-        music.play_region(music.floor_song(String(region.get("ambient", region["key"])), floor_number))
+        music.play_region(MusicScores.floor_song(String(region.get("ambient", region["key"])), floor_number))
 
 func _on_style_picked(style_key: String) -> void:
     # A trail picked on the menu must be the trail that starts, whichever way
