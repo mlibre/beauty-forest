@@ -29,6 +29,9 @@ var _staff_pivot: Node3D
 var _blink_timer := 2.8
 var _blink_time := 0.0
 var _eye_meshes: Array[MeshInstance3D] = []
+var _cape: MeshInstance3D
+var _cape_hem: MeshInstance3D
+var _contact_shadow: MeshInstance3D
 
 func _ready() -> void:
     _build_character()
@@ -74,6 +77,39 @@ func _build_character() -> void:
     tunic_overlay.material_override = tunic_light
     tunic_overlay.position = Vector3(0, 0.16, 0)
     hips.add_child(tunic_overlay)
+
+    # A leather satchel rides the right hip; its strap crosses the chest, so
+    # the hero reads as a traveler even from the front where the cape hides.
+    var satchel := MeshInstance3D.new()
+    var satchel_mesh := BoxMesh.new()
+    satchel_mesh.size = Vector3(0.17, 0.15, 0.10)
+    satchel.mesh = satchel_mesh
+    satchel.material_override = _toot(Color("#7a5236"))
+    satchel.position = Vector3(0.33, 0.05, 0.02)
+    hips.add_child(satchel)
+    var satchel_flap := MeshInstance3D.new()
+    var flap_mesh := BoxMesh.new()
+    flap_mesh.size = Vector3(0.18, 0.06, 0.11)
+    satchel_flap.mesh = flap_mesh
+    satchel_flap.material_override = _toot(Color("#8a5e3b"))
+    satchel_flap.position = Vector3(0.33, 0.115, 0.02)
+    hips.add_child(satchel_flap)
+    var strap := MeshInstance3D.new()
+    var strap_mesh := BoxMesh.new()
+    strap_mesh.size = Vector3(0.075, 0.62, 0.03)
+    strap.mesh = strap_mesh
+    strap.material_override = _toot(Color("#6d4632"))
+    strap.position = Vector3(-0.10, 0.30, -0.30)
+    strap.rotation.z = 0.62
+    hips.add_child(strap)
+    var buckle := MeshInstance3D.new()
+    var buckle_mesh := BoxMesh.new()
+    buckle_mesh.size = Vector3(0.075, 0.055, 0.036)
+    buckle.mesh = buckle_mesh
+    buckle.material_override = gold
+    buckle.position = Vector3(-0.245, 0.44, -0.305)
+    buckle.rotation.z = 0.62
+    hips.add_child(buckle)
 
     var belt := MeshInstance3D.new()
     belt.mesh = TorusMesh.new()
@@ -146,6 +182,18 @@ func _build_character() -> void:
         smile.position = point
         head.add_child(smile)
 
+    # A hair shine: two pale beads where the light would land first, so the
+    # cap of hair has a highlight instead of reading as one flat brown mass.
+    var shine_color := Color("#9a6a45")
+    for shine_point in [Vector3(-0.10, 0.27, -0.22), Vector3(0.06, 0.29, -0.245)]:
+        var shine := MeshInstance3D.new()
+        shine.mesh = SphereMesh.new()
+        shine.mesh.radius = 0.028
+        shine.mesh.height = 0.04
+        shine.material_override = _toon(shine_color, 0.10, 0.55)
+        shine.position = shine_point
+        head.add_child(shine)
+
     _scarf = MeshInstance3D.new()
     _scarf.mesh = TorusMesh.new()
     _scarf.mesh.inner_radius = 0.22
@@ -153,6 +201,49 @@ func _build_character() -> void:
     _scarf.material_override = scarf_mat
     _scarf.position = Vector3(0, 0.66, 0)
     hips.add_child(_scarf)
+
+    # The cape hangs from a pivot at the shoulders so it can sway as one
+    # piece; the gold hem rides at its foot and moves with it.
+    var cape_pivot := Node3D.new()
+    cape_pivot.name = "CapePivot"
+    cape_pivot.position = Vector3(0, 0.62, 0.36)
+    cape_pivot.rotation.x = 0.14
+    hips.add_child(cape_pivot)
+    _cape = MeshInstance3D.new()
+    var cape_mesh := BoxMesh.new()
+    cape_mesh.size = Vector3(0.62, 0.82, 0.042)
+    _cape.mesh = cape_mesh
+    _cape.material_override = _toon(Color("#3f7a52"), 0.08, 0.82)
+    _cape.position = Vector3(0, -0.41, 0)
+    _cape.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+    cape_pivot.add_child(_cape)
+    _cape_hem = MeshInstance3D.new()
+    var hem_mesh := BoxMesh.new()
+    hem_mesh.size = Vector3(0.63, 0.05, 0.05)
+    _cape_hem.mesh = hem_mesh
+    _cape_hem.material_override = gold
+    _cape_hem.position = Vector3(0, -0.80, 0)
+    cape_pivot.add_child(_cape_hem)
+
+    # A soft contact shadow grounds the hero even where the canopy thins the
+    # directional light: a quiet dark pool, not a second silhouette.
+    _contact_shadow = MeshInstance3D.new()
+    var shadow_mesh := CylinderMesh.new()
+    shadow_mesh.top_radius = 0.30
+    shadow_mesh.bottom_radius = 0.38
+    shadow_mesh.height = 0.012
+    shadow_mesh.radial_segments = 20
+    _contact_shadow.mesh = shadow_mesh
+    var shadow_material := StandardMaterial3D.new()
+    shadow_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    shadow_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    shadow_material.albedo_color = Color(0.04, 0.07, 0.05, 0.17)
+    shadow_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    shadow_material.no_depth_test = false
+    _contact_shadow.mesh.material = shadow_material
+    _contact_shadow.position = Vector3(0, 0.015, 0)
+    _contact_shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    add_child(_contact_shadow)
     var scarf_tail := MeshInstance3D.new()
     scarf_tail.mesh = BoxMesh.new()
     scarf_tail.mesh.size = Vector3(0.16, 0.42, 0.055)
@@ -254,6 +345,18 @@ func _build_leg(node_name: String, pivot_position: Vector3, trouser_material: Ma
     boot.position = Vector3(0, -0.62, -0.055)
     boot.scale = Vector3(1.0, 0.70, 1.25)
     pivot.add_child(boot)
+    # A fur cuff at the boot's top warms the silhouette line between
+    # trouser and boot the way a collar does at the neck.
+    var cuff := MeshInstance3D.new()
+    var cuff_mesh := CylinderMesh.new()
+    cuff_mesh.top_radius = 0.145
+    cuff_mesh.bottom_radius = 0.16
+    cuff_mesh.height = 0.09
+    cuff_mesh.radial_segments = 10
+    cuff.mesh = cuff_mesh
+    cuff.material_override = _toot(Color("#e8d9b8"))
+    cuff.position = Vector3(0, -0.50, -0.02)
+    pivot.add_child(cuff)
 
 func _toot(color: Color) -> StandardMaterial3D:
     return CozyMaterials.pbr(color, 0.78)
@@ -418,6 +521,17 @@ func _process(delta: float) -> void:
             core_material.emission = core_material.emission.lerp(_warmth_tint(), 1.0 - exp(-delta * 4.0))
     if _scarf:
         _scarf.rotation.z = 0.0 if _reduced_motion else sin(_time * 1.6) * 0.025
+    if _cape and is_instance_valid(_cape):
+        # The cape sways as one cloth: a slow breath plus a walk flutter that
+        # rises with pace. Reduced motion keeps a whisper of the breath.
+        var flutter := 0.0 if _reduced_motion else _walk_current * sin(_time * 7.4) * 0.085
+        var breath := sin(_time * 1.8) * (0.008 if _reduced_motion else 0.022)
+        _cape.get_parent().rotation.x = 0.14 + breath + flutter
+    if _contact_shadow and is_instance_valid(_contact_shadow):
+        # The shadow pool shrinks on the happy hop so the hero truly leaves
+        # the ground for a beat; it never fades out entirely.
+        var shadow_scale := 1.0 - (_model.position.y if _model else 0.0) * 1.4
+        _contact_shadow.scale = Vector3(maxf(0.62, shadow_scale), 1.0, maxf(0.62, shadow_scale))
 
 func set_warmth(fraction: float) -> void:
     ## How full the lantern is, 0..1. Driven by the director each HUD refresh.

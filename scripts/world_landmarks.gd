@@ -58,15 +58,64 @@ func _build_stairwell(world_position: Vector3) -> void:
     stairwell.name = "Stairwell"
     stairwell.position = world_position
     add_child(stairwell)
+
+    # A round stone dais lifts the whole landing off the turf, with a moss
+    # lip where the forest reclaims its edge.
+    var dais := MeshInstance3D.new()
+    var dais_mesh := CylinderMesh.new()
+    dais_mesh.top_radius = 1.55
+    dais_mesh.bottom_radius = 1.70
+    dais_mesh.height = 0.09
+    dais_mesh.radial_segments = 26
+    dais.mesh = dais_mesh
+    dais.material_override = _pbr(Color("#b3a077"), 0.92)
+    dais.position = Vector3(0, 0.045, 0.15)
+    dais.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+    stairwell.add_child(dais)
+    var moss_lip := MeshInstance3D.new()
+    var lip_mesh := TorusMesh.new()
+    lip_mesh.inner_radius = 1.52
+    lip_mesh.outer_radius = 1.74
+    lip_mesh.rings = 26
+    lip_mesh.ring_segments = 6
+    moss_lip.mesh = lip_mesh
+    moss_lip.material_override = _pbr(Color("#6f9d5c"), 0.95)
+    moss_lip.position = Vector3(0, 0.075, 0.15)
+    stairwell.add_child(moss_lip)
+
     for step in range(5):
         var step_mesh := MeshInstance3D.new()
         var box := BoxMesh.new()
         box.size = Vector3(2.3, 0.18, 0.52)
         step_mesh.mesh = box
         step_mesh.material_override = _pbr(Color("#d6bd7d").darkened(step * 0.025), 0.90)
-        step_mesh.position = Vector3(0, 0.09 + float(step) * 0.11, 0.70 - float(step) * 0.28)
+        step_mesh.position = Vector3(0, 0.13 + float(step) * 0.11, 0.70 - float(step) * 0.28)
         step_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
         stairwell.add_child(step_mesh)
+
+    # Twin lantern pillars flank the arch: stone stems crowned with the same
+    # green fire the arch carries, so the goal reads from across the floor.
+    for side in [-1.0, 1.0]:
+        var pillar := MeshInstance3D.new()
+        var pillar_mesh := CylinderMesh.new()
+        pillar_mesh.top_radius = 0.115
+        pillar_mesh.bottom_radius = 0.16
+        pillar_mesh.height = 1.42
+        pillar_mesh.radial_segments = 9
+        pillar.mesh = pillar_mesh
+        pillar.material_override = _pbr(Color("#a8946c"), 0.90)
+        pillar.position = Vector3(side * 1.28, 0.71, 0.72)
+        pillar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+        stairwell.add_child(pillar)
+        var cap := MeshInstance3D.new()
+        var cap_mesh := SphereMesh.new()
+        cap_mesh.radius = 0.13
+        cap_mesh.height = 0.24
+        cap.mesh = cap_mesh
+        cap.material_override = _emissive(Color("#bdf0bd"), 2.2)
+        cap.position = Vector3(side * 1.28, 1.50, 0.72)
+        stairwell.add_child(cap)
+
     var arch := MeshInstance3D.new()
     var arch_mesh := TorusMesh.new()
     arch_mesh.inner_radius = 1.05
@@ -78,6 +127,43 @@ func _build_stairwell(world_position: Vector3) -> void:
     arch.position = Vector3(0, 0.20, 0.50)
     arch.rotation.x = PI * 0.5
     stairwell.add_child(arch)
+
+    # Three vines hang from the arch's crown, each ending in a leaf-bud, so
+    # the ring of light grows out of the forest instead of floating bare.
+    for vine_index in range(3):
+        var vine := MeshInstance3D.new()
+        var vine_mesh := CylinderMesh.new()
+        vine_mesh.top_radius = 0.018
+        vine_mesh.bottom_radius = 0.026
+        vine_mesh.height = 0.62
+        vine_mesh.radial_segments = 6
+        vine.mesh = vine_mesh
+        vine.material_override = _pbr(Color("#5d8a4a"), 0.94)
+        var vine_angle := -0.85 + float(vine_index) * 0.85
+        vine.position = Vector3(sin(vine_angle) * 1.18, 1.28 - 0.31 * (1.0 if vine_index == 1 else 0.6), 0.50 + cos(vine_angle) * 0.12)
+        stairwell.add_child(vine)
+        var bud := MeshInstance3D.new()
+        var bud_mesh := SphereMesh.new()
+        bud_mesh.radius = 0.055
+        bud_mesh.height = 0.10
+        bud.mesh = bud_mesh
+        bud.material_override = _pbr(Color("#7fb35f"), 0.88)
+        bud.position = vine.position + Vector3(0, -0.33, 0)
+        stairwell.add_child(bud)
+
+    # A ring of drifting motes circles the landing at seed-fixed heights, so
+    # the stairwell breathes even from a floor away.
+    for mote_index in range(6):
+        var mote := MeshInstance3D.new()
+        var mote_mesh := SphereMesh.new()
+        mote_mesh.radius = 0.045
+        mote_mesh.height = 0.085
+        mote.mesh = mote_mesh
+        mote.material_override = _emissive(Color("#d6f5d6"), 1.9)
+        var mote_angle := TAU * float(mote_index) / 6.0
+        mote.position = Vector3(sin(mote_angle) * 1.42, 0.55 + 0.38 * sin(mote_angle * 2.7), 0.15 + cos(mote_angle) * 1.42)
+        stairwell.add_child(mote)
+
     var glow := MeshInstance3D.new()
     var disk := CylinderMesh.new()
     disk.top_radius = 1.0
