@@ -130,6 +130,9 @@ func _build_stairwell(world_position: Vector3) -> void:
 
     # Three vines hang from the arch's crown, each ending in a leaf-bud, so
     # the ring of light grows out of the forest instead of floating bare.
+    # Each vine's top touches the ring's INNER edge at its own x — a fixed
+    # crown height let the side vines poke 0.43 above the band, stalks
+    # floating past the ring instead of hanging from it.
     for vine_index in range(3):
         var vine := MeshInstance3D.new()
         var vine_mesh := CylinderMesh.new()
@@ -140,7 +143,9 @@ func _build_stairwell(world_position: Vector3) -> void:
         vine.mesh = vine_mesh
         vine.material_override = _pbr(Color("#5d8a4a"), 0.94)
         var vine_angle := -0.85 + float(vine_index) * 0.85
-        vine.position = Vector3(sin(vine_angle) * 1.18, 1.28 - 0.31 * (1.0 if vine_index == 1 else 0.6), 0.50 + cos(vine_angle) * 0.12)
+        var vine_x := sin(vine_angle) * 1.18
+        var hang := 0.20 + sqrt(maxf(0.0, 1.05 * 1.05 - vine_x * vine_x))
+        vine.position = Vector3(vine_x, hang - 0.31, 0.50 + cos(vine_angle) * 0.12)
         stairwell.add_child(vine)
         var bud := MeshInstance3D.new()
         var bud_mesh := SphereMesh.new()

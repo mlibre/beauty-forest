@@ -118,6 +118,23 @@ func _check_objective_layout(world: ForestWorld) -> void:
             glow = child as MeshInstance3D
     ok(glow != null and is_zero_approx(glow.global_position.y - 0.125),
         "stair glow should sit above the top tread")
+    # The arch's vines hang FROM the ring: each vine's top must stay within
+    # the arch band at its own x. A vine whose top pokes above the ring reads
+    # as a stalk floating past the arch, not one growing out of it.
+    var vine_count := 0
+    for child in stair.get_children():
+        var mesh_instance := child as MeshInstance3D
+        if mesh_instance == null or not (mesh_instance.mesh is CylinderMesh):
+            continue
+        var vine_mesh := mesh_instance.mesh as CylinderMesh
+        if vine_mesh.height >= 1.0 or mesh_instance.position.y < 0.3:
+            continue
+        vine_count += 1
+        var vine_top := mesh_instance.position.y + vine_mesh.height * 0.5
+        var ring_top_at_x := 0.20 + sqrt(maxf(0.0, 1.30 * 1.30 - mesh_instance.position.x * mesh_instance.position.x))
+        ok(vine_top <= ring_top_at_x + 0.06,
+            "an arch vine's top (%.2f) pokes above the arch band at its x (%.2f); it floats past the ring instead of hanging from it" % [vine_top, ring_top_at_x])
+    ok(vine_count == 3, "the arch should carry three hanging vines, found %d" % vine_count)
 
 func _check_camera_facing_visuals(world: ForestWorld) -> void:
     var sign := world.get_node_or_null("ForestSign")
