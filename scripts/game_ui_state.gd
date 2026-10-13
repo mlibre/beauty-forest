@@ -115,9 +115,9 @@ var _story_title: Label
 var _story_body: Label
 ## The vignette's picture, shown when a story names one.
 var _story_glyph: TextureRect
-## The vignette's arrival choreography — rise, lamp-sweep and typewriter in
-## one tween — and the ink-ripple that rings behind the glyph. One home each,
-## killed by _cancel_story, so a fast vignette never fights a slow one.
+## The vignette's arrival choreography — settle-scale, lamp-sweep and
+## ink-ripple in one tween, killed by _cancel_story so a fast vignette never
+## fights a slow one.
 var _story_arrival_tween: Tween
 var _story_ripple: Panel
 var _story_sweep: TextureRect
@@ -245,8 +245,8 @@ func _cancel_story() -> void:
         _story_arrival_tween.kill()
     _story_arrival_tween = null
     if _story_card != null and is_instance_valid(_story_card):
-        # A cancelled arrival leaves no half-settled transform behind: the
-        # next show starts from rest, wherever the layout puts the card.
+        # A cancelled arrival leaves no half-settled transform behind: scale
+        # always returns to ONE, so the next show starts from rest.
         _story_card.scale = Vector2.ONE
     if _story_card != null:
         _story_card.visible = false

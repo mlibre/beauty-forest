@@ -258,18 +258,15 @@ func _begin_story_arrival(duration: float) -> void:
         return
     var tween := create_tween()
     tween.set_parallel(true)
-    # The rise: the card lies down flat the way a turned page does, settling
-    # scale and height together from a breath under rest.
-    var rest_y := _story_card.position.y
+    # The settle: the card breathes a 1.5% scale into rest from its top
+    # edge. Deliberately no position rise: a container-housed panel moved
+    # before its first sort shapes its autowrap body at width 1 and stays
+    # there (1911px), and a rise cancelled mid-flight bakes its half-risen y
+    # as the next telling's rest -- the card walked up the screen one
+    # overlapped vignette at a time. Scale always tweens back to ONE, so a
+    # cancelled settle self-corrects on the next show.
     _story_card.pivot_offset = _story_card.size * Vector2(0.5, 0.0)
     _story_card.scale = Vector2(0.985, 0.985)
-    # The rise never pre-assigns the card's position: a container-housed
-    # panel moved before its first sort shapes its autowrap body at width 1
-    # and stays there (1911px, the battery caught it twice). The tween's
-    # .from() starts the card 16px below REST on the tween's first step,
-    # after the card's own layout has run -- same motion, zero pre-sort
-    # writes.
-    tween.tween_property(_story_card, "position:y", rest_y, 0.42).from(rest_y + 16.0).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
     tween.tween_property(_story_card, "scale", Vector2.ONE, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
     if ripple_shown:
         tween.tween_property(ripple, "scale", Vector2.ONE, 0.50).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
