@@ -219,7 +219,7 @@ func show_story(title: String, body: String, duration: float = 3.8, glyph: Strin
         _story_card.visible = false
         _story_tween = null
     )
-    _begin_story_arrival(duration)
+    _begin_story_arrival()
 
 ## The vignette's arrival, staged like a book plate: the card settles the last
 ## few pixels into place and breathes a 1.5% scale into rest, a band of
@@ -234,7 +234,7 @@ func show_story(title: String, body: String, duration: float = 3.8, glyph: Strin
 ## zero-width longest word, and the card's height follows it up to 1945px --
 ## the battery caught exactly that). Scale, position and alpha never touch
 ## layout, so those are the only channels the arrival animates.
-func _begin_story_arrival(duration: float) -> void:
+func _begin_story_arrival() -> void:
     if _story_arrival_tween != null and _story_arrival_tween.is_valid():
         _story_arrival_tween.kill()
     _story_arrival_tween = null
