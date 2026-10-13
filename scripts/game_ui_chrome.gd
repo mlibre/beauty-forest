@@ -179,21 +179,60 @@ func _build_interface() -> void:
     _story_card.visible = false
     _story_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _root.add_child(_story_card)
+    # The page-turn light: a soft band that crosses the card once as it
+    # arrives, the way a turned page catches the lamp. It rides above the
+    # card as a sibling (a container would fight the motion) and settles
+    # hidden -- one-shot, never a loop.
+    _story_sweep = TextureRect.new()
+    var sweep_gradient := Gradient.new()
+    sweep_gradient.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
+    sweep_gradient.colors = PackedColorArray([Color(1, 1, 1, 0.0), Color(1.0, 0.97, 0.86, 0.13), Color(1, 1, 1, 0.0)])
+    var sweep_texture := GradientTexture2D.new()
+    sweep_texture.gradient = sweep_gradient
+    sweep_texture.fill_from = Vector2(0, 0)
+    sweep_texture.fill_to = Vector2(1, 0)
+    _story_sweep.texture = sweep_texture
+    _story_sweep.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    _story_sweep.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _story_sweep.visible = false
+    _root.add_child(_story_sweep)
     var story_margin := _margin(24, 18, 24, 18)
     _story_card.add_child(story_margin)
     var story_box := VBoxContainer.new()
     story_margin.add_child(story_box)
     # The vignette's picture: the region's own mark, shown when the story
     # carries one. A floor's opening line lands with its picture, the same
-    # way the intro's pages do.
+    # way the intro's pages do. The glyph sits on a small stage so the
+    # ink-ripple can ring behind it without fighting the card's layout.
+    var glyph_stage := Control.new()
+    glyph_stage.custom_minimum_size = Vector2(30, 30)
+    glyph_stage.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+    glyph_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    story_box.add_child(glyph_stage)
+    _story_ripple = Panel.new()
+    _story_ripple.set_anchors_preset(Control.PRESET_FULL_RECT)
+    _story_ripple.offset_left = -10
+    _story_ripple.offset_top = -10
+    _story_ripple.offset_right = 10
+    _story_ripple.offset_bottom = 10
+    _story_ripple.pivot_offset = Vector2(25, 25)
+    _story_ripple.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _story_ripple.visible = false
+    var story_ripple_style := StyleBoxFlat.new()
+    story_ripple_style.bg_color = Color(1.0, 0.89, 0.55, 0.10)
+    story_ripple_style.border_color = Color("#ffe29a")
+    story_ripple_style.set_border_width_all(2)
+    story_ripple_style.set_corner_radius_all(25)
+    _story_ripple.add_theme_stylebox_override("panel", story_ripple_style)
+    glyph_stage.add_child(_story_ripple)
     _story_glyph = TextureRect.new()
     _story_glyph.custom_minimum_size = Vector2(30, 30)
     _story_glyph.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     _story_glyph.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    _story_glyph.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+    _story_glyph.set_anchors_preset(Control.PRESET_FULL_RECT)
     _story_glyph.visible = false
     _story_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    story_box.add_child(_story_glyph)
+    glyph_stage.add_child(_story_glyph)
     _story_title = _label("", 22, Color("#ffe69d"))
     _story_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     story_box.add_child(_story_title)
@@ -311,6 +350,24 @@ func _build_intro() -> void:
     glow_style.bg_color = Color("#ffe9a0", 0.22)
     glow_style.set_corner_radius_all(52)
     _intro_glow.add_theme_stylebox_override("panel", glow_style)
+    # The ink-ripple: added before the glyph holder, so it rings BEHIND the
+    # picture -- pressed like a stamp with every page turn, then gone.
+    _intro_ripple = Panel.new()
+    _intro_ripple.set_anchors_preset(Control.PRESET_FULL_RECT)
+    _intro_ripple.offset_left = -8
+    _intro_ripple.offset_top = -8
+    _intro_ripple.offset_right = 8
+    _intro_ripple.offset_bottom = 8
+    _intro_ripple.pivot_offset = Vector2(60, 60)
+    _intro_ripple.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _intro_ripple.visible = false
+    var intro_ripple_style := StyleBoxFlat.new()
+    intro_ripple_style.bg_color = Color(1.0, 0.92, 0.62, 0.10)
+    intro_ripple_style.border_color = Color("#ffe9a0")
+    intro_ripple_style.set_border_width_all(2)
+    intro_ripple_style.set_corner_radius_all(60)
+    _intro_ripple.add_theme_stylebox_override("panel", intro_ripple_style)
+    _intro_glow.add_child(_intro_ripple)
     var glyph_holder := CenterContainer.new()
     glyph_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
     glyph_holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

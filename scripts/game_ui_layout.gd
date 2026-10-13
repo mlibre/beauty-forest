@@ -150,8 +150,12 @@ func _fit_layout(settle: bool = true) -> void:
         _story_card.custom_minimum_size = Vector2(story_width, 0)
         _story_card.reset_size()
         # A very short window cannot stack both bands; keeping the card on screen
-        # wins over keeping it clear of the toast.
-        story_top = minf(story_top, maxf(8.0, viewport_size.y - _story_card.size.y - 8.0))
+        # wins over keeping it clear of the toast. The 24px under the card is
+        # the glyph's pride: the card's height here is measured before the
+        # vignette's picture has joined the column, and the next sort grows
+        # the card by ~16px -- so the clamp reserves that growth, or a 240px
+        # window fits a card that then hangs 5px past its bottom edge.
+        story_top = minf(story_top, maxf(8.0, viewport_size.y - _story_card.size.y - 24.0))
         # The card's own text sets a minimum width no custom_minimum_size can
         # beat, so clamp the final x too and keep it in the window regardless.
         var story_x := gap_left + (gap - _story_card.size.x) * 0.5

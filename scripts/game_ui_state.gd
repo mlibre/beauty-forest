@@ -115,6 +115,12 @@ var _story_title: Label
 var _story_body: Label
 ## The vignette's picture, shown when a story names one.
 var _story_glyph: TextureRect
+## The vignette's arrival choreography — rise, lamp-sweep and typewriter in
+## one tween — and the ink-ripple that rings behind the glyph. One home each,
+## killed by _cancel_story, so a fast vignette never fights a slow one.
+var _story_arrival_tween: Tween
+var _story_ripple: Panel
+var _story_sweep: TextureRect
 var _beat_ring: Panel
 var _beat_inner: Panel
 var _warm_flash: ColorRect
@@ -130,6 +136,8 @@ var _intro_hint: Label
 ## re-tinted and the dots re-lit by show_intro_page as the director turns
 ## pages, so the storybook reads as a sequence of small illustrated scenes.
 var _intro_glow: Panel
+## One soft ring behind the page's picture, pressed like a stamp each turn.
+var _intro_ripple: Panel
 var _intro_dots: HBoxContainer
 ## How many pages the current telling has; the director sets this when the
 ## telling begins, because the story's length belongs to the story.
@@ -233,6 +241,13 @@ func _cancel_story() -> void:
     if _story_tween != null and _story_tween.is_valid():
         _story_tween.kill()
     _story_tween = null
+    if _story_arrival_tween != null and _story_arrival_tween.is_valid():
+        _story_arrival_tween.kill()
+    _story_arrival_tween = null
+    if _story_card != null and is_instance_valid(_story_card):
+        # A cancelled arrival leaves no half-settled transform behind: the
+        # next show starts from rest, wherever the layout puts the card.
+        _story_card.scale = Vector2.ONE
     if _story_card != null:
         _story_card.visible = false
 

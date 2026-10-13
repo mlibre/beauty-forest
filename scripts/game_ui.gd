@@ -219,6 +219,75 @@ func show_story(title: String, body: String, duration: float = 3.8, glyph: Strin
         _story_card.visible = false
         _story_tween = null
     )
+    _begin_story_arrival(duration)
+
+## The vignette's arrival, staged like a book plate: the card settles the last
+## few pixels into place and breathes a 1.5% scale into rest, a band of
+## lamplight crosses it once, and the picture's mark rings like pressed ink
+## while the title and body land on a short stagger. Every part is one-shot
+## and settles -- nothing on the card loops, breathes or drifts, so the
+## interface's stillness rules hold. Reduced motion keeps only the plain
+## fade.
+##
+## Deliberately NO typewriter: animating visible_ratio on an autowrap label
+## makes its minimum size dance while it types (zero visible glyphs report a
+## zero-width longest word, and the card's height follows it up to 1945px --
+## the battery caught exactly that). Scale, position and alpha never touch
+## layout, so those are the only channels the arrival animates.
+func _begin_story_arrival(duration: float) -> void:
+    if _story_arrival_tween != null and _story_arrival_tween.is_valid():
+        _story_arrival_tween.kill()
+    _story_arrival_tween = null
+    var ripple := _story_ripple
+    var ripple_shown := ripple != null and is_instance_valid(ripple) and \
+        _story_glyph != null and is_instance_valid(_story_glyph) and _story_glyph.visible
+    if ripple != null and is_instance_valid(ripple):
+        ripple.visible = ripple_shown
+        if ripple_shown:
+            ripple.modulate.a = 0.9
+            ripple.scale = Vector2(0.55, 0.55)
+    var sweep := _story_sweep
+    if sweep != null and is_instance_valid(sweep):
+        sweep.visible = false
+    if _reduced_motion:
+        if _story_card != null and is_instance_valid(_story_card):
+            _story_card.scale = Vector2.ONE
+            _story_card.pivot_offset = _story_card.size * 0.5
+        if ripple != null and is_instance_valid(ripple):
+            ripple.visible = false
+        return
+    var tween := create_tween()
+    tween.set_parallel(true)
+    # The rise: the card lies down flat the way a turned page does, settling
+    # scale and height together from a breath under rest.
+    var rest_y := _story_card.position.y
+    _story_card.pivot_offset = _story_card.size * Vector2(0.5, 0.0)
+    _story_card.scale = Vector2(0.985, 0.985)
+    # The rise never pre-assigns the card's position: a container-housed
+    # panel moved before its first sort shapes its autowrap body at width 1
+    # and stays there (1911px, the battery caught it twice). The tween's
+    # .from() starts the card 16px below REST on the tween's first step,
+    # after the card's own layout has run -- same motion, zero pre-sort
+    # writes.
+    tween.tween_property(_story_card, "position:y", rest_y, 0.42).from(rest_y + 16.0).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+    tween.tween_property(_story_card, "scale", Vector2.ONE, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+    if ripple_shown:
+        tween.tween_property(ripple, "scale", Vector2.ONE, 0.50).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+        tween.tween_property(ripple, "modulate:a", 0.0, 0.50).set_delay(0.08)
+    # The lamp band crosses once, then the card is still.
+    if sweep != null and is_instance_valid(sweep):
+        sweep.size = Vector2(_story_card.size.x * 0.42, maxf(0.0, _story_card.size.y - 8.0))
+        sweep.position = Vector2(_story_card.position.x - sweep.size.x, _story_card.position.y + 4.0)
+        sweep.visible = true
+        sweep.modulate.a = 0.0
+        tween.tween_property(sweep, "modulate:a", 1.0, 0.12).set_delay(0.12)
+        tween.tween_property(sweep, "position:x", _story_card.position.x + _story_card.size.x, 0.62).set_delay(0.12)
+        tween.tween_property(sweep, "modulate:a", 0.0, 0.20).set_delay(0.54)
+        tween.chain().tween_callback(func():
+            if is_instance_valid(sweep):
+                sweep.visible = false
+        )
+    _story_arrival_tween = tween
 
 ## The storybook intro, one page at a time. The director owns the pacing and
 ## the pages; the interface only draws what it is handed — and draws it as a
@@ -294,6 +363,14 @@ func show_intro_page(page: Dictionary, page_index: int = 0) -> void:
         _intro_turn_tween = create_tween()
         var turn := _intro_turn_tween
         turn.set_parallel(true)
+        # The ink-ripple rings once behind the picture, a stamp pressed into
+        # the page as it turns.
+        if _intro_ripple != null and is_instance_valid(_intro_ripple):
+            _intro_ripple.visible = true
+            _intro_ripple.modulate.a = 0.8
+            _intro_ripple.scale = Vector2(0.62, 0.62)
+            turn.tween_property(_intro_ripple, "scale", Vector2.ONE, 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+            turn.tween_property(_intro_ripple, "modulate:a", 0.0, 0.55).set_delay(0.10)
         turn.tween_property(_intro_glyph, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
         turn.tween_property(_intro_glyph, "modulate:a", 1.0, 0.24)
         turn.tween_property(_intro_title, "modulate:a", 1.0, 0.26).set_delay(0.08)
@@ -303,6 +380,8 @@ func show_intro_page(page: Dictionary, page_index: int = 0) -> void:
 func hide_intro() -> void:
     if _intro_root != null and is_instance_valid(_intro_root):
         _intro_root.visible = false
+        if _intro_ripple != null and is_instance_valid(_intro_ripple):
+            _intro_ripple.visible = false
 
 func set_beat(active: bool, gold: bool) -> void:
     _beat_ring.visible = active
