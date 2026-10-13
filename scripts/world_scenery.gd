@@ -7,6 +7,7 @@ extends Node3D
 const CozyMaterials := preload("res://scripts/cozy_materials.gd")
 const CozyVFX := preload("res://scripts/cozy_vfx.gd")
 const DungeonGenerator := preload("res://scripts/dungeon_generator.gd")
+const GroundDetails := preload("res://scripts/ground_details.gd")
 
 ## Scenery half of a forest floor: sky and lights, ground collision, instanced
 ## grove and decor, sunbeams and ambient life, plus the material factories and
@@ -190,6 +191,12 @@ func _build_ground_and_collisions() -> void:
     ground_material.set_shader_parameter("base_color", ground_base)
     ground_material.set_shader_parameter("light_patch", ground_base.lerp(Color("#d6cf82"), 0.27))
     ground_material.set_shader_parameter("deep_patch", ground_base.lerp(Color("#3f6b33"), 0.34))
+    # The floor's own warm details: bare earth where the turf thins, fallen
+    # leaves gathered along its edges, clover in the turf. Region-tinted so a
+    # terrace's floor is not a meadow's floor.
+    ground_material.set_shader_parameter("dirt_color", ground_base.lerp(Color("#8a6f42"), 0.55))
+    ground_material.set_shader_parameter("litter_color", Color("#c98a4e").lerp(Color(region["flower"]), 0.22))
+    ground_material.set_shader_parameter("clover_strength", 0.55)
     # The web renderer paints this plane flat and bright (no SSAO/SSIL to crease
     # it), so the same calibration that fixes the sky also reins the moss in.
     _calibrate_ground_for_renderer(ground_material, RenderingServer.get_current_rendering_method())
@@ -319,6 +326,11 @@ func _build_decor() -> void:
     rock_mesh.radial_segments = 8
     rock_mesh.rings = 4
     _add_multimesh("WarmPebbles", rock_mesh, _pbr(Color("#bcae89"), 0.98), rocks, [])
+
+## The ground's third layer, above the shader and the decor: swaying grass
+## tufts, fallen leaves and clover clumps, one instanced draw call each.
+func _build_ground_details() -> void:
+    GroundDetails.scatter(self, dungeon, _rng, region, _wind_materials)
 
 func _build_sunbeams() -> void:
     # Soft god rays through the canopy, not translucent slabs.

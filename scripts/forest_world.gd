@@ -16,6 +16,7 @@ func build_floor(p_floor: int, p_dungeon: Dictionary, reduced_motion: bool = fal
     _build_ground_and_collisions()
     _build_grove_visual()
     _build_decor()
+    _build_ground_details()
     _build_sunbeams()
     _build_ambient_life()
     _build_clearings()
