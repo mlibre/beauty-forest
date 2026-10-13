@@ -217,6 +217,8 @@ func _build_grove_visual() -> void:
     var width := int(dungeon["width"])
     var depth := int(dungeon["height"])
     var trunk_transforms: Array[Transform3D] = []
+    var trunk_colors: Array[Color] = []
+    var flare_transforms: Array[Transform3D] = []
     var crown_transforms: Array[Transform3D] = []
     var crown_colors: Array[Color] = []
     var grid: PackedInt32Array = dungeon["grid"]
@@ -227,12 +229,23 @@ func _build_grove_visual() -> void:
             if _point_inside_room(x, z, 1):
                 continue
             var base := Vector3(float(x) + 0.5 + _rng.randf_range(-0.12, 0.12), 0, float(z) + 0.5 + _rng.randf_range(-0.12, 0.12))
-            var trunk_height := _rng.randf_range(1.35, 2.25)
-            var trunk_basis := Basis.IDENTITY.scaled(Vector3(_rng.randf_range(0.78, 1.18), trunk_height, _rng.randf_range(0.78, 1.18)))
+            # One grove cell in twelve is an elder: taller, wider, with a
+            # second crown blob. A wall of same-sized trees reads as a fence;
+            # a few elders break the roofline the way an old forest does.
+            var elder := _rng.randf() < 0.085
+            var trunk_height := _rng.randf_range(1.35, 2.25) * (1.55 if elder else 1.0)
+            var trunk_girth := _rng.randf_range(0.78, 1.18) * (1.35 if elder else 1.0)
+            var trunk_basis := Basis.IDENTITY.scaled(Vector3(trunk_girth, trunk_height, trunk_girth))
             trunk_transforms.append(Transform3D(trunk_basis, base + Vector3(0, trunk_height * 0.5, 0)))
-            var crown_count := 2 if _rng.randf() < 0.72 else 1
+            # Bark lightens with age: elders wear the palest wood of the stand.
+            var bark := Color("#8a603d").lerp(Color("#a97e52"), _rng.randf_range(0.0, 0.45 if elder else 0.2))
+            trunk_colors.append(bark)
+            # A root flare — a low, wide cone hugging the trunk's feet — so
+            # every tree meets the ground grown-out instead of potted.
+            flare_transforms.append(Transform3D(Basis.IDENTITY.scaled(Vector3(trunk_girth * 1.9, 0.34, trunk_girth * 1.9)), base + Vector3(0, 0.10, 0)))
+            var crown_count := (3 if elder else 0) + (2 if _rng.randf() < 0.72 else 1)
             for crown_index in range(crown_count):
-                var crown_scale := Vector3.ONE * _rng.randf_range(0.72, 1.18)
+                var crown_scale := Vector3.ONE * _rng.randf_range(0.72, 1.18) * (1.30 if elder else 1.0)
                 crown_scale.y *= _rng.randf_range(0.80, 1.12)
                 var crown_position := base + Vector3(_rng.randf_range(-0.48, 0.48), trunk_height + _rng.randf_range(0.15, 0.65), _rng.randf_range(-0.48, 0.48))
                 crown_transforms.append(Transform3D(Basis.from_euler(Vector3(0, _rng.randf_range(0, TAU), 0)).scaled(crown_scale), crown_position))
@@ -243,7 +256,17 @@ func _build_grove_visual() -> void:
     trunk_mesh.height = 1.0
     trunk_mesh.radial_segments = 7
     var trunk_material := _pbr(Color("#8a603d"), 0.93)
-    _add_multimesh("GroveTrunks", trunk_mesh, trunk_material, trunk_transforms, [])
+    # Per-instance bark: elders wear the palest wood of the stand, so the
+    # material must actually read the instance colors it is given.
+    trunk_material.vertex_color_use_as_albedo = true
+    _add_multimesh("GroveTrunks", trunk_mesh, trunk_material, trunk_transforms, trunk_colors)
+    # The flare shares the trunk's material so bark and roots shade as one.
+    var flare_mesh := CylinderMesh.new()
+    flare_mesh.top_radius = 0.16
+    flare_mesh.bottom_radius = 0.30
+    flare_mesh.height = 1.0
+    flare_mesh.radial_segments = 7
+    _add_multimesh("GroveFlares", flare_mesh, _pbr(Color("#7d563a"), 0.95), flare_transforms, [])
 
     var crown_mesh := SphereMesh.new()
     crown_mesh.radius = 0.80
