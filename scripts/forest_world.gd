@@ -17,8 +17,8 @@ func build_floor(p_floor: int, p_dungeon: Dictionary, reduced_motion: bool = fal
     _build_grove_visual()
     _build_decor()
     _build_ground_details()
-    _build_sunbeams()
-    _build_ambient_life()
+    WorldAtmosphere.build_sunbeams(self)
+    WorldAtmosphere.build_ambient_life(self)
     _build_clearings()
     _set_particle_motion(self, _reduced_motion)
 

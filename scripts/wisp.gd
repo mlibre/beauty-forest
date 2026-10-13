@@ -6,6 +6,7 @@ extends CharacterBody3D
 # on first boot. regression_architecture holds this file to it.
 const BeautyContent := preload("res://scripts/beauty_content.gd")
 const BeautyWisps := preload("res://scripts/beauty_wisps.gd")
+const WispKit := preload("res://scripts/wisp_kit.gd")
 const CozyMaterials := preload("res://scripts/cozy_materials.gd")
 
 var type_key := "Shambler"
@@ -141,16 +142,16 @@ func _build() -> void:
     _visual.add_child(aura)
 
     for side in [-1.0, 1.0]:
-        var eye_white := _sphere(0.078 * visual_scale, Color("#fffaf0"))
+        var eye_white := WispKit.sphere(0.078 * visual_scale, Color("#fffaf0"))
         eye_white.position = Vector3(side * 0.135 * visual_scale, 0.91 * visual_scale, -0.315 * visual_scale)
         _visual.add_child(eye_white)
-        var pupil := _sphere(0.050 * visual_scale, Color("#5c482f"))
+        var pupil := WispKit.sphere(0.050 * visual_scale, Color("#5c482f"))
         pupil.material_override = _emissive(Color("#6b5131"), 0.8)
         pupil.position = Vector3(side * 0.135 * visual_scale, 0.91 * visual_scale, -0.378 * visual_scale)
         _visual.add_child(pupil)
         _pupils.append(pupil)
     for point_index in range(3):
-        var smile := _sphere(0.020 * visual_scale, Color("#493029"))
+        var smile := WispKit.sphere(0.020 * visual_scale, Color("#493029"))
         smile.position = Vector3((point_index - 1) * 0.055 * visual_scale, 0.79 * visual_scale, -0.39 * visual_scale)
         _visual.add_child(smile)
         _mouth_dots.append(smile)
@@ -194,7 +195,7 @@ func _build() -> void:
     _sparkle_pivot.position = _halo.position
     _visual.add_child(_sparkle_pivot)
     for sparkle_index in range(3):
-        var sparkle := _sphere(0.028 * visual_scale, Color("#eaf6ff"))
+        var sparkle := WispKit.sphere(0.028 * visual_scale, Color("#eaf6ff"))
         sparkle.material_override = _emissive(Color("#dceeff"), 2.3)
         var sparkle_angle := TAU * float(sparkle_index) / 3.0
         sparkle.position = Vector3(sin(sparkle_angle) * 0.30 * visual_scale, 0.02 * visual_scale, cos(sparkle_angle) * 0.30 * visual_scale)
@@ -212,7 +213,7 @@ func _build() -> void:
         _big_light.position = Vector3(0, 1.2 * visual_scale, 0)
         add_child(_big_light)
     if curious:
-        var star := _sphere(0.11 * visual_scale, Color("#fff3a0"))
+        var star := WispKit.sphere(0.11 * visual_scale, Color("#fff3a0"))
         star.material_override = _emissive(Color("#fff09a"), 3.0)
         star.position = Vector3(0.42 * visual_scale, 1.34 * visual_scale, 0)
         _visual.add_child(star)
@@ -222,18 +223,18 @@ func _add_type_prop(base_color: Color) -> void:
     match type_key:
         "Shambler":
             for side in [-1.0, 1.0]:
-                var brow := _box(Vector3(0.12, 0.028, 0.03) * visual_scale, prop_color)
+                var brow := WispKit.box(Vector3(0.12, 0.028, 0.03) * visual_scale, prop_color)
                 brow.position = Vector3(side * 0.14 * visual_scale, 1.03 * visual_scale, -0.35 * visual_scale)
                 brow.rotation.z = side * -0.16
                 _visual.add_child(brow)
                 _brows.append(brow)
         "Crawler":
             for side in [-1.0, 1.0]:
-                var stalk := _cylinder(0.014 * visual_scale, 0.28 * visual_scale, prop_color)
+                var stalk := WispKit.cylinder(0.014 * visual_scale, 0.28 * visual_scale, prop_color)
                 stalk.position = Vector3(side * 0.13 * visual_scale, 1.28 * visual_scale, 0)
                 stalk.rotation.z = side * -0.30
                 _visual.add_child(stalk)
-                var tip := _sphere(0.038 * visual_scale, Color("#ffe99b"))
+                var tip := WispKit.sphere(0.038 * visual_scale, Color("#ffe99b"))
                 tip.position = Vector3(side * 0.18 * visual_scale, 1.43 * visual_scale, 0)
                 _visual.add_child(tip)
         "Warden":
@@ -247,19 +248,19 @@ func _add_type_prop(base_color: Color) -> void:
             _visual.add_child(sash)
         "Hummingbird", "Lantern Moth":
             for side in [-1.0, 1.0]:
-                var wing := _sphere(0.25 * visual_scale, Color("#fff0b8"))
+                var wing := WispKit.sphere(0.25 * visual_scale, Color("#fff0b8"))
                 wing.scale = Vector3(1.25, 0.18, 0.70)
                 wing.position = Vector3(side * 0.48 * visual_scale, 0.90 * visual_scale, 0)
                 wing.rotation.z = side * -0.28
                 _visual.add_child(wing)
         "Dandelion":
             for offset in [-0.10, 0.0, 0.10]:
-                var tuft := _cylinder(0.015 * visual_scale, 0.24 * visual_scale, Color("#fff6d8"))
+                var tuft := WispKit.cylinder(0.015 * visual_scale, 0.24 * visual_scale, Color("#fff6d8"))
                 tuft.position = Vector3(offset * visual_scale, 1.35 * visual_scale, 0)
                 tuft.rotation.z = offset * 2.4
                 _visual.add_child(tuft)
         "Pebble":
-            var cap := _sphere(0.19 * visual_scale, Color("#d7b17d"))
+            var cap := WispKit.sphere(0.19 * visual_scale, Color("#d7b17d"))
             cap.scale = Vector3(1.0, 0.48, 1.0)
             cap.position = Vector3(0, 1.28 * visual_scale, 0)
             cap.rotation.z = 0.22
@@ -275,33 +276,33 @@ func _add_type_prop(base_color: Color) -> void:
             handle.rotation.y = PI * 0.5
             _visual.add_child(handle)
         "Mossbell":
-            var hat := _cone(0.28 * visual_scale, 0.22 * visual_scale, Color("#e6ca82"))
+            var hat := WispKit.cone(0.28 * visual_scale, 0.22 * visual_scale, Color("#e6ca82"))
             hat.position = Vector3(0, 1.35 * visual_scale, 0)
             _visual.add_child(hat)
         "Giggle Puff":
             for side in [-1.0, 1.0]:
-                var pom := _sphere(0.105 * visual_scale, Color("#ffd1dc"))
+                var pom := WispKit.sphere(0.105 * visual_scale, Color("#ffd1dc"))
                 pom.position = Vector3(side * 0.16 * visual_scale, 1.34 * visual_scale, 0)
                 _visual.add_child(pom)
         "Puffcap":
-            var cap := _cone(0.34 * visual_scale, 0.24 * visual_scale, Color("#d9a06b"))
+            var cap := WispKit.cone(0.34 * visual_scale, 0.24 * visual_scale, Color("#d9a06b"))
             cap.position = Vector3(0, 1.30 * visual_scale, 0)
             _visual.add_child(cap)
             for offset in [-0.55, 0.35]:
-                var dot := _sphere(0.045 * visual_scale, Color("#fff1d4"))
+                var dot := WispKit.sphere(0.045 * visual_scale, Color("#fff1d4"))
                 dot.position = Vector3(offset * visual_scale, 1.38 * visual_scale, 0.18 * visual_scale)
                 _visual.add_child(dot)
         "Comet":
-            var tail := _cone(0.16 * visual_scale, 0.55 * visual_scale, Color("#ffedbe"))
+            var tail := WispKit.cone(0.16 * visual_scale, 0.55 * visual_scale, Color("#ffedbe"))
             tail.position = Vector3(0, 0.92 * visual_scale, 0.42 * visual_scale)
             tail.rotation.x = -0.9
             _visual.add_child(tail)
         "Snugbug":
-            var shell := _sphere(0.30 * visual_scale, Color("#b58fd8"))
+            var shell := WispKit.sphere(0.30 * visual_scale, Color("#b58fd8"))
             shell.scale = Vector3(1.0, 0.82, 1.12)
             shell.position = Vector3(0, 0.88 * visual_scale, 0)
             _visual.add_child(shell)
-            var seam := _box(Vector3(0.02, 0.5, 0.86) * visual_scale, Color("#8f6bb0"))
+            var seam := WispKit.box(Vector3(0.02, 0.5, 0.86) * visual_scale, Color("#8f6bb0"))
             seam.position = Vector3(0, 0.90 * visual_scale, 0)
             _visual.add_child(seam)
 
@@ -466,40 +467,3 @@ func _toot(color: Color) -> StandardMaterial3D:
 
 func _emissive(color: Color, energy: float) -> StandardMaterial3D:
     return CozyMaterials.emissive(color, energy)
-
-func _sphere(radius: float, color: Color) -> MeshInstance3D:
-    var visual := MeshInstance3D.new()
-    var mesh := SphereMesh.new()
-    mesh.radius = radius
-    mesh.height = radius * 2.0
-    visual.mesh = mesh
-    visual.material_override = _toot(color)
-    return visual
-
-func _box(size: Vector3, color: Color) -> MeshInstance3D:
-    var visual := MeshInstance3D.new()
-    var mesh := BoxMesh.new()
-    mesh.size = size
-    visual.mesh = mesh
-    visual.material_override = _toot(color)
-    return visual
-
-func _cylinder(radius: float, height: float, color: Color) -> MeshInstance3D:
-    var visual := MeshInstance3D.new()
-    var mesh := CylinderMesh.new()
-    mesh.top_radius = radius
-    mesh.bottom_radius = radius
-    mesh.height = height
-    visual.mesh = mesh
-    visual.material_override = _toot(color)
-    return visual
-
-func _cone(radius: float, height: float, color: Color) -> MeshInstance3D:
-    var visual := MeshInstance3D.new()
-    var mesh := CylinderMesh.new()
-    mesh.top_radius = 0.01
-    mesh.bottom_radius = radius
-    mesh.height = height
-    visual.mesh = mesh
-    visual.material_override = _toot(color)
-    return visual

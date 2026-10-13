@@ -48,7 +48,7 @@ func _run() -> void:
         root.add_child(game)
         await frames(5)
 
-        var menu := await _measure(game)
+        var menu := await _measure_when_bright(game, MENU_MIN, 6, 5)
         if not ok(menu > 0.0, "the menu frame did not render, so it cannot be judged"):
                 stop(game, suite_name)
                 return
