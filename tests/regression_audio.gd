@@ -75,17 +75,22 @@ func _run() -> void:
     ok(absf(actual_seconds - expected_seconds) < 0.1,
         "the lullaby is %.1fs; eight bars at 63 bpm is %.1fs" % [actual_seconds, expected_seconds])
     # It must hold actual music, at a level that stays soft.
+    # A stream's `data` property is not a free read: it hands back a fresh copy
+    # of the whole PCM block, so re-reading it inside the loop re-copied ~1.3 MB
+    # on EVERY sample -- 28 seconds per scan, seven minutes per suite run. One
+    # hoisted local reads the same bytes and the same peak in milliseconds.
+    var samples := song.data
     var peak := 0
-    for sample_index in range(0, song.data.size(), 2):
-        peak = maxi(peak, absi(song.data.decode_s16(sample_index)))
+    for sample_index in range(0, samples.size(), 2):
+        peak = maxi(peak, absi(samples.decode_s16(sample_index)))
     ok(peak > 8000, "the rendered lullaby is nearly silent (peak %d)" % peak)
     ok(peak <= 32767, "the rendered lullaby clipped")
     # The seam: a wrap-mixed loop keeps sounding through the boundary; a
     # faded-out tail ends in silence and clicks on every repeat.
     var seam_peak := 0
-    var seam_start: int = song.data.size() - 2048
-    for sample_index in range(seam_start, song.data.size(), 2):
-        seam_peak = maxi(seam_peak, absi(song.data.decode_s16(sample_index)))
+    var seam_start: int = samples.size() - 2048
+    for sample_index in range(seam_start, samples.size(), 2):
+        seam_peak = maxi(seam_peak, absi(samples.decode_s16(sample_index)))
     ok(seam_peak > 800, "the loop seam fades to silence instead of wrapping (peak %d)" % seam_peak)
     # Re-asking for the region that is already playing must not restart it.
     var before_stream: int = music.current_stream().get_instance_id()
@@ -168,9 +173,11 @@ func _run() -> void:
         if not ok(absf(actual - expected) < 0.1,
                 "%s is %.1fs; eight bars at %s bpm is %.1fs" % [song_key, actual, MusicScores.SONGS[song_key]["tempo"], expected]):
             break
+        # Same property-copy trap the lullaby scan fell into: hoist once.
+        var book_samples := rendered.data
         var book_peak := 0
-        for sample_index in range(0, rendered.data.size(), 2):
-            book_peak = maxi(book_peak, absi(rendered.data.decode_s16(sample_index)))
+        for sample_index in range(0, book_samples.size(), 2):
+            book_peak = maxi(book_peak, absi(book_samples.decode_s16(sample_index)))
         if not ok(book_peak > 8000 and book_peak <= 32767,
                 "%s rendered at peak %d -- silent or clipped" % [song_key, book_peak]):
             break
@@ -236,9 +243,10 @@ func _run() -> void:
     ok(probe_tone.mix_rate == 22050, "tone stream used an unexpected mix rate")
     ok(not probe_tone.stereo, "tone stream unexpectedly used stereo")
     ok(probe_tone.data.size() > 0 and probe_tone.data.size() % 2 == 0, "tone stream had malformed PCM data")
+    var tone_samples := probe_tone.data
     var max_sample := 0
-    for byte_index in range(0, probe_tone.data.size(), 2):
-        max_sample = maxi(max_sample, absi(probe_tone.data.decode_s16(byte_index)))
+    for byte_index in range(0, tone_samples.size(), 2):
+        max_sample = maxi(max_sample, absi(tone_samples.decode_s16(byte_index)))
     ok(max_sample <= 32767, "tone PCM exceeded signed 16-bit bounds")
     probe_tone = null
 
@@ -299,12 +307,15 @@ func _check_chords_release_to_silence(director: AudioDirector) -> void:
         var stream := director._cache[key] as AudioStreamWAV
         if stream == null or stream.data.size() < 4:
             continue
-        var count: int = stream.data.size() / 2
+        # The argument was evaluated per call, so every sample re-copied the
+        # chord's whole PCM block through the property getter. Hoist once.
+        var chord_samples := stream.data
+        var count: int = chord_samples.size() / 2
         var peak := 0.0
         for index in range(count):
-            peak = maxf(peak, absf(_wav_sample(stream.data, index)))
+            peak = maxf(peak, absf(_wav_sample(chord_samples, index)))
         ok(peak > 0.0, "a cached chord is silent")
-        var tail: float = absf(_wav_sample(stream.data, count - 1))
+        var tail: float = absf(_wav_sample(chord_samples, count - 1))
         if peak > 0.0:
             ok(tail < peak * 0.02,
                 "chord %s ends at %.1f%% of peak, which clicks" % [key.left(28), tail / peak * 100.0])

@@ -200,11 +200,19 @@ func _present_panel() -> void:
     _shop_card.visible = true
     _fit_layout()
     _clear_panel()
+    # The shop arrives the way every other screen does: the world dims with a
+    # breath, the card settles. Popping a wall of wares in one frame read as
+    # a window slamming open in a quiet house.
+    _fade_scrim_in(_shop_scrim)
+    _settle_in(_shop_card)
 
 func _retire_panel() -> void:
     # The mirror of _present_panel: the card and its scrim leave together.
+    # Departures are instant and scrims reset to full strength, so the next
+    # arrival always starts its fade from a clean, fully-lit scrim.
     _shop_scrim.visible = false
     _shop_card.visible = false
+    _shop_scrim.modulate.a = 1.0
 
 func show_shop(state: Dictionary) -> void:
     _present_panel()
@@ -355,6 +363,11 @@ func close_panels() -> void:
     _overlay_scrim.visible = false
     _overlay_card.visible = false
     _beat_ring.visible = false
+    # Hidden scrims return to full strength: a fade-in that never finished
+    # must not bake a half-dimmed world into the next opening.
+    _menu_scrim.modulate.a = 1.0
+    _shop_scrim.modulate.a = 1.0
+    _overlay_scrim.modulate.a = 1.0
     _cancel_story()
     _reset_touch_joystick()
     # A panel opening owns the whole screen; a "press E" hint about a world

@@ -407,7 +407,23 @@ func _show_overlay(for_menu: bool = false) -> void:
     _overlay_card.visible = true
     _overlay_card.modulate.a = 1.0
     _fit_layout()
+    # The dim arrives with the card, not before it: one breath of a fade on
+    # whichever scrim this opening raised, so no screen ever snaps from a
+    # lit forest to a dimmed one in a single frame.
+    _fade_scrim_in(_menu_scrim if for_menu else _overlay_scrim)
     _settle_in(_overlay_card)
+
+## A scrim fades in with a short breath (a quarter second, cubed out), and
+## reduced motion shows it immediately — the dim is presentation, not
+## information, so nothing is lost by skipping it.
+func _fade_scrim_in(scrim: CanvasItem) -> void:
+    if scrim == null or not is_instance_valid(scrim):
+        return
+    scrim.modulate.a = 1.0 if _reduced_motion else 0.0
+    if _reduced_motion:
+        return
+    var fade := scrim.create_tween()
+    fade.tween_property(scrim, "modulate:a", 1.0, 0.24).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 ## A card arrives like a leaf settling: a quick fade, then perfectly still.
 ## Still means still — no card breathes, no scrim shimmers; the menu's life is
