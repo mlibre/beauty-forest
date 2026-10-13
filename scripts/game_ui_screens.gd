@@ -1,8 +1,9 @@
 class_name GameUIScreens
-extends "res://scripts/game_ui_panels.gd"
+extends "res://scripts/game_ui_settings.gd"
 ## The animated, joyful screens: menu, pause, nap, ending, the memory book --
-## the ones that open into the overlay card. The full-screen panels (Peddle's
-## cart, the gentler-forest options) live one file down, in GameUIPanels.
+## the ones that open into the overlay card. The full-screen panels live one
+## file down: the shelves in GameUIPanels, the gentler-forest options between
+## it and this file in GameUISettings.
 
 func show_menu(meta: Dictionary) -> void:
     _clear(_overlay_content)
@@ -400,9 +401,12 @@ func show_ending(dragons: int, meta: Dictionary) -> void:
 
 func show_journal(meta: Dictionary, facts_learned: Array, stickers: Array) -> void:
     _present_panel()
-    _shop_frame.add_child(_card_header("Mote’s memory book ♥", GardenGlyphs.BOOK, "Fun facts and stickers you collected. Just for smiles — never a test."))
-    _shop_frame.add_child(_separator())
+    # The header rides inside the scroll like every panel's: a pinned header
+    # demands its own height from a card whose window may not have it, and a
+    # long collection already needs the room. The close button stays pinned.
     var list := _panel_list(9)
+    list.add_child(_card_header("Mote’s memory book ♥", GardenGlyphs.BOOK, "Fun facts and stickers you collected. Just for smiles — never a test."))
+    list.add_child(_separator())
     list.add_child(_section_label("FUN FACTS YOU FOUND · %d ♥" % facts_learned.size()))
     if facts_learned.is_empty():
         list.add_child(_label("No facts yet. Level up gently or soothe a curious wisp; Mote will share one.", 16, Color("#eee8c8")))

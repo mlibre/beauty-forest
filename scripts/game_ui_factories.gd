@@ -188,10 +188,15 @@ func _card_header(title: String, glyph_key: String, subtitle: String = "", headi
     row.add_theme_constant_override("separation", 12)
     row.add_child(_roundel(glyph_key, 26))
     var heading := _label(title, heading_size, Color("#ffe6a0"))
-    # One line by choice: a screen's name reads best unbroken, and at 200%
-    # text a two-line heading alone eats a quarter of a short window's card.
-    # The responsive clamp adds wrap itself when a narrow window truly needs
-    # it — that is the one place width, not height, is the tighter budget.
+    # The heading wraps when the row cannot afford its full one-line width.
+    # "One line by choice" still holds everywhere it can: autowrap only bites
+    # when the row is genuinely narrower than the text, and on every
+    # comfortable desktop width it never bites. The old one-line-by-force
+    # version had a per-control escape hatch in the responsive clamp -- but
+    # the clamp judges each control alone, and at 200% text the menu title
+    # fit alone while roundel + separation + title did not fit as a row, so
+    # the menu card inflated straight off both edges of a 480px window.
+    heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     heading.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     row.add_child(heading)

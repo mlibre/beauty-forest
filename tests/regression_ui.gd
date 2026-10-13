@@ -248,6 +248,17 @@ func _run() -> void:
         var settings_card := Rect2(_ui._shop_card.position, _ui._shop_card.size)
         ok(_root_rect.encloses(settings_card), "200%% text pushed the settings card outside the window: %s" % str(settings_card))
         ok(_ui._shop_content.size.x <= _ui._shop_card.size.x, "200%% text made settings copy wider than its card")
+        # The menu gets the same 200% pass as the settings panel. Its title is
+        # the game's largest heading, authored one line by choice -- and a
+        # one-line heading at 80px font beside a fixed roundel used to demand
+        # more width than the window had, inflating the card straight off both
+        # edges. The clamp that was supposed to catch this works per control,
+        # and each piece fit alone; only the ROW was too wide.
+        _ui.show_menu(game.meta)
+        await frames(4)
+        var big_menu := Rect2(_ui._overlay_card.position, _ui._overlay_card.size)
+        ok(_root_rect.encloses(big_menu), "200%% text pushed the menu card outside the window: %s" % str(big_menu))
+        ok(_ui._overlay_content.size.x <= _ui._overlay_card.size.x, "200%% text made menu copy wider than its card")
         _ui.apply_settings(BeautyData.default_settings())
         _ui._fit_layout()
 
