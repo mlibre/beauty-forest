@@ -1,7 +1,12 @@
 name: Release builds
 
+# Every push to master is a release: the four exports build fresh, the
+# rolling `latest` release is re-pointed at the new commit, and the web build
+# goes live through pages.yml (which shares this trigger). A versioned tag
+# still makes a versioned release the same way.
 on:
   push:
+    branches: [master]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -58,6 +63,28 @@ jobs:
           name: BeautyForest-linux
           path: builds/linux/BeautyForest.x86_64
 
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.7.2 and templates
+        run: |
+          curl -sL -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+          unzip -q godot.zip && sudo install -m 755 Godot_v4.7.2-stable_linux.x86_64 /usr/local/bin/godot
+          curl -sL -o templates.tpz https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates
+          unzip -q templates.tpz -d tpl && mv tpl/templates ~/.local/share/godot/export_templates/4.7.2.stable
+      - name: Export web build
+        run: |
+          mkdir -p builds/web
+          touch builds/.gdignore
+          godot --headless --path . --import
+          godot --headless --path . --export-release "Web" builds/web/index.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BeautyForest-web
+          path: builds/web
+
   android:
     runs-on: ubuntu-latest
     steps:
@@ -109,7 +136,7 @@ jobs:
           path: builds/android/BeautyForest.apk
 
   release:
-    needs: [windows, linux, android]
+    needs: [windows, linux, web, android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -119,14 +146,21 @@ jobs:
         run: |
           zip -j BeautyForest-Windows.zip BeautyForest-windows/BeautyForest.exe
           zip -j BeautyForest-Linux.zip BeautyForest-linux/BeautyForest.x86_64
+          zip -j BeautyForest-Web.zip BeautyForest-web/*
           cp BeautyForest-android/BeautyForest.apk BeautyForest-Android.apk
           # This job checks out nothing, so gh cannot discover the repository
           # from git; every call names it explicitly with -R.
-          if gh release view -R mlibre/beauty-forest "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload -R mlibre/beauty-forest "$GITHUB_REF_NAME" BeautyForest-Windows.zip BeautyForest-Linux.zip BeautyForest-Android.apk --clobber
-          else
-            gh release create -R mlibre/beauty-forest "$GITHUB_REF_NAME" \
-              BeautyForest-Windows.zip BeautyForest-Linux.zip BeautyForest-Android.apk \
-              --title "Beauty Forest $GITHUB_REF_NAME" \
-              --notes "A gentle walk — no hurry, no losing. Unzip, run, wander. The Android APK is self-signed: allow installs from this source when your phone asks."
+          #
+          # A push to master re-points the rolling `latest` release at the new
+          # commit: the old release is deleted WITH its tag (--cleanup-tag),
+          # then recreated from the exact sha this run built. A versioned tag
+          # (v*) keeps its own name and never collides with `latest`.
+          if [[ "$GITHUB_REF_NAME" == latest ]]; then
+            gh release delete latest -R mlibre/beauty-forest --yes --cleanup-tag >/dev/null 2>&1 || true
+            gh release create latest -R mlibre/beauty-forest \
+              --target "$GITHUB_SHA" \
+              --title "Beauty Forest — latest build" \
+              --notes "Built from commit $GITHUB_SHA. A gentle walk — no hurry, no losing. Unzip, run, wander. The Android APK is self-signed: allow installs from this source when your phone asks. The web build also lives on the GitHub Pages site."
           fi
+          gh release upload -R mlibre/beauty-forest "$GITHUB_REF_NAME" \
+            BeautyForest-Windows.zip BeautyForest-Linux.zip BeautyForest-Web.zip BeautyForest-Android.apk --clobber
