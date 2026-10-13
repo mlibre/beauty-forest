@@ -107,7 +107,12 @@ func _build_character() -> void:
     buckle_mesh.size = Vector3(0.075, 0.055, 0.036)
     buckle.mesh = buckle_mesh
     buckle.material_override = gold
-    buckle.position = Vector3(-0.245, 0.44, -0.305)
+    # The buckle rides the strap's lower reach, just above the belt: the
+    # chest is a capsule, and at the buckle's old perch near the shoulder it
+    # curved back ~0.13 behind the strap plane — the gold plate floated off
+    # the chest. At the belt line the capsule is at its widest and the
+    # buckle sits flush on the strap.
+    buckle.position = Vector3(0.043, 0.10, -0.322)
     buckle.rotation.z = 0.62
     hips.add_child(buckle)
 
