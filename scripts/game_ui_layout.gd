@@ -415,15 +415,31 @@ func _show_overlay(for_menu: bool = false) -> void:
 
 ## A scrim fades in with a short breath (a quarter second, cubed out), and
 ## reduced motion shows it immediately — the dim is presentation, not
-## information, so nothing is lost by skipping it.
+## information, so nothing is lost by skipping it. A fade that is still
+## running when the screen reopens must not fight the new one: the old tween
+## is killed first (kept on a meta so the closers can kill it too).
 func _fade_scrim_in(scrim: CanvasItem) -> void:
     if scrim == null or not is_instance_valid(scrim):
         return
+    _kill_tween_meta(scrim, "arrival_fade")
     scrim.modulate.a = 1.0 if _reduced_motion else 0.0
     if _reduced_motion:
         return
     var fade := scrim.create_tween()
     fade.tween_property(scrim, "modulate:a", 1.0, 0.24).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+    scrim.set_meta("arrival_fade", fade)
+
+## Kill the tween a node keeps under `meta_key`, if one is still running.
+## Opening twice in a row used to stack two tweens on the same property --
+## both writing modulate every frame until the slower one finished, a flicker
+## only a fast open-close-open could produce. Cheap to prevent.
+func _kill_tween_meta(item: Object, meta_key: String) -> void:
+    if not item.has_meta(meta_key):
+        return
+    var prior := item.get_meta(meta_key) as Tween
+    if prior != null and prior.is_valid():
+        prior.kill()
+    item.remove_meta(meta_key)
 
 ## A card arrives like a leaf settling: a quick fade, then perfectly still.
 ## Still means still — no card breathes, no scrim shimmers; the menu's life is
@@ -433,9 +449,11 @@ func _fade_scrim_in(scrim: CanvasItem) -> void:
 func _settle_in(card: Control) -> void:
     if _reduced_motion:
         return
+    _kill_tween_meta(card, "arrival_settle")
     card.modulate.a = 0.0
     var settle := card.create_tween()
     settle.tween_property(card, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+    card.set_meta("arrival_settle", settle)
 
 func _dismiss_beat_ring() -> void:
     ## The beat ring is a live gameplay affordance ("press E on the gold") and

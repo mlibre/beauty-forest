@@ -217,7 +217,11 @@ func _present_panel() -> void:
 func _retire_panel() -> void:
     # The mirror of _present_panel: the card and its scrim leave together.
     # Departures are instant and scrims reset to full strength, so the next
-    # arrival always starts its fade from a clean, fully-lit scrim.
+    # arrival always starts its fade from a clean, fully-lit scrim. Any
+    # arrival tween still in flight dies with the closing, or it would keep
+    # writing modulate.a over the reset.
+    _kill_tween_meta(_shop_scrim, "arrival_fade")
+    _kill_tween_meta(_shop_card, "arrival_settle")
     _shop_scrim.visible = false
     _shop_card.visible = false
     _shop_scrim.modulate.a = 1.0
@@ -465,7 +469,14 @@ func close_panels() -> void:
     _overlay_card.visible = false
     _beat_ring.visible = false
     # Hidden scrims return to full strength: a fade-in that never finished
-    # must not bake a half-dimmed world into the next opening.
+    # must not bake a half-dimmed world into the next opening. The in-flight
+    # arrival tweens die with the close -- a tween that outlives its screen
+    # would keep writing modulate.a over these resets.
+    _kill_tween_meta(_menu_scrim, "arrival_fade")
+    _kill_tween_meta(_shop_scrim, "arrival_fade")
+    _kill_tween_meta(_overlay_scrim, "arrival_fade")
+    _kill_tween_meta(_shop_card, "arrival_settle")
+    _kill_tween_meta(_overlay_card, "arrival_settle")
     _menu_scrim.modulate.a = 1.0
     _shop_scrim.modulate.a = 1.0
     _overlay_scrim.modulate.a = 1.0
