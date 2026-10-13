@@ -239,6 +239,14 @@ func _build_interface() -> void:
     _story_body = _label("", 15, Color("#fff0c8"))
     _story_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _story_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    # The body is drawn behind an ink wash: the label lays out its full text
+    # every frame (so the card's height never moves) and the shader decides
+    # which rows draw. show_story pours the wash; the reveal is draw-space,
+    # not layout-space, so the typewriter bug can never return.
+    var story_ink := ShaderMaterial.new()
+    story_ink.shader = load("res://shaders/ink_reveal.gdshader")
+    story_ink.set_shader_parameter("reveal", 1.0)
+    _story_body.material = story_ink
     story_box.add_child(_story_body)
 
     _beat_ring = Panel.new()
@@ -273,9 +281,37 @@ func _build_interface() -> void:
     _warm_flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     _warm_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _root.add_child(_warm_flash)
+    _build_cinema()
     _build_context_hint()
     _build_intro()
     _build_touch_controls()
+
+## The cinema: letterbox bars for the walk's staged moments, and the page-turn
+## wipe for a descent. Both live above the HUD but below the modal screens;
+## both are drawn quiet (no borders, no gloss) so they frame instead of shout.
+func _build_cinema() -> void:
+    var bar_color := Color(0.05, 0.08, 0.06, 0.88)
+    _cinematic_top = ColorRect.new()
+    _cinematic_top.name = "CinemaTop"
+    _cinematic_top.color = bar_color
+    _cinematic_top.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+    _cinematic_top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _cinematic_top.visible = false
+    _root.add_child(_cinematic_top)
+    _cinematic_bottom = ColorRect.new()
+    _cinematic_bottom.name = "CinemaBottom"
+    _cinematic_bottom.color = bar_color
+    _cinematic_bottom.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+    _cinematic_bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _cinematic_bottom.visible = false
+    _root.add_child(_cinematic_bottom)
+    _page_wipe = ColorRect.new()
+    _page_wipe.name = "PageWipe"
+    _page_wipe.color = Color("#fff3cf")
+    _page_wipe.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    _page_wipe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _page_wipe.modulate.a = 0.0
+    _root.add_child(_page_wipe)
 
 ## The bottom-centre hint pill: the one piece of prose the walk screen is
 ## allowed to paint, and only while a press would actually do something.
@@ -368,6 +404,30 @@ func _build_intro() -> void:
     intro_ripple_style.set_corner_radius_all(60)
     _intro_ripple.add_theme_stylebox_override("panel", intro_ripple_style)
     _intro_glow.add_child(_intro_ripple)
+    # The page's own fireflies: five motes that live inside the glow plate,
+    # behind the picture. A storybook's picture is a window -- something is
+    # always moving out there. show_intro_page tints them with the page and
+    # keeps their loops turning; reduced motion leaves them parked and faint.
+    var firefly_holder := Control.new()
+    firefly_holder.name = "IntroFireflies"
+    firefly_holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    firefly_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _intro_glow.add_child(firefly_holder)
+    for firefly_index in range(5):
+        var firefly := Panel.new()
+        firefly.custom_minimum_size = Vector2(6, 6)
+        firefly.size = Vector2(6, 6)
+        firefly.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        var firefly_style := StyleBoxFlat.new()
+        firefly_style.bg_color = Color(1.0, 0.95, 0.75, 0.85)
+        firefly_style.set_corner_radius_all(3)
+        firefly.add_theme_stylebox_override("panel", firefly_style)
+        # Authored rest positions, spread across the plate; the drift loops
+        # move each one a few pixels around its own anchor.
+        var rest_angle := TAU * float(firefly_index) / 5.0 + 0.6
+        firefly.position = Vector2(52.0, 52.0) + Vector2(cos(rest_angle) * 34.0, sin(rest_angle) * 26.0)
+        firefly_holder.add_child(firefly)
+        _intro_fireflies.append(firefly)
     var glyph_holder := CenterContainer.new()
     glyph_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
     glyph_holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -384,6 +444,13 @@ func _build_intro() -> void:
     _intro_body = _label("", 17, Color("#eef3d8"))
     _intro_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _intro_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    # The prose pours in through the same ink wash the vignette wears: full
+    # text laid out from the first frame, rows revealed top-down in draw
+    # space. The page never reflows while it tells.
+    var intro_ink := ShaderMaterial.new()
+    intro_ink.shader = load("res://shaders/ink_reveal.gdshader")
+    intro_ink.set_shader_parameter("reveal", 1.0)
+    _intro_body.material = intro_ink
     column.add_child(_intro_body)
     column.add_child(_spacer(4))
     # One dot per page: where the telling is, and how much story is left. A

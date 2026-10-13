@@ -147,6 +147,28 @@ var _intro_page_count := 0
 ## the older one wins the last word -- the next page's picture never shrinks
 ## in at all. One home, killed on every turn.
 var _intro_turn_tween: Tween
+## The ink wash that draws the prose onto the page: a shader mask on the
+## body labels (intro and in-run vignette). The text is laid out in full and
+## the mask only decides which rows draw, so the reveal can never make a
+## label's minimum size dance the way a typewriter did.
+var _ink_tween: Tween
+var _ink_label: Label
+## The intro's living picture: five motes drifting slow loops inside the
+## page's glow plate, behind the glyph. The book's own fireflies -- the one
+## place the interface is allowed to breathe, because a storybook's picture
+## is a window, not a button.
+var _intro_fireflies: Array[Panel] = []
+var _intro_firefly_tweens: Array[Tween] = []
+## The cinema: two letterbox bars that frame the song ceremonies, so the
+## walk's biggest moments stage themselves instead of arriving as prose.
+var _cinematic_top: ColorRect
+var _cinematic_bottom: ColorRect
+var _cinematic_tween: Tween
+var _cinematic_on := false
+## The page-turn wipe: one soft wash of light when the walk descends past a
+## stair, so floors change the way a book turns its page.
+var _page_wipe: ColorRect
+var _page_wipe_tween: Tween
 ## The interface's doorbell, wired once by the director at boot: a callable
 ## that speaks for button hovers and presses. The UI chain never reaches the
 ## audio director directly; when nothing is wired, the buttons stay silent.
@@ -244,6 +266,15 @@ func _cancel_story() -> void:
     if _story_arrival_tween != null and _story_arrival_tween.is_valid():
         _story_arrival_tween.kill()
     _story_arrival_tween = null
+    if _ink_tween != null and _ink_tween.is_valid():
+        _ink_tween.kill()
+    _ink_tween = null
+    _ink_label = null
+    # A replaced vignette must not leave a half-poured wash on the labels:
+    # both bodies return to fully drawn, whatever the cancel interrupted.
+    for washed_label in [_story_body, _intro_body]:
+        if washed_label != null and is_instance_valid(washed_label) and washed_label.material is ShaderMaterial:
+            (washed_label.material as ShaderMaterial).set_shader_parameter("reveal", 1.0)
     if _story_card != null and is_instance_valid(_story_card):
         # A cancelled arrival leaves no half-settled transform behind: scale
         # always returns to ONE, so the next show starts from rest.

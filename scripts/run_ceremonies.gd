@@ -43,6 +43,9 @@ func _begin_dragon_lullaby() -> void:
     ui.show_story("The Lullaby", "Mote hums the tune. Press E when the ring glows GOLD. Missed notes merely let the forest wait.", 4.5)
     ui.add_log("Mote: “Follow me… E on the gold!”")
     audio.play_tone(523.25, 0.4, 0.07, 1)
+    # Snoozle's song is a staged moment: the letterbox frames it like a film
+    # scene, and leaves when the last note lands.
+    ui.set_cinematic(true)
 
 func _begin_feeling_lullaby(target: Wisp) -> void:
     if _lullaby_active or not is_instance_valid(target) or not target.alive or not target.is_feeling:
@@ -57,6 +60,7 @@ func _begin_feeling_lullaby(target: Wisp) -> void:
     _lullaby_timer = 1.2
     ui.show_story("A Big Feeling", "%s wobbles close, sniffly and huge. Hum with it — E on the gold, rest when the ring dims." % target.feeling_name, 4.5)
     ui.add_log("Mote: “Gentle… two little rounds, with breaths between. Missed notes just stretch the song.”")
+    ui.set_cinematic(true)
 
 func _tick_lullaby(delta: float) -> void:
     if not _lullaby_active:
@@ -128,6 +132,7 @@ func _win_feeling() -> void:
     var target := _lullaby_target
     _lullaby_active = false
     ui.set_beat(false, false)
+    ui.set_cinematic(false)
     target.take_damage(target.health + 1.0)
     CozyVFX.burst(world, target.global_position + Vector3.UP * 1.4, Color("#ffe7a0"), 48, 2.5, 1.4)
     CozyVFX.ring(world, target.global_position + Vector3.UP * 0.1, Color("#fff0ad"), 3.6, 0.9)
@@ -139,6 +144,7 @@ func _win_feeling() -> void:
 func _win_dragon() -> void:
     _lullaby_active = false
     ui.set_beat(false, false)
+    ui.set_cinematic(false)
     meta["dragons_sung"] = int(meta.get("dragons_sung", 0)) + 1
     meta["best_floor"] = maxi(int(meta.get("best_floor", 0)), floor_number)
     _award_sticker("dragon_friend")
@@ -177,6 +183,7 @@ func _reset_lullaby() -> void:
     _lullaby_target = null
     _lullaby_step = -1
     _lullaby_timer = 0.0
+    ui.set_cinematic(false)
     _lullaby_gold = false
     _dragon_hits = 0
     _feeling_round = 1

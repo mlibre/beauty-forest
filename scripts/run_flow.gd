@@ -210,7 +210,10 @@ func _on_start_requested(style_key: String) -> void:
 func _on_restart_requested(continue_deeper: bool = false) -> void:
     var next_floor := floor_number + 1 if continue_deeper else 1
     # "Wander deeper" keeps the walk (and its loadout) going; "a fresh walk"
-    # starts over on purpose.
+    # starts over on purpose. Going deeper turns the book's page: one wash of
+    # light crosses the screen while the next floor builds underneath it.
+    if continue_deeper:
+        ui.play_page_wipe()
     _start_run(next_floor, continue_deeper)
 
 func _open_shop() -> void:
