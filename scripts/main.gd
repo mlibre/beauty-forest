@@ -157,7 +157,7 @@ func _unhandled_input(event: InputEvent) -> void:
         if _near_merchant():
             _open_shop()
         else:
-            ui.show_toast("Peddle parks on floors 2 · 4 · 7 · 10 of every thirteen-floor stretch.", 3.4)
+            ui.show_toast("Peddle parks on cozy corners of every thirty-floor stretch.", 3.4)
         get_viewport().set_input_as_handled()
     elif event.is_action_pressed("bf_journal"):
         _open_journal()

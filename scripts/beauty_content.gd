@@ -188,6 +188,36 @@ const REGIONS := [
         "foliage": "#78bd5e", "tip": "#b9dd69", "flower": "#fff3b0", "ground": "#9ac765", "accent": "#ffeaa0",
         "entry": "The Roost glows like the inside of a lantern. Tuck in your scarf.",
     },
+    {
+        "key": "dewdrop-terraces", "name": "Dewdrop Terraces", "min": 14, "max": 17, "glyph": "sparkle",
+        "sky": "#f2f0cf", "horizon": "#fdf6d8", "fog": "#d8e8c0", "sun": "#ffeaa6",
+        "foliage": "#5cb554", "tip": "#a9dd66", "flower": "#bfe4ff", "ground": "#7cc065", "accent": "#e8f4c0",
+        "entry": "Dewdrop Terraces ring like tiny bells. Every leaf holds its own little sky.",
+    },
+    {
+        "key": "honeywind-boughs", "name": "Honeywind Boughs", "min": 18, "max": 21, "glyph": "lantern",
+        "sky": "#f8d99a", "horizon": "#ffe9b8", "fog": "#ecd9a0", "sun": "#ffd37e",
+        "foliage": "#a2b945", "tip": "#e0cd5e", "flower": "#ffd9a0", "ground": "#b0bd55", "accent": "#fff0b0",
+        "entry": "Honeywind Boughs sway slow and golden. The breeze tastes faintly of dessert.",
+    },
+    {
+        "key": "glowcap-meadow", "name": "Glowcap Meadow", "min": 22, "max": 25, "glyph": "mote",
+        "sky": "#f7cf9e", "horizon": "#ffdcb0", "fog": "#e8c9a2", "sun": "#ffc47e",
+        "foliage": "#b98d52", "tip": "#e8bc72", "flower": "#ffe3f2", "ground": "#a3a858", "accent": "#ffd9a8",
+        "entry": "Glowcap Meadow leans in close to listen. Every mushroom is a tiny reading lamp.",
+    },
+    {
+        "key": "starpetal-vale", "name": "Starpetal Vale", "min": 26, "max": 29, "glyph": "heart",
+        "sky": "#f9e2c2", "horizon": "#fff3d8", "fog": "#e9e2b8", "sun": "#ffe5a2",
+        "foliage": "#6dbb58", "tip": "#c0e468", "flower": "#e6d5ff", "ground": "#8cc468", "accent": "#fff0c0",
+        "entry": "Starpetal Vale glows softly from below, like a lantern under a quilt.",
+    },
+    {
+        "key": "grand-roost", "name": "The Grand Roost", "min": 30, "max": 30, "glyph": "dragon",
+        "sky": "#fff3d4", "horizon": "#fff8e0", "fog": "#eee9b8", "sun": "#ffe89a",
+        "foliage": "#7fc260", "tip": "#bfe06e", "flower": "#fff4bc", "ground": "#9ecb6a", "accent": "#ffeab0",
+        "entry": "The Grand Roost glows like the inside of a lantern. The whole family is waiting.",
+    },
 ]
 
 const FLOOR_MODIFIERS := [
@@ -253,22 +283,43 @@ const FEELINGS := {
     4: {"name": "The Lonely", "farewell": "Thank you for sitting with me. I feel found."},
     8: {"name": "The Hurried", "farewell": "Slowing down… together… ahh. That is the whole trick."},
     12: {"name": "The Snuffly", "farewell": "*sniff* Blew my nose on a star. Feel much better now."},
+    16: {"name": "The Wakeful", "farewell": "Ohh. Heavy things feel lighter when somebody stays. Stay was all you did."},
+    20: {"name": "The Giggly", "farewell": "Hee… hee… *snorf* Thank you. I had that laugh saved up for ages."},
+    24: {"name": "The Dreamy", "farewell": "Was I humming? You hummed WITH me. Now it is a song. Sleep well, friend."},
+    28: {"name": "The Snuggly", "farewell": "You may borrow this hug anytime. It renews itself. That is the trick of hugs."},
 }
 
 const STORY := {
-    1: ["The Descent Begins", "Mote heard a rumor: far below sleeps a dragon who hasn’t napped properly in centuries. You two will fix that."],
+    1: ["The Descent Begins", "Mote heard a rumor: far below sleeps a whole family of dragons who haven’t napped properly in centuries. You two will fix that."],
     2: ["A Warm Draft", "Warm air rises past you, smelling of moss and lavender. ‘Dragons snore harmonically,’ Mote whispers, impressed."],
     3: ["Distant Thunder", "A slow, rumbling snore shakes dust from the canopy. The wisps below seem calmer near it."],
-    4: ["The Lullaby Problem", "Mote explains: the dragon wakes grumpy without five Dream Chimes sung in harmony. They’re lost on the floor below. Naturally."],
+    4: ["The Lullaby Problem", "Mote explains: the first dragon wakes grumpy without five Dream Chimes sung in harmony. They’re lost on the floor below. Naturally."],
     5: ["Snoozle’s Nap Chamber", "Five chimes glimmer among the roots. ‘Snoozle!’ Mote squeaks. ‘Remember: E on the gold, gentle as pancakes.’"],
     6: ["Snoozle Sleeps Soundly", "Mote waves goodbye. ‘One dragon tucked in! But she mumbled about cousins below. Big family. Bigger snores.’"],
     7: ["Pollen Postcards", "Golden pollen drifts up like tiny letters. ‘The cousins write in sneezes,’ Mote translates, sneezing fluently."],
     8: ["The Family Hum", "Every snore down here harmonizes. ‘That’s a family choir,’ Mote whispers. ‘Snoozle is the soprano. Obviously.’"],
     9: ["Mushroom Mail", "A cap bounces a heart-shaped spore toward you. ‘A gift from the Roost!’ Mote declares. ‘Or lunch. Either way, heartwarming.’"],
     10: ["Cousin Rumbles", "The floor purrs like a giant kettle. ‘That’s not one dragon,’ Mote says. ‘That’s a whole cuddle-pile.’"],
-    11: ["Lullaby Practice", "Mote rehearses his softest hum. ‘The Roost is near. Grandma dragons are picky about lullabies.’"],
+    11: ["Lullaby Practice", "Mote rehearses his softest hum. ‘The first cousin’s roost is near. Pudding is picky about lullabies.’"],
     12: ["Almost to the Roost", "Warm light pools from below. ‘Nearly there,’ Mote breathes. ‘Tuck in your scarf. Family reunions need coziness.’"],
-    13: ["The Roost", "The Roost glows like the inside of a lantern. Snoozle’s whole family dreams here — time for the biggest, softest lullaby."],
+    13: ["A Cousin’s Roost", "Pudding the cousin curls here, half the size and twice the snooze. Five fresh chimes glimmer among the roots. ‘She counts them to fall asleep,’ Mote whispers."],
+    14: ["The Terraces Begin", "Dewdrop Terraces step down like stairs for giants, every leaf holding a drop of light. ‘Someone polishes these,’ Mote says, checking behind the leaves."],
+    15: ["Tiny Bells", "The dew rings when the wind walks past — a whole terrace of chimes nobody winds. Mote conducts two bars, then apologizes to the breeze."],
+    16: ["The Wakeful Feeling", "A Very Big Feeling sits alone on a terrace, swinging its feet. ‘Feels are heavier in the deep,’ Mote says. ‘Bring your softest hum.’"],
+    17: ["Terrace Games", "Young dragons left hopscotch marks in the moss, scorched gently at each square. ‘Recess downstairs,’ Mote grins. ‘They never could skip square four.’"],
+    18: ["The Boughs Ahead", "Honeywind Boughs hang low and heavy with sweetness. ‘Mind your hair,’ Mote warns, already sticky."],
+    19: ["A Slow Golden River", "Warm air drifts downhill like a river you cannot see. Mote floats a leaf on it and bows to the current."],
+    20: ["The Giggly Feeling", "Something enormous giggles behind the boughs, then hiccups pollen. ‘Everyone needs a laugh this big sometime,’ Mote says, dusting off."],
+    21: ["The Boughs’ Sleeper", "Tumblesnug sleeps braided into the lowest bough, chimes humming in her moss. ‘She wound them herself,’ Mote whispers. ‘Gold beats, gentle as syrup.’"],
+    22: ["Meadow of Little Lamps", "Glowcap Meadow is lit floor to sky — every mushroom a reading lamp, every lamp left on. ‘The family reads to each other down here,’ Mote says softly."],
+    23: ["The Library Log", "A hollow log holds bedtime stories scratched in bark: one about a brave wisp. It is you. The pictures are very flattering."],
+    24: ["The Dreamy Feeling", "A huge, half-asleep Feeling drifts the meadow path, humming off-key with total confidence. ‘Sing it home anyway,’ Mote yawns. ‘Kindness doesn’t need the right notes.’"],
+    25: ["Spore Lanterns", "The caps release slow golden spores that hang like tiny lanterns over the path. Mote walks extra politely through them."],
+    26: ["The Vale Below", "Starpetal Vale opens beneath you, glowing like a lantern under a quilt. ‘Almost the whole way,’ Mote breathes. ‘Listen — even the stairs sound cozy.’"],
+    27: ["Petals That Point", "Starpetals lean all one direction — deeper. ‘The forest grew signposts,’ Mote says. ‘Someone very kind must have taught it.’"],
+    28: ["The Snuggly Feeling", "A house-sized Feeling is hugging a boulder, waiting its turn. ‘They line up to feel better down here,’ Mote whispers. ‘Family habit, probably.’"],
+    29: ["The Eldest’s Anteroom", "Marigold, ancient and immense, naps at the threshold with her chimes arranged like a crown. ‘The softest lullaby ever hummed,’ Mote whispers. ‘This is why we came.’"],
+    30: ["The Grand Roost", "Every dragon, every cousin, one warm heap of family — and above them all, Snoozle opens one eye to wave you in. Time for the biggest, softest lullaby ever hummed."],
 }
 
 ## Every sticker the journal can pin: the name it shows and the award line the
@@ -418,8 +469,16 @@ static func story_for_floor(floor_number: int) -> Array:
         return BeautyEndless.story_for_floor(floor_number)
     return STORY.get(story_floor(floor_number), [])
 
+## The last floor of any chapter — the campaign's Grand Roost, or an endless
+## chapter's own finale — the one floor whose dragon hands the walk to the
+## ending card instead of revealing a stair.
+static func is_chapter_final_floor(floor_number: int) -> bool:
+    if BeautyEndless.is_endless(floor_number):
+        return floor_number == BeautyEndless.CAMPAIGN_LENGTH + BeautyEndless.chapter_for_floor(floor_number) * BeautyEndless.CHAPTER_LENGTH
+    return story_floor(floor_number) == BeautyEndless.CAMPAIGN_LENGTH
+
 static func is_dragon_floor(floor_number: int) -> bool:
-    return story_floor(floor_number) in [5, 13]
+    return story_floor(floor_number) in [5, 13, 21, 29] or is_chapter_final_floor(floor_number)
 
 static func random_choice(items: Array) -> Variant:
     if items.is_empty():
@@ -427,7 +486,7 @@ static func random_choice(items: Array) -> Variant:
     return items[randi() % items.size()]
 
 static func random_modifier(story: int) -> Dictionary:
-    if story == 13:
+    if story == 13 or story == BeautyEndless.CAMPAIGN_LENGTH:
         return {"name": "Lantern-hush morning", "description": "the Roost rests easy", "heart_rate": 0.55}
     return FLOOR_MODIFIERS[randi() % FLOOR_MODIFIERS.size()].duplicate(true)
 

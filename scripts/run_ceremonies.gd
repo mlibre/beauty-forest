@@ -162,7 +162,13 @@ func _win_dragon() -> void:
         # the hero keeps playing on this floor. Bring the ambience back, or the
         # coziest moment in the game leaves the rest of the run muted.
         music.play_region(MusicScores.floor_song(String(region.get("ambient", region.get("key", "sunlit-roots"))), floor_number))
-        ui.show_story("DEEPER STILL", "Snoozle snoozes on, warm and enormous. But Mote tugs your sleeve: there are cousins below, and the forest grows deeper than any map.", 4.2)
+        # The floor's own sleeper names the moment: Snoozle hands the walk to
+        # the cousins, a cousin hands it to the next branch of the family. One
+        # sentence each, because the tuck-in is the moment, not the epilogue.
+        var epilogue := "Snoozle snoozes on, warm and enormous. But Mote tugs your sleeve: there are cousins below, and the forest grows deeper than any map."
+        if BeautyContent.story_floor(floor_number) != 5:
+            epilogue = "The cousin curls tighter, purring like a small landslide. Mote tugs your sleeve: the family grows bigger below, and the forest grows deeper than any map."
+        ui.show_story("DEEPER STILL", epilogue, 4.2)
         ui.add_log("Mote: “Snoozle sleeps soundly. The stair is glowing now.”")
 
 func _reset_lullaby() -> void:

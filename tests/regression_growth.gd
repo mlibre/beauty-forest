@@ -102,14 +102,14 @@ func _check_endless_regions_compose(game: Node) -> bool:
     if not ok(bloom.size() == 196, "the 196-chapter bloom repeated a forest: %s" % first_dupe):
         return false
     for floor_number in range(1, BeautyContent.CAMPAIGN_LENGTH + 1):
-        var expected := "Sunlit Roots" if floor_number <= 4 else ("Pollen Halls" if floor_number <= 8 else ("Mushroom Lull" if floor_number <= 12 else "Snoozle’s Roost"))
+        var expected := "Sunlit Roots" if floor_number <= 4 else ("Pollen Halls" if floor_number <= 8 else ("Mushroom Lull" if floor_number <= 12 else ("Snoozle’s Roost" if floor_number <= 13 else ("Dewdrop Terraces" if floor_number <= 17 else ("Honeywind Boughs" if floor_number <= 21 else ("Glowcap Meadow" if floor_number <= 25 else ("Starpetal Vale" if floor_number <= 29 else "The Grand Roost")))))))
         if not ok(String(BeautyContent.region_for_floor(floor_number)["name"]) == expected,
                 "campaign floor %d lost its own region" % floor_number):
             return false
-    var chapter_one: String = String(BeautyContent.region_for_floor(14)["name"])
-    var deeper: String = String(BeautyContent.region_for_floor(26)["name"])
+    var chapter_one: String = String(BeautyContent.region_for_floor(31)["name"])
+    var deeper: String = String(BeautyContent.region_for_floor(43)["name"])
     if not ok(chapter_one == String(BeautyEndless.region(1)["name"]) and deeper == chapter_one,
-            "floors 14 and 26 do not share chapter 1's region: %s / %s" % [chapter_one, deeper]):
+            "floors 31 and 43 do not share chapter 1's region: %s / %s" % [chapter_one, deeper]):
         return false
     return true
 
@@ -121,18 +121,18 @@ func _check_feelings_exist_below(game: Node) -> bool:
         return false
     if not ok(BeautyContent.feeling_for_floor(5).is_empty(), "the first dragon floor grew a Feeling beside the dragon"):
         return false
-    var chapter_feeling: Dictionary = BeautyContent.feeling_for_floor(17)
+    var chapter_feeling: Dictionary = BeautyContent.feeling_for_floor(34)
     if not ok(not chapter_feeling.is_empty() and not String(chapter_feeling.get("name", "")).is_empty()
             and not String(chapter_feeling.get("farewell", "")).is_empty(),
-            "endless floor 17 (chapter story 4) has no Big Feeling"):
+            "endless floor 34 (chapter story 4) has no Big Feeling"):
         return false
-    if not ok(not BeautyContent.feeling_for_floor(21).is_empty(), "endless floor 21 (chapter story 8) has no Big Feeling"):
+    if not ok(not BeautyContent.feeling_for_floor(38).is_empty(), "endless floor 38 (chapter story 8) has no Big Feeling"):
         return false
-    if not ok(not BeautyContent.feeling_for_floor(16).is_empty() == false,
-            "endless floor 16 grew an unplanned Feeling"):
+    if not ok(not BeautyContent.feeling_for_floor(33).is_empty() == false,
+            "endless floor 33 grew an unplanned Feeling"):
         return false
-    var other_chapter: Dictionary = BeautyContent.feeling_for_floor(30)
-    if not ok(not other_chapter.is_empty(), "chapter 2's first Feeling is missing (floor 30)"):
+    var other_chapter: Dictionary = BeautyContent.feeling_for_floor(47)
+    if not ok(not other_chapter.is_empty(), "chapter 2's first Feeling is missing (floor 47)"):
         return false
     if not ok(String(other_chapter.get("name", "")) != String(chapter_feeling.get("name", "")),
             "chapter 2 reused chapter 1's Feeling name"):
@@ -147,21 +147,21 @@ func _check_endless_story_pages(game: Node) -> bool:
         if not ok(page.size() == 2 and not String(page[0]).is_empty(),
                 "campaign floor %d lost its hand-written story page" % floor_number):
             return false
-    var first_endless: Array = BeautyContent.story_for_floor(14)
+    var first_endless: Array = BeautyContent.story_for_floor(31)
     if not ok(first_endless.size() == 2 and not String(first_endless[0]).is_empty() and not String(first_endless[1]).is_empty(),
-            "endless floor 14 opened a blank page"):
+            "endless floor 31 opened a blank page"):
         return false
-    if not ok(first_endless == BeautyContent.story_for_floor(14), "endless floor 14's page changed between reads"):
+    if not ok(first_endless == BeautyContent.story_for_floor(31), "endless floor 31's page changed between reads"):
         return false
-    var chapter_two: Array = BeautyContent.story_for_floor(27)
+    var chapter_two: Array = BeautyContent.story_for_floor(44)
     if not ok(String(chapter_two[0]) != String(first_endless[0]),
             "chapter 2 opened with chapter 1's page: %s" % String(chapter_two[0])):
         return false
     var pages := {}
     for offset in range(0, 13):
-        var page: Array = BeautyContent.story_for_floor(14 + offset)
+        var page: Array = BeautyContent.story_for_floor(31 + offset)
         pages[String(page[0])] = true
-        if not ok(page.size() == 2, "endless floor %d's page is malformed" % (14 + offset)):
+        if not ok(page.size() == 2, "endless floor %d's page is malformed" % (31 + offset)):
             return false
     if not ok(pages.size() >= 11, "one chapter told only %d distinct stories" % pages.size()):
         return false
@@ -286,29 +286,27 @@ func _check_a_fresh_walk_forgets_the_draft(game: Node) -> bool:
 func _check_endless_floors_build(game: Node) -> bool:
     ## Floors past the Roost must actually build: region, feelings, dragon
     ## finale, merchant — the whole calendar, one chapter deep.
-    game._start_run(14)
+    game._start_run(31)
     await frames(8)
-    if not ok(game.region.get("key", "") == "endless-1", "floor 14 did not enter the first endless chapter: %s" % str(game.region.get("key"))):
+    if not ok(game.region.get("key", "") == "endless-1", "floor 31 did not enter the first endless chapter: %s" % str(game.region.get("key"))):
         return false
-    if not ok(game.world != null and is_instance_valid(game.world), "endless floor 14 built no world"):
+    if not ok(game.world != null and is_instance_valid(game.world), "endless floor 31 built no world"):
         return false
-    game._load_floor(18, false)
+    game._load_floor(43, false)
     await frames(8)
-    if not ok(game.dragon_exists, "endless dragon floor 18 has no dragon"):
+    if not ok(game.dragon_exists, "endless chapter-final floor 43 has no dragon"):
         return false
-    if not ok(game.world.chimes.size() == 5, "endless dragon floor 18 has %d chimes" % game.world.chimes.size()):
+    if not ok(game.world.chimes.size() == 5, "endless chapter-final floor 43 has %d chimes" % game.world.chimes.size()):
         return false
-    game._load_floor(26, false)
-    await frames(8)
-    if not ok(game.dragon_finale, "floor 26 (chapter story 13) is not a finale"):
+    if not ok(game.dragon_finale, "floor 43 (chapter 1's last floor) is not a finale"):
         return false
-    game._load_floor(17, false)
+    game._load_floor(34, false)
     await frames(8)
     var feeling_wisps := 0
     for wisp: Wisp in game.wisps:
         if is_instance_valid(wisp) and wisp.is_feeling:
             feeling_wisps += 1
-    if not ok(feeling_wisps == 1, "endless floor 17 hosts %d Big Feelings" % feeling_wisps):
+    if not ok(feeling_wisps == 1, "endless floor 34 hosts %d Big Feelings" % feeling_wisps):
         return false
     return true
 
@@ -429,7 +427,7 @@ func _check_the_new_depth_wisps_exist(game: Node) -> bool:
             wisp.free()
             return false
         wisp.free()
-    var deep_pool: Array = BeautyContent.wisp_pool(20)
+    var deep_pool: Array = BeautyContent.wisp_pool(40)
     var deep_types := {}
     for entry: Array in deep_pool:
         deep_types[String(entry[0])] = true

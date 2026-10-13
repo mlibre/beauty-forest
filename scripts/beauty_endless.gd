@@ -1,13 +1,14 @@
 class_name BeautyEndless
 extends RefCounted
 
-## The Endless Bloom: everything below floor 13.
+## The Endless Bloom: everything below floor 30.
 ##
-## The base campaign tells one story — Snoozle's family, thirteen floors — and
-## the ending screen offers "Wander deeper". What the walker found down there
-## used to be the same four regions and the same three Big Feelings wrapped
-## around again, which quietly retracted the game's whole promise: nothing in
-## this forest has a ceiling, but past the Roost the scenery started looping.
+## The base campaign tells one story — Snoozle's whole family, thirty floors —
+## and the ending screen offers "Wander deeper". What the walker found down
+## there used to be the same four regions and the same three Big Feelings
+## wrapped around again, which quietly retracted the game's whole promise:
+## nothing in this forest has a ceiling, but past the Roost the scenery
+## started looping.
 ##
 ## So every chapter of thirteen floors past the campaign composes its OWN
 ## region, its own two Big Feelings, its own story vignettes and its own finale
@@ -20,7 +21,7 @@ extends RefCounted
 ## tables ask this module endless questions (region, feeling, story), so every
 ## dependency between the two must point one way -- content -> endless. A const
 ## borrowed back the other way would be a cycle no loader can resolve.
-const CAMPAIGN_LENGTH := 13
+const CAMPAIGN_LENGTH := 30
 
 const CHAPTER_LENGTH := 13
 

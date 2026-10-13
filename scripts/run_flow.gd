@@ -31,7 +31,7 @@ const INTRO_PAGES: Array = [
     {"glyph": "heart", "title": "The promise", "tint": Color("#ffd9e0"),
         "body": "Sit with them. Hum until they glow. No hurry, no losing — kindness is the whole game."},
     {"glyph": "stairs", "title": "The descent", "tint": Color("#bdf0bd"),
-        "body": "Thirteen floors below, Snoozle waits for the softest lullaby ever hummed. Ready? Let's wander."},
+        "body": "Thirty floors below, a whole family of dragons waits for the softest lullaby ever hummed. Ready? Let's wander."},
 ]
 const INTRO_PAGE_SECONDS := 4.6
 const INTRO_GLIDE_SECONDS := 3.0
@@ -149,7 +149,7 @@ func _start_run(start_floor: int, keep_progress: bool = false) -> void:
     if keep_progress:
         _mote_line = String(BeautyContent.random_choice(BeautyLore.DESCEND_LINES))
     else:
-        _mote_line = "Here we go! Thirteen floors of forest between us and one very sleepy dragon family."
+        _mote_line = "Here we go! Thirty floors of forest between us and one very sleepy dragon family."
     _mote_line_timer = 28.0
     _load_floor(maxi(1, start_floor), false)
     ui.add_log("Mote: “%s”" % _mote_line)

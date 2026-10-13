@@ -15,6 +15,7 @@ extends "res://tests/support/test_case.gd"
 # on first boot. regression_architecture holds this file to it.
 const SongNote := preload("res://scripts/song_note.gd")
 const Wisp := preload("res://scripts/wisp.gd")
+const BeautyContent := preload("res://scripts/beauty_content.gd")
 
 func _initialize() -> void:
     suite_name = "BEAUTY_FOREST_ENCOUNTERS"
@@ -185,8 +186,9 @@ func _check_ambience_returns_after_a_non_finale_dragon(game: Node) -> bool:
             "the forest stayed silent after Snoozle snoozed, though the walk continues"):
         return false
     # The finale hands the moment over to the ending, so the music must bow
-    # out and stay bowed out past its own 0.7s fade.
-    game._start_run(13)
+    # out and stay bowed out past its own 0.7s fade. The campaign's finale
+    # lives on its last floor (the Grand Roost), not on the cousin's roost.
+    game._start_run(BeautyContent.CAMPAIGN_LENGTH)
     await frames(4)
     game._win_dragon()
     await create_timer(1.2).timeout

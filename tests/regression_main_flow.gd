@@ -133,8 +133,8 @@ func _run() -> void:
 
     # Mote's not-near-the-cart hint used to promise absolute floors
     # ("2, 4, 7, and 10"), which in the endless chapters is a lie: the cart
-    # parks on those STORY positions of every thirteen-floor stretch, so
-    # floor 15 is a cart floor too and the old line hid it. The hint must
+    # parks on those STORY positions of every thirty-floor stretch, so
+    # floor 32 is a cart floor too and the old line hid it. The hint must
     # describe the cycle the schedule actually runs on.
     game.player.global_position += Vector3(6.0, 0.0, 0.0)
     # The hint moved from the hidden log strip to the toast, the one voice a
@@ -153,7 +153,7 @@ func _run() -> void:
     # is still queued behind an earlier one would leave the old message up and
     # the assertion would judge the wrong words.
     var shop_strip: String = game.ui._toast_label.text
-    if not ok("every thirteen-floor stretch" in shop_strip,
+    if not ok("every thirty-floor stretch" in shop_strip,
             "the not-near-cart hint does not describe the story cycle; Mote's strip said: %s" % shop_strip):
         return
     if not ok(not ("floors 2, 4, 7, and 10" in shop_strip),

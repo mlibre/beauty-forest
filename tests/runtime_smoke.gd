@@ -66,7 +66,7 @@ func _run() -> void:
     await frames(3)
     game._on_journal_closed()
 
-    for floor_number in [4, 5, 8, 12, 13]:
+    for floor_number in [4, 5, 8, 12, 13, 16, 21, 24, 29, 30]:
         game._load_floor(floor_number, false)
         await frames(8)
         ok(game.world != null, "floor %d built no world" % floor_number)

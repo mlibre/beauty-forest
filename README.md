@@ -79,7 +79,7 @@ and everything you carry grows right along with it:
   comes back stronger, with a gold pip to show for it.
 - **Sparkles come easier the deeper you wander**, so the cart is always
   worth a browse.
-- **The forest grows chapters below the thirteenth floor** — new regions,
+- **The forest grows chapters below the thirtieth floor** — new regions,
   new stories, and one enormous cousin yawning for more lullabies.
 
 ## Mote
