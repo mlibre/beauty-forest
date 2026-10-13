@@ -14,6 +14,7 @@ extends "res://tests/support/test_case.gd"
 const CozyMinimap := preload("res://scripts/cozy_minimap.gd")
 const DungeonGenerator := preload("res://scripts/dungeon_generator.gd")
 const HeroRig := preload("res://scripts/hero_rig.gd")
+const HeroRigAnim := preload("res://scripts/hero_rig_anim.gd")
 
 func _initialize() -> void:
         suite_name = "BEAUTY_FOREST_RIG"
@@ -29,7 +30,7 @@ func _run() -> void:
         var walk_samples := await _sample(leg, "rotation:x", 8)
         ok(_varied(walk_samples), "the walk cycle never moves the leg: %s" % str(walk_samples))
 
-        var walk: Animation = rig._make_walk_animation()
+        var walk: Animation = HeroRigAnim.make_walk()
         var hips_track := -1
         for track in range(walk.get_track_count()):
                 if walk.track_get_path(track) == NodePath("Model/Hips:position"):
@@ -38,7 +39,7 @@ func _run() -> void:
         if hips_track >= 0:
                 ok(walk.track_get_key_count(hips_track) == 5,
                         "the walk bob collapsed to %d of its 5 authored keys" % walk.track_get_key_count(hips_track))
-        var swing: Animation = rig._make_swing_animation()
+        var swing: Animation = HeroRigAnim.make_swing()
         var arm_track := -1
         for track in range(swing.get_track_count()):
                 if swing.track_get_path(track) == NodePath("Model/Hips/RightArmPivot:rotation"):

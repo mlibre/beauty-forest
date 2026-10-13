@@ -5,6 +5,8 @@ extends Node3D
 # editor-built global-class cache, and bare names would not parse
 # on first boot. regression_architecture holds this file to it.
 const CozyMaterials := preload("res://scripts/cozy_materials.gd")
+const HeroTailor := preload("res://scripts/hero_tailor.gd")
+const HeroRigAnim := preload("res://scripts/hero_rig_anim.gd")
 
 ## A fully procedural, articulated 3D hero. AnimationTree blends idle, walk,
 ## and the lantern's cosmetic staff-swing; no manual attack input exists.
@@ -45,15 +47,15 @@ func _build_character() -> void:
     add_child(model)
     _model = model
 
-    var skin := _toon(Color("#f2c6a5"), 0.06, 0.72)
-    var skin_shadow := _toon(Color("#d99b7e"), 0.04, 0.80)
-    var hair := _toon(Color("#74492f"), 0.05, 0.86)
-    var tunic := _toon(Color("#5ea96b"), 0.10, 0.78)
-    var tunic_light := _toon(Color("#83c878"), 0.09, 0.74)
-    var trousers := _toot(Color("#445f62"))
-    var boots := _toot(Color("#6d4632"))
-    var scarf_mat := _toon(Color("#ef8d84"), 0.16, 0.70)
-    var gold := _toon(Color("#ffe49a"), 0.45, 0.40)
+    var skin := HeroTailor.toon(Color("#f2c6a5"), 0.06, 0.72)
+    var skin_shadow := HeroTailor.toon(Color("#d99b7e"), 0.04, 0.80)
+    var hair := HeroTailor.toon(Color("#74492f"), 0.05, 0.86)
+    var tunic := HeroTailor.toon(Color("#5ea96b"), 0.10, 0.78)
+    var tunic_light := HeroTailor.toon(Color("#83c878"), 0.09, 0.74)
+    var trousers := HeroTailor.toot(Color("#445f62"))
+    var boots := HeroTailor.toot(Color("#6d4632"))
+    var scarf_mat := HeroTailor.toon(Color("#ef8d84"), 0.16, 0.70)
+    var gold := HeroTailor.toon(Color("#ffe49a"), 0.45, 0.40)
 
     var hips := Node3D.new()
     hips.name = "Hips"
@@ -86,21 +88,21 @@ func _build_character() -> void:
     var satchel_mesh := BoxMesh.new()
     satchel_mesh.size = Vector3(0.17, 0.15, 0.10)
     satchel.mesh = satchel_mesh
-    satchel.material_override = _toot(Color("#7a5236"))
+    satchel.material_override = HeroTailor.toot(Color("#7a5236"))
     satchel.position = Vector3(0.33, 0.05, 0.02)
     hips.add_child(satchel)
     var satchel_flap := MeshInstance3D.new()
     var flap_mesh := BoxMesh.new()
     flap_mesh.size = Vector3(0.18, 0.06, 0.11)
     satchel_flap.mesh = flap_mesh
-    satchel_flap.material_override = _toot(Color("#8a5e3b"))
+    satchel_flap.material_override = HeroTailor.toot(Color("#8a5e3b"))
     satchel_flap.position = Vector3(0.33, 0.115, 0.02)
     hips.add_child(satchel_flap)
     var strap := MeshInstance3D.new()
     var strap_mesh := BoxMesh.new()
     strap_mesh.size = Vector3(0.075, 0.62, 0.03)
     strap.mesh = strap_mesh
-    strap.material_override = _toot(Color("#6d4632"))
+    strap.material_override = HeroTailor.toot(Color("#6d4632"))
     strap.position = Vector3(-0.10, 0.30, -0.30)
     strap.rotation.z = 0.62
     hips.add_child(strap)
@@ -159,7 +161,7 @@ func _build_character() -> void:
         eye_white.mesh = SphereMesh.new()
         eye_white.mesh.radius = 0.072
         eye_white.mesh.height = 0.12
-        eye_white.material_override = _toot(Color("#fffaf0"))
+        eye_white.material_override = HeroTailor.toot(Color("#fffaf0"))
         eye_white.position = Vector3(side * 0.105, 0.02, -0.285)
         head.add_child(eye_white)
         _eye_meshes.append(eye_white)
@@ -167,14 +169,14 @@ func _build_character() -> void:
         pupil.mesh = SphereMesh.new()
         pupil.mesh.radius = 0.034
         pupil.mesh.height = 0.062
-        pupil.material_override = _toot(Color("#38271f"))
+        pupil.material_override = HeroTailor.toot(Color("#38271f"))
         pupil.position = Vector3(side * 0.105, 0.02, -0.345)
         head.add_child(pupil)
         var cheek := MeshInstance3D.new()
         cheek.mesh = SphereMesh.new()
         cheek.mesh.radius = 0.045
         cheek.mesh.height = 0.025
-        cheek.material_override = _toon(Color("#ef9b91"), 0.05, 0.9)
+        cheek.material_override = HeroTailor.toon(Color("#ef9b91"), 0.05, 0.9)
         cheek.position = Vector3(side * 0.17, -0.075, -0.292)
         head.add_child(cheek)
 
@@ -185,7 +187,7 @@ func _build_character() -> void:
         smile.mesh = SphereMesh.new()
         smile.mesh.radius = 0.018
         smile.mesh.height = 0.03
-        smile.material_override = _toot(Color("#4a2e28"))
+        smile.material_override = HeroTailor.toot(Color("#4a2e28"))
         smile.position = point
         head.add_child(smile)
 
@@ -197,7 +199,7 @@ func _build_character() -> void:
         shine.mesh = SphereMesh.new()
         shine.mesh.radius = 0.028
         shine.mesh.height = 0.04
-        shine.material_override = _toon(shine_color, 0.10, 0.55)
+        shine.material_override = HeroTailor.toon(shine_color, 0.10, 0.55)
         shine.position = shine_point
         head.add_child(shine)
 
@@ -216,7 +218,7 @@ func _build_character() -> void:
     purse_mesh.radius = 0.085
     purse_mesh.height = 0.15
     purse.mesh = purse_mesh
-    purse.material_override = _toot(Color("#8a5e3b"))
+    purse.material_override = HeroTailor.toot(Color("#8a5e3b"))
     purse.position = Vector3(-0.28, -0.02, -0.28)
     purse.scale = Vector3(1.0, 1.15, 0.8)
     hips.add_child(purse)
@@ -240,7 +242,7 @@ func _build_character() -> void:
     var cape_mesh := BoxMesh.new()
     cape_mesh.size = Vector3(0.62, 0.82, 0.042)
     _cape.mesh = cape_mesh
-    _cape.material_override = _toon(Color("#3f7a52"), 0.08, 0.82)
+    _cape.material_override = HeroTailor.toon(Color("#3f7a52"), 0.08, 0.82)
     _cape.position = Vector3(0, -0.41, 0)
     _cape.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
     cape_pivot.add_child(_cape)
@@ -279,10 +281,10 @@ func _build_character() -> void:
     scarf_tail.rotation.z = -0.18
     hips.add_child(scarf_tail)
 
-    _build_arm("LeftArmPivot", Vector3(-0.37, 0.58, 0), skin_shadow, tunic_light)
-    var right_arm := _build_arm("RightArmPivot", Vector3(0.37, 0.58, 0), skin_shadow, tunic_light)
-    _build_leg("LeftLegPivot", Vector3(-0.18, 0.02, 0), trousers, boots)
-    _build_leg("RightLegPivot", Vector3(0.18, 0.02, 0), trousers, boots)
+    HeroTailor.build_arm(self, "LeftArmPivot", Vector3(-0.37, 0.58, 0), skin_shadow, tunic_light)
+    var right_arm := HeroTailor.build_arm(self, "RightArmPivot", Vector3(0.37, 0.58, 0), skin_shadow, tunic_light)
+    HeroTailor.build_leg(self, "LeftLegPivot", Vector3(-0.18, 0.02, 0), trousers, boots)
+    HeroTailor.build_leg(self, "RightLegPivot", Vector3(0.18, 0.02, 0), trousers, boots)
 
     # A leather patch on each knee, sewn where a traveler actually kneels.
     for knee_side in [-1.0, 1.0]:
@@ -294,12 +296,12 @@ func _build_character() -> void:
         patch_mesh.radius = 0.075
         patch_mesh.height = 0.05
         patch.mesh = patch_mesh
-        patch.material_override = _toot(Color("#7a5236"))
+        patch.material_override = HeroTailor.toot(Color("#7a5236"))
         patch.position = Vector3(0, -0.28, -0.115)
         patch.scale = Vector3(1.0, 0.6, 0.75)
         knee.add_child(patch)
 
-    _build_hat(scarf_mat, hair)
+    _hat_pivot = HeroTailor.build_hat(self, scarf_mat)
 
     # The staff is attached to the hand and is purely cosmetic; automatic
     # lantern combat is implemented by the game, never by this prop.
@@ -314,7 +316,7 @@ func _build_character() -> void:
     staff_mesh.bottom_radius = 0.035
     staff_mesh.height = 1.65
     staff.mesh = staff_mesh
-    staff.material_override = _toot(Color("#8a5e3b"))
+    staff.material_override = HeroTailor.toot(Color("#8a5e3b"))
     staff.rotation.z = -0.12
     staff.position = Vector3(0.12, -0.26, 0)
     staff_pivot.add_child(staff)
@@ -340,7 +342,7 @@ func _build_character() -> void:
         spark_mesh.radius = 0.022
         spark_mesh.height = 0.04
         spark.mesh = spark_mesh
-        spark.material_override = _emissive(Color("#ffe9ad"), 2.6)
+        spark.material_override = HeroTailor.emissive(Color("#ffe9ad"), 2.6)
         var spark_angle := TAU * float(spark_index) / 3.0
         spark.position = Vector3(sin(spark_angle) * 0.22, 0.06 + 0.05 * cos(spark_angle * 2.0), cos(spark_angle) * 0.22)
         _spark_pivot.add_child(spark)
@@ -348,7 +350,7 @@ func _build_character() -> void:
     _lantern_core.mesh = SphereMesh.new()
     _lantern_core.mesh.radius = 0.145
     _lantern_core.mesh.height = 0.29
-    _lantern_core.material_override = _emissive(Color("#ffe49a"), 3.0)
+    _lantern_core.material_override = HeroTailor.emissive(Color("#ffe49a"), 3.0)
     crown.add_child(_lantern_core)
     _lantern_light = OmniLight3D.new()
     _lantern_light.light_color = Color("#ffd990")
@@ -357,168 +359,15 @@ func _build_character() -> void:
     _lantern_light.shadow_enabled = false
     crown.add_child(_lantern_light)
 
-func _build_hat(scarf_material: ShaderMaterial, hair_material: ShaderMaterial) -> void:
-    ## A wide-brimmed traveler's hat with a soft, flopped crown and a feather:
-    ## the single biggest silhouette upgrade the hero can wear, readable from
-    ## any angle and against any backdrop the canopy offers.
-    var head := get_node_or_null("Model/Hips/Head")
-    if head == null:
-        return
-    _hat_pivot = Node3D.new()
-    _hat_pivot.name = "HatPivot"
-    _hat_pivot.position = Vector3(0, 0.20, 0.01)
-    _hat_pivot.rotation_degrees = Vector3(4.0, 0.0, -3.0)
-    head.add_child(_hat_pivot)
-
-    var brim := MeshInstance3D.new()
-    var brim_mesh := CylinderMesh.new()
-    brim_mesh.top_radius = 0.46
-    brim_mesh.bottom_radius = 0.50
-    brim_mesh.height = 0.035
-    brim_mesh.radial_segments = 18
-    brim.mesh = brim_mesh
-    brim.material_override = _toon(Color("#5f8f5a"), 0.08, 0.84)
-    brim.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-    _hat_pivot.add_child(brim)
-
-    # The crown leans back and its tip flops forward: a cone split at the top
-    # would need bones, so the flop is one extra bent segment kissing the first.
-    var crown := MeshInstance3D.new()
-    var crown_mesh := CylinderMesh.new()
-    crown_mesh.top_radius = 0.16
-    crown_mesh.bottom_radius = 0.30
-    crown_mesh.height = 0.34
-    crown_mesh.radial_segments = 14
-    crown.mesh = crown_mesh
-    crown.material_override = _toon(Color("#5f8f5a"), 0.08, 0.84)
-    crown.position = Vector3(0, 0.18, -0.02)
-    crown.rotation.x = -0.10
-    crown.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-    _hat_pivot.add_child(crown)
-    var flop := MeshInstance3D.new()
-    var flop_mesh := SphereMesh.new()
-    flop_mesh.radius = 0.155
-    flop_mesh.height = 0.30
-    flop.mesh = flop_mesh
-    flop.material_override = _toon(Color("#548057"), 0.08, 0.84)
-    flop.position = Vector3(0, 0.36, 0.05)
-    flop.rotation.x = 0.85
-    flop.scale = Vector3(1.0, 1.0, 1.25)
-    _hat_pivot.add_child(flop)
-
-    # The band repeats the scarf, so hat and neck answer each other.
-    var band := MeshInstance3D.new()
-    var band_mesh := CylinderMesh.new()
-    band_mesh.top_radius = 0.305
-    band_mesh.bottom_radius = 0.315
-    band_mesh.height = 0.09
-    band_mesh.radial_segments = 16
-    band.mesh = band_mesh
-    band.material_override = scarf_material
-    band.position = Vector3(0, 0.045, -0.02)
-    _hat_pivot.add_child(band)
-
-    # One goose feather, pinned where band meets crown, tips forward-left.
-    var quill := MeshInstance3D.new()
-    var quill_mesh := CylinderMesh.new()
-    quill_mesh.top_radius = 0.008
-    quill_mesh.bottom_radius = 0.014
-    quill_mesh.height = 0.26
-    quill_mesh.radial_segments = 6
-    quill.mesh = quill_mesh
-    quill.material_override = _toot(Color("#c9b48a"))
-    quill.position = Vector3(-0.24, 0.19, -0.06)
-    quill.rotation_degrees = Vector3(-12.0, 0.0, -38.0)
-    _hat_pivot.add_child(quill)
-    var vane := MeshInstance3D.new()
-    var vane_mesh := SphereMesh.new()
-    vane_mesh.radius = 0.05
-    vane_mesh.height = 0.20
-    vane.mesh = vane_mesh
-    vane.material_override = _toon(Color("#e8707a"), 0.10, 0.78)
-    vane.position = Vector3(-0.32, 0.28, -0.07)
-    vane.rotation.z = -0.55
-    vane.scale = Vector3(0.35, 1.0, 0.8)
-    _hat_pivot.add_child(vane)
-
-func _attach_pivot(node_name: String, pivot_position: Vector3) -> Node3D:
-    var pivot := Node3D.new()
-    pivot.name = node_name
-    pivot.position = pivot_position
-    var hips := get_node_or_null("Model/Hips")
-    if hips:
-        hips.add_child(pivot)
-    return pivot
-
-func _build_arm(node_name: String, pivot_position: Vector3, arm_material: Material, sleeve_material: Material) -> Node3D:
-    var pivot := _attach_pivot(node_name, pivot_position)
-    var sleeve := MeshInstance3D.new()
-    var sleeve_mesh := CapsuleMesh.new()
-    sleeve_mesh.radius = 0.115
-    sleeve_mesh.height = 0.42
-    sleeve.mesh = sleeve_mesh
-    sleeve.material_override = sleeve_material
-    sleeve.position = Vector3(0, -0.18, 0)
-    pivot.add_child(sleeve)
-    var hand := MeshInstance3D.new()
-    hand.mesh = SphereMesh.new()
-    hand.mesh.radius = 0.115
-    hand.mesh.height = 0.22
-    hand.material_override = arm_material
-    hand.position = Vector3(0, -0.42, 0)
-    pivot.add_child(hand)
-    return pivot
-
-func _build_leg(node_name: String, pivot_position: Vector3, trouser_material: Material, boot_material: Material) -> void:
-    var pivot := _attach_pivot(node_name, pivot_position)
-    var leg := MeshInstance3D.new()
-    var leg_mesh := CapsuleMesh.new()
-    leg_mesh.radius = 0.13
-    leg_mesh.height = 0.58
-    leg.mesh = leg_mesh
-    leg.material_override = trouser_material
-    leg.position = Vector3(0, -0.29, 0)
-    pivot.add_child(leg)
-    var boot := MeshInstance3D.new()
-    var boot_mesh := SphereMesh.new()
-    boot_mesh.radius = 0.15
-    boot_mesh.height = 0.30
-    boot.mesh = boot_mesh
-    boot.material_override = boot_material
-    boot.position = Vector3(0, -0.62, -0.055)
-    boot.scale = Vector3(1.0, 0.70, 1.25)
-    pivot.add_child(boot)
-    # A fur cuff at the boot's top warms the silhouette line between
-    # trouser and boot the way a collar does at the neck.
-    var cuff := MeshInstance3D.new()
-    var cuff_mesh := CylinderMesh.new()
-    cuff_mesh.top_radius = 0.145
-    cuff_mesh.bottom_radius = 0.16
-    cuff_mesh.height = 0.09
-    cuff_mesh.radial_segments = 10
-    cuff.mesh = cuff_mesh
-    cuff.material_override = _toot(Color("#e8d9b8"))
-    cuff.position = Vector3(0, -0.50, -0.02)
-    pivot.add_child(cuff)
-
-func _toot(color: Color) -> StandardMaterial3D:
-    return CozyMaterials.pbr(color, 0.78)
-
-func _toon(color: Color, glow: float, roughness: float) -> ShaderMaterial:
-    return CozyMaterials.toon(color, glow, roughness, 0.26)
-
-func _emissive(color: Color, energy: float) -> StandardMaterial3D:
-    return CozyMaterials.emissive(color, energy)
-
 func _build_animations() -> void:
     var player := AnimationPlayer.new()
     player.name = "AnimationPlayer"
     add_child(player)
     var library := AnimationLibrary.new()
 
-    var idle := _make_idle_animation()
-    var walk := _make_walk_animation()
-    var swing := _make_swing_animation()
+    var idle := HeroRigAnim.make_idle()
+    var walk := HeroRigAnim.make_walk()
+    var swing := HeroRigAnim.make_swing()
     library.add_animation("idle", idle)
     library.add_animation("walk", walk)
     library.add_animation("swing", swing)
@@ -528,73 +377,9 @@ func _build_animations() -> void:
     animation_tree.name = "AnimationTree"
     add_child(animation_tree)
     animation_tree.anim_player = NodePath("../AnimationPlayer")
-
-    var root := AnimationNodeBlendTree.new()
-    var locomotion := AnimationNodeBlend2.new()
-    var moving_layer := AnimationNodeBlend2.new()
-    var idle_node := AnimationNodeAnimation.new()
-    idle_node.animation = &"idle"
-    var walk_node := AnimationNodeAnimation.new()
-    walk_node.animation = &"walk"
-    var swing_node := AnimationNodeAnimation.new()
-    swing_node.animation = &"swing"
-    root.add_node("Locomotion", locomotion, Vector2(320, 120))
-    root.add_node("MoveLayer", moving_layer, Vector2(120, 120))
-    root.add_node("Idle", idle_node, Vector2(-80, 40))
-    root.add_node("Walk", walk_node, Vector2(-80, 120))
-    root.add_node("Swing", swing_node, Vector2(-80, 220))
-    root.connect_node("Locomotion", 0, "Idle")
-    root.connect_node("Locomotion", 1, "MoveLayer")
-    root.connect_node("MoveLayer", 0, "Walk")
-    root.connect_node("MoveLayer", 1, "Swing")
-    root.connect_node("output", 0, "Locomotion")
-    animation_tree.tree_root = root
+    animation_tree.tree_root = HeroRigAnim.blend_tree()
     animation_tree.active = true
     set_motion(0.0, 0.0)
-
-func _make_idle_animation() -> Animation:
-    var animation := Animation.new()
-    animation.length = 2.4
-    animation.loop_mode = Animation.LOOP_LINEAR
-    _add_vector_track(animation, "Model/Hips:position", [Vector3(0, 0.78, 0), Vector3(0, 0.805, 0), Vector3(0, 0.78, 0)], [0.0, 1.2, 2.4])
-    _add_vector_track(animation, "Model/Hips/LeftArmPivot:rotation", [Vector3(0.06, 0, -0.08), Vector3(0.10, 0, -0.10), Vector3(0.06, 0, -0.08)], [0.0, 1.2, 2.4])
-    _add_vector_track(animation, "Model/Hips/RightArmPivot:rotation", [Vector3(-0.08, 0, 0.08), Vector3(-0.03, 0, 0.11), Vector3(-0.08, 0, 0.08)], [0.0, 1.2, 2.4])
-    return animation
-
-func _make_walk_animation() -> Animation:
-    var animation := Animation.new()
-    animation.length = 0.72
-    animation.loop_mode = Animation.LOOP_LINEAR
-    _add_vector_track(animation, "Model/Hips/LeftLegPivot:rotation", [Vector3(0.52, 0, 0), Vector3(-0.52, 0, 0), Vector3(0.52, 0, 0)], [0.0, 0.36, 0.72])
-    _add_vector_track(animation, "Model/Hips/RightLegPivot:rotation", [Vector3(-0.52, 0, 0), Vector3(0.52, 0, 0), Vector3(-0.52, 0, 0)], [0.0, 0.36, 0.72])
-    _add_vector_track(animation, "Model/Hips/LeftArmPivot:rotation", [Vector3(-0.42, 0, -0.08), Vector3(0.42, 0, -0.08), Vector3(-0.42, 0, -0.08)], [0.0, 0.36, 0.72])
-    _add_vector_track(animation, "Model/Hips/RightArmPivot:rotation", [Vector3(0.42, 0, 0.08), Vector3(-0.42, 0, 0.08), Vector3(0.42, 0, 0.08)], [0.0, 0.36, 0.72])
-    # A walk cycle is two bounce arcs per circuit, so the hips ride five keys:
-    # down, rise, down, rise, down. Passing it through as one up-down cycle
-    # let the second rise never exist and the hero looked like half a walk.
-    _add_vector_track(animation, "Model/Hips:position", [Vector3(0, 0.78, 0), Vector3(0, 0.83, 0), Vector3(0, 0.78, 0), Vector3(0, 0.83, 0), Vector3(0, 0.78, 0)], [0.0, 0.18, 0.36, 0.54, 0.72])
-    return animation
-
-func _make_swing_animation() -> Animation:
-    var animation := Animation.new()
-    animation.length = 0.52
-    animation.loop_mode = Animation.LOOP_NONE
-    # The arm reaches the flourish at 0.17, holds it through the note until
-    # 0.34, and returns by 0.52. Dropping the hold key made the arm rebound
-    # the instant it reached the pose.
-    _add_vector_track(animation, "Model/Hips/RightArmPivot:rotation", [Vector3(-0.15, 0, 0.12), Vector3(-1.15, 0, -0.20), Vector3(-1.15, 0, -0.20), Vector3(-0.15, 0, 0.12)], [0.0, 0.17, 0.34, 0.52])
-    _add_vector_track(animation, "Model/Hips/RightArmPivot/StaffPivot:rotation", [Vector3(0, 0, 0), Vector3(0.32, -0.22, -0.16), Vector3(0.32, -0.22, -0.16), Vector3(0, 0, 0)], [0.0, 0.17, 0.34, 0.52])
-    _add_vector_track(animation, "Model/Hips:rotation", [Vector3(0, 0, 0), Vector3(-0.08, 0.16, 0), Vector3(0, 0, 0)], [0.0, 0.20, 0.52])
-    return animation
-
-func _add_vector_track(animation: Animation, track_path: String, values: Array, times: Array) -> void:
-    var track := animation.add_track(Animation.TYPE_VALUE)
-    animation.track_set_path(track, NodePath(track_path))
-    animation.track_set_interpolation_type(track, Animation.INTERPOLATION_CUBIC)
-    # One key per value, at the matching time: authoring more times than keys
-    # would silently drop the ride the invisible key was meant to hold.
-    for index in range(times.size()):
-        animation.track_insert_key(track, float(times[index]), values[index])
 
 func set_walk_motion(walk_amount: float) -> void:
     _walk_target = clampf(walk_amount, 0.0, 1.0)
