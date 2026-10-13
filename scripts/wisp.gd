@@ -5,6 +5,7 @@ extends CharacterBody3D
 # editor-built global-class cache, and bare names would not parse
 # on first boot. regression_architecture holds this file to it.
 const BeautyContent := preload("res://scripts/beauty_content.gd")
+const BeautyWisps := preload("res://scripts/beauty_wisps.gd")
 const CozyMaterials := preload("res://scripts/cozy_materials.gd")
 
 var type_key := "Shambler"
@@ -56,7 +57,7 @@ var _sparkle_pivot: Node3D
 
 func setup(p_type_key: String, p_floor_number: int, p_is_big: bool = false, p_feeling: Dictionary = {}) -> void:
     type_key = p_type_key
-    type_data = BeautyContent.WISP_TYPES[type_key]
+    type_data = BeautyWisps.WISP_TYPES[type_key]
     is_big = p_is_big
     is_feeling = not p_feeling.is_empty()
     _seed = randf() * TAU

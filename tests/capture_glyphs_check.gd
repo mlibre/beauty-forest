@@ -4,6 +4,7 @@ extends SceneTree
 # editor-built global-class cache, and bare names would not parse
 # on first boot. regression_architecture holds this file to it.
 const BeautyContent := preload("res://scripts/beauty_content.gd")
+const BeautyWisps := preload("res://scripts/beauty_wisps.gd")
 const GardenGlyphs := preload("res://scripts/garden_glyphs.gd")
 
 ## Every glyph the game can ask for, checked numerically: each one must be
@@ -28,7 +29,7 @@ func _run() -> void:
 		cases.append([String(stanza["key"]), GardenGlyphs.STANZA_PREFIX + String(stanza["key"])])
 	for verse: Dictionary in BeautyContent.MOTE_VERSES:
 		cases.append([String(verse["key"]), GardenGlyphs.VERSE_PREFIX + String(verse["key"])])
-	for wisp: String in BeautyContent.WISP_TYPES:
+	for wisp: String in BeautyWisps.WISP_TYPES:
 		cases.append([wisp, GardenGlyphs.WISP_PREFIX + wisp])
 	# Tiered wares: every tier the shelf sells must carry its own stamped ink.
 	# Tier III arrived with the Endless Bloom and its pips were never checked --

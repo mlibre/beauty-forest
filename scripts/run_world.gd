@@ -179,7 +179,7 @@ func _spawn_menu_wisps() -> void:
     for index in range(5):
         var cell := DungeonGenerator.random_floor_cell(dungeon, _rng, Vector2(spawn_room["cx"], spawn_room["cy"]), 6.0, occupied)
         occupied[cell] = true
-        var wisp := _new_wisp(cell, BeautyContent.pick_wisp_type(1), 1)
+        var wisp := _new_wisp(cell, BeautyWisps.pick_wisp_type(1), 1)
         # The title's backdrop souls drift contentedly mid-warmth: the walk's
         # truth is "sad until helped", but the first screen should promise the
         # middle of that journey, not its loneliest moment.

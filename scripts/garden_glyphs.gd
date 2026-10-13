@@ -13,6 +13,7 @@ extends "res://scripts/garden_ink.gd"
 # editor-built global-class cache, and bare names would not parse
 # on first boot. regression_architecture holds this file to it.
 const BeautyContent := preload("res://scripts/beauty_content.gd")
+const BeautyWisps := preload("res://scripts/beauty_wisps.gd")
 
 const CACHE_SIZE := 64
 
@@ -109,7 +110,7 @@ static func _is_known(key: String) -> bool:
 	if bare.begins_with(STANZA_PREFIX):
 		return _stanza_glyphs().has(bare.trim_prefix(STANZA_PREFIX))
 	if bare.begins_with(WISP_PREFIX):
-		return BeautyContent.WISP_TYPES.has(bare.trim_prefix(WISP_PREFIX))
+		return BeautyWisps.WISP_TYPES.has(bare.trim_prefix(WISP_PREFIX))
 	for charm: Dictionary in BeautyContent.CHARMS:
 		if String(charm["key"]) == bare:
 			return true
@@ -431,10 +432,10 @@ static func _draw_note(image: Image, s: float, tint: Color) -> void:
 ## and the creature it marks are the same object. Scale and head size carry the
 ## rest of the type's identity.
 static func _draw_wisp(image: Image, key: String, s: float) -> void:
-	if not BeautyContent.WISP_TYPES.has(key):
+	if not BeautyWisps.WISP_TYPES.has(key):
 		_ellipse_ring(image, _at(0.5, 0.5, s), s * 0.26, s * 0.26, Color(1, 1, 1, 0.30), 2)
 		return
-	var data: Dictionary = BeautyContent.WISP_TYPES[key]
+	var data: Dictionary = BeautyWisps.WISP_TYPES[key]
 	var tint := Color(String(data.get("color", "#ffffff")))
 	var body: float = float(data.get("scale", 1.0))
 	# Cap the radius below the scale's own maximum: the glow pass stamps at

@@ -8,6 +8,7 @@ extends "res://scripts/run_boons.gd"
 # editor-built global-class cache, and bare names would not parse
 # on first boot. regression_architecture holds this file to it.
 const DungeonGenerator := preload("res://scripts/dungeon_generator.gd")
+const BeautyWisps := preload("res://scripts/beauty_wisps.gd")
 const HeartPickup := preload("res://scripts/heart_pickup.gd")
 
 ## One soft hue per step of the lantern's round, mirroring the pentatonic arc
@@ -38,7 +39,7 @@ func _spawn_wisps() -> void:
     for index in range(count):
         var cell := DungeonGenerator.random_floor_cell(dungeon, _rng, Vector2(spawn_room["cx"], spawn_room["cy"]), 7.0, occupied)
         occupied[cell] = true
-        var wisp := _new_wisp(cell, BeautyContent.pick_wisp_type(floor_number), floor_number)
+        var wisp := _new_wisp(cell, BeautyWisps.pick_wisp_type(floor_number), floor_number)
         wisp.set_meta("attack_cooldown", _rng.randf_range(0.2, 1.1))
         wisp.set_meta("said_grumble", false)
     var story := BeautyContent.story_floor(floor_number)

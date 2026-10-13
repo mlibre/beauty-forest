@@ -9,6 +9,7 @@ extends "res://tests/support/test_case.gd"
 # editor-built global-class cache, and bare names would not parse
 # on first boot. regression_architecture holds this file to it.
 const BeautyContent := preload("res://scripts/beauty_content.gd")
+const BeautyWisps := preload("res://scripts/beauty_wisps.gd")
 const BeautyData := preload("res://scripts/beauty_data.gd")
 const BeautyEndless := preload("res://scripts/beauty_endless.gd")
 const RunBoons := preload("res://scripts/run_boons.gd")
@@ -418,7 +419,7 @@ func _check_the_new_depth_wisps_exist(game: Node) -> bool:
     ## Puffcap, Comet and Snugbug must be real: in the tables, in the pool
     ## rotation, and buildable with a body a player can see.
     for type_key in ["Puffcap", "Comet", "Snugbug"]:
-        if not ok(BeautyContent.WISP_TYPES.has(type_key), "%s is not in the wisp tables" % type_key):
+        if not ok(BeautyWisps.WISP_TYPES.has(type_key), "%s is not in the wisp tables" % type_key):
             return false
         var wisp := Wisp.new()
         wisp.setup(type_key, 20)
@@ -427,14 +428,14 @@ func _check_the_new_depth_wisps_exist(game: Node) -> bool:
             wisp.free()
             return false
         wisp.free()
-    var deep_pool: Array = BeautyContent.wisp_pool(40)
+    var deep_pool: Array = BeautyWisps.wisp_pool(40)
     var deep_types := {}
     for entry: Array in deep_pool:
         deep_types[String(entry[0])] = true
     if not ok(deep_types.has("Puffcap") or deep_types.has("Comet") or deep_types.has("Snugbug"),
             "the deep pool never rotates the new types in: %s" % str(deep_types)):
         return false
-    var shallow_pool: Array = BeautyContent.wisp_pool(9)
+    var shallow_pool: Array = BeautyWisps.wisp_pool(9)
     for entry: Array in shallow_pool:
         if not ok(not (String(entry[0]) in ["Puffcap", "Comet", "Snugbug"]),
                 "the campaign pool leaked a depth type early: %s" % str(entry[0])):

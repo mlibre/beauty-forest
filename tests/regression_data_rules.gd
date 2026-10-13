@@ -7,6 +7,7 @@ extends "res://tests/support/test_case.gd"
 # editor-built global-class cache, and bare names would not parse
 # on first boot. regression_architecture holds this file to it.
 const BeautyContent := preload("res://scripts/beauty_content.gd")
+const BeautyWisps := preload("res://scripts/beauty_wisps.gd")
 const BeautyData := preload("res://scripts/beauty_data.gd")
 
 func _initialize() -> void:
@@ -73,7 +74,7 @@ func _test_weighted_pick_boundaries() -> void:
     # first pool entry stole one outcome from its neighbor and a 1,1 pool could
     # never yield its second entry at all.
     for floor_number in [1, 5]:
-        var pool := BeautyContent.wisp_pool(floor_number)
+        var pool := BeautyWisps.wisp_pool(floor_number)
         var total := 0
         for entry: Array in pool:
             total += int(entry[1])
@@ -82,7 +83,7 @@ func _test_weighted_pick_boundaries() -> void:
             seed(s)
             var roll := randi() % total
             seed(s)
-            var actual := BeautyContent.pick_wisp_type(floor_number)
+            var actual := BeautyWisps.pick_wisp_type(floor_number)
             var remaining := roll
             var expected := "Shambler"
             for entry: Array in pool:
