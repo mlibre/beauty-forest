@@ -122,6 +122,7 @@ func _ware_card(grid: GridContainer, item: Dictionary, sparkles: int, worn: bool
     card.free_item = free_item
     card.affordable = affordable
     card.high_contrast = _high_contrast
+    card.purse = sparkles
     button.add_child(card)
     # A Button's minimum is max(custom_minimum_size, its own text), and this row
     # paints no text at all, so without a floor the shelf would collapse into a
@@ -196,15 +197,22 @@ func _present_panel() -> void:
     if _context_hint != null and is_instance_valid(_context_hint):
         _context_hint.visible = false
     _context_hint_verb = ""
+    # Whether this is a first arrival or a rebuild. A purchase calls show_shop
+    # again with the card still on screen; re-running the arrival there blinked
+    # the whole panel (scrim, card, everything) on every bought ware. The
+    # arrival belongs to the OPENING -- a rebuild answers in smaller ink: the
+    # purse pulses and the touched card flashes (see show_shop).
+    var fresh := not _shop_card.visible
     _shop_scrim.visible = true
     _shop_card.visible = true
     _fit_layout()
     _clear_panel()
-    # The shop arrives the way every other screen does: the world dims with a
-    # breath, the card settles. Popping a wall of wares in one frame read as
-    # a window slamming open in a quiet house.
-    _fade_scrim_in(_shop_scrim)
-    _settle_in(_shop_card)
+    if fresh:
+        # The shop arrives the way every other screen does: the world dims with
+        # a breath, the card settles. Popping a wall of wares in one frame read
+        # as a window slamming open in a quiet house.
+        _fade_scrim_in(_shop_scrim)
+        _settle_in(_shop_card)
 
 func _retire_panel() -> void:
     # The mirror of _present_panel: the card and its scrim leave together.
@@ -214,7 +222,16 @@ func _retire_panel() -> void:
     _shop_card.visible = false
     _shop_scrim.modulate.a = 1.0
 
-func show_shop(state: Dictionary) -> void:
+func show_shop(state: Dictionary, focus_key: String = "") -> void:
+    # A purchase rebuilds the cart in place. Everything the rebuild should
+    # carry across the clear has to be read BEFORE _present_panel: whether the
+    # card is already up, and how far down the shelves the player had scrolled
+    # -- a rebuild that snapped back to the top threw away the browsing spot
+    # every single purchase.
+    var rebuild := _shop_card.visible
+    var kept_scroll := 0
+    if rebuild and _shop_scroll != null and is_instance_valid(_shop_scroll):
+        kept_scroll = _shop_scroll.scroll_vertical
     _present_panel()
     var sparkles := int(state.get("sparkles", 0))
     var list := _panel_list(12)
@@ -233,17 +250,38 @@ func show_shop(state: Dictionary) -> void:
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     heading.add_child(title)
     # The purse is a sparkle and a number, not "12 to spend" -- the icon beside
-    # the digits already says what they are.
+    # the digits already says what they are. The label is kept so a rebuild can
+    # pulse it: after a purchase lands, the digits are the thing that changed.
     heading.add_child(_icon(GardenGlyphs.SPARKLE, 22, Color("#ffe987")))
-    heading.add_child(_label(str(sparkles), 22, Color("#ffe987")))
+    _shop_purse_label = _label(str(sparkles), 22, Color("#ffe987"))
+    heading.add_child(_shop_purse_label)
     list.add_child(_separator())
+
+    # What the shelves need to know about the visitor, read once: warmth and
+    # room are facts of the run, and both Peddle's greeting and the shelf
+    # headings speak from them.
+    var warmth_full := float(state.get("hp", 0.0)) >= float(state.get("hp_max", 1.0))
+    var owned: Array = state.get("owned", [])
+    var equipped: Array = state.get("charms", [])
+    var capacity := int(state.get("capacity", 1))
+    var slots_full := equipped.size() >= capacity
+
+    # Peddle speaks before the shelves do. One line, tuned to what the cart can
+    # see of the visit -- an empty purse, a full lantern, a hero warm as toast --
+    # so the shop answers the player's state instead of repeating a fixed
+    # welcome at every opening. Kept as ink in the cart's own voice: it is the
+    # same character the log already quotes.
+    var greeting := _label("“%s”" % _peddle_greeting(sparkles, warmth_full, slots_full), 14, Color("#d8cfae"))
+    greeting.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    greeting.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    greeting.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    list.add_child(greeting)
 
     # Warm tea: one ware, so it gets a shelf of its own only because it is
     # bought constantly and heals. Spending sparkles on tea while already warm
     # used to be a silent no-op -- the button was live, the price was charged
     # and nothing happened -- so the card dims at full warmth and the hover
     # says why.
-    var warmth_full := float(state.get("hp", 0.0)) >= float(state.get("hp_max", 1.0))
     var tea_shelf := _shelf(list, "WARM TEA", "tea", "")
     for charm: Dictionary in BeautyContent.CHARMS:
         if String(charm["key"]) != "tea":
@@ -253,15 +291,6 @@ func show_shop(state: Dictionary) -> void:
         if warmth_full:
             (tea.get_parent() as Button).tooltip_text = "You are warm as a toast already — keep these sparkles for a charm ♥"
 
-    var owned: Array = state.get("owned", [])
-    var equipped: Array = state.get("charms", [])
-    var capacity := int(state.get("capacity", 1))
-    var slots_full := equipped.size() >= capacity
-    # The heading carries the count, so it never has to be read off a sentence:
-    # a gold rim on a card is "wearing", and this is how many there are. The
-    # second number is the ROOM -- a deeper walk opens more sockets, and saying
-    # so on the cart is what turns a full shelf from a dead end into an
-    # invitation to go further down.
     var charm_shelf := _shelf(list, "WORN CHARMS", "scarf", "%d/%d" % [
         equipped.size(), capacity])
     for charm: Dictionary in BeautyContent.CHARMS:
@@ -338,7 +367,79 @@ func show_shop(state: Dictionary) -> void:
 
     _shop_frame.add_child(_centered_button("Back to the walk", true, func(): close_shop()))
     _fit_layout()
+    # A rebuild hands the player back to where they were browsing: the captured
+    # scroll goes back on immediately and again after the deferred sort, because
+    # a ScrollContainer clamps its position to a content height it only learns
+    # once the layout has actually run.
+    if rebuild and kept_scroll > 0:
+        _shop_scroll.scroll_vertical = kept_scroll
+        call_deferred("_restore_shop_scroll", kept_scroll)
+    # The rebuild's small ink: the purse pulses (it is what changed), and the
+    # card the press touched flashes once -- arrival-scale motion is for
+    # openings, not for every bought ware.
+    if rebuild:
+        _pulse_purse()
+    _flash_card(focus_key)
     _focus_first_enabled(_shop_frame)
+
+## Peddle's one line under the heading, tuned to what the cart can see of the
+## visit. Every branch answers a state the shelves themselves show -- an empty
+## purse, a full lantern, warmth already carried -- so the greeting never
+## contradicts the wares it sits above.
+func _peddle_greeting(sparkles: int, warmth_full: bool, slots_full: bool) -> String:
+    if warmth_full and slots_full and sparkles >= 9:
+        return "Warm, lantern full, and a purse that still sings — the deeper shelves are watching you."
+    if warmth_full and sparkles == 0:
+        return "Warm as a toast and not a sparkle to spare — browse anyway. The wares keep."
+    if warmth_full:
+        return "You look warm as a toast. The shelf glitters a little brighter for it."
+    if slots_full:
+        return "That lantern is full of light! Wander deeper — the floors below open more room."
+    if sparkles == 0:
+        return "The purse hums quietly today. The heart-gifts are always free."
+    if sparkles >= 12:
+        return "A glittering purse! The top shelf is yours to browse."
+    return "Welcome back to the cart. Everything is leaf-wrapped and waiting."
+
+## After a rebuild, the purse digits flash warm once and settle: the one thing
+## a purchase changed is the thing the eye should find. Skipped entirely under
+## reduced motion -- the number itself already says the news.
+func _pulse_purse() -> void:
+    if _reduced_motion:
+        return
+    if _shop_purse_label == null or not is_instance_valid(_shop_purse_label):
+        return
+    _shop_purse_label.modulate = Color(1.75, 1.55, 0.95, 1.0)
+    var pulse := _shop_purse_label.create_tween()
+    pulse.tween_property(_shop_purse_label, "modulate", Color(1, 1, 1, 1), 0.42) \
+        .set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+## The card a press touched flashes once -- a warm bloom that fades back to
+## the card's own face. Reduced motion keeps the flash but shortens it to a
+## step (no tween), so the answer still lands without the movement.
+func _flash_card(focus_key: String) -> void:
+    if focus_key.is_empty():
+        return
+    var target: CozyCard = null
+    for child in _shop_frame.find_children("*", "", true, false):
+        var card := child as CozyCard
+        if card != null and card.item_key() == focus_key and target == null:
+            target = card
+    if target == null:
+        return
+    if _reduced_motion:
+        target.modulate = Color(1.35, 1.3, 1.1, 1.0)
+        return
+    target.modulate = Color(1.7, 1.6, 1.15, 1.0)
+    var flash := target.create_tween()
+    flash.tween_property(target, "modulate", Color(1, 1, 1, 1), 0.5) \
+        .set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+## The deferred half of the scroll restore: runs one frame after show_shop, once
+## the sorted content has a real height to clamp against.
+func _restore_shop_scroll(value: int) -> void:
+    if _shop_scroll != null and is_instance_valid(_shop_scroll):
+        _shop_scroll.scroll_vertical = value
 
 func close_shop() -> void:
     _retire_panel()

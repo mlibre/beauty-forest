@@ -110,6 +110,9 @@ var _shop_card: PanelContainer
 var _shop_frame: VBoxContainer
 var _shop_scroll: ScrollContainer
 var _shop_content: VBoxContainer
+## The purse digits in the cart's heading, kept so a rebuild can pulse them --
+## the one spot on the shelf the eye should land on after a purchase lands.
+var _shop_purse_label: Label
 var _story_card: PanelContainer
 var _story_title: Label
 var _story_body: Label

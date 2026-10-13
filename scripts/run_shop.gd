@@ -81,7 +81,7 @@ func _on_buy_requested(key: String) -> void:
         ui.add_log("Peddle: “One %s, wrapped in a leaf. It suits you.”" % label)
     _award_sticker("shopper")
     _recalculate_loadout(false)
-    ui.show_shop(_shop_state())
+    ui.show_shop(_shop_state(), key)
     _refresh_ui()
 
 func _buy_tea(record: Dictionary) -> void:
@@ -118,7 +118,7 @@ func _on_charm_equip_requested(key: String, tier: int) -> void:
         _reorder_worn_to_shelf()
     _recalculate_loadout(false)
     audio.play_tone(587.33, 0.24, 0.055, 1)
-    ui.show_shop(_shop_state())
+    ui.show_shop(_shop_state(), key)
 
 ## Puts the worn list into the same order as the owned list, so a ware always
 ## wears into the socket its shelf position implies.
@@ -138,14 +138,14 @@ func _on_stanza_equip_requested(key: String) -> void:
         stanzas_equipped[key] = true
     _recalculate_loadout(false)
     audio.play_tone(659.25, 0.24, 0.055, 1)
-    ui.show_shop(_shop_state())
+    ui.show_shop(_shop_state(), key)
 
 func _on_mote_verse_requested(key: String) -> void:
     mote_verse_key = key
     _recalculate_loadout(false)
     audio.play_tone(783.99, 0.30, 0.055, 1)
     ui.add_log("Mote: “%s — I’ll hum that beside you.”" % (String(BeautyContent.random_choice(BeautyLore.MOTE_LINES)) if not key.is_empty() else "I’ll hum softly beside you."))
-    ui.show_shop(_shop_state())
+    ui.show_shop(_shop_state(), key)
 
 func _recalculate_loadout(reset_hp: bool) -> void:
     charm_effects = BeautyData.charm_effects(charms_equipped)
