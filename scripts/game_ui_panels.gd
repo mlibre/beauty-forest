@@ -211,7 +211,8 @@ func show_shop(state: Dictionary) -> void:
     heading.add_theme_constant_override("separation", 10)
     _shop_frame.add_child(heading)
     heading.add_child(_icon(GardenGlyphs.CART, 26, Color("#ffe49b")))
-    var title := _label("Peddle’s cart ♥", 26, Color("#ffe49b"))
+    var title := _label("Peddle’s cart ♥", 30, Color("#ffe49b"))
+    title.theme_type_variation = "HeadingLabel"
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     heading.add_child(title)
     # The purse is a sparkle and a number, not "12 to spend" -- the icon beside
@@ -332,8 +333,7 @@ func show_shop(state: Dictionary) -> void:
 func show_settings(settings: Dictionary, return_name: String = "the walk") -> void:
     _settings = settings.duplicate(true)
     _present_panel()
-    _shop_frame.add_child(_label("Make it yours ♥", 30, Color("#ffe49b")))
-    _shop_frame.add_child(_label("Change anything, anytime. Leaving is always okay.", 14, Color("#dce9c4")))
+    _shop_frame.add_child(_card_header("Make it yours ♥", GardenGlyphs.MOTE, "Change anything, anytime. Leaving is always okay."))
     _shop_frame.add_child(_separator())
     var list := _panel_list(8)
 

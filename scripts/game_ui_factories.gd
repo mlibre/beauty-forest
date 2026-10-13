@@ -153,9 +153,57 @@ func _button_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
 
 func _card(fill: Color, border: Color, radius: int, border_width: int = 2) -> PanelContainer:
     var panel := PanelContainer.new()
-    panel.add_theme_stylebox_override("panel", _button_style(fill, border, radius))
+    var style := _button_style(fill, border, radius)
+    # Every card wears a heavier gold crown along its top edge: the screen's
+    # one piece of jewelry, the same on the menu, the pause card, the cart,
+    # the memory book and the nap card, so the whole interface reads as one
+    # hand instead of five.
+    style.border_width_top = border_width + 3
+    panel.add_theme_stylebox_override("panel", style)
     panel.mouse_filter = Control.MOUSE_FILTER_PASS
     return panel
+
+## The identity band every screen opens with: a glyph in a gold roundel, the
+## screen's name in the storybook face, and one quiet subtitle line. One
+## factory so the menu, pause, cart, book, nap and ending cards all wear the
+## same face — a screen's first impression is its header, and five screens
+## drawing five different headers read as five different games.
+##
+## The heading wraps and expands instead of demanding its full width, and the
+## roundel stays a fixed small plate: at 200% text on a 640x360 window the
+## settings card has ~230px of header budget, so every piece here is sized to
+## fit that worst case rather than the comfortable desktop one.
+func _card_header(title: String, glyph_key: String, subtitle: String = "", heading_size: int = 30) -> Control:
+    var box := VBoxContainer.new()
+    box.add_theme_constant_override("separation", 4)
+    var row := HBoxContainer.new()
+    row.alignment = BoxContainer.ALIGNMENT_CENTER
+    row.add_theme_constant_override("separation", 12)
+    var roundel := PanelContainer.new()
+    var roundel_style := StyleBoxFlat.new()
+    roundel_style.bg_color = Color(0.32, 0.22, 0.06, 0.60)
+    roundel_style.border_color = Color("#ffe29a")
+    roundel_style.set_border_width_all(2)
+    roundel_style.set_corner_radius_all(24)
+    roundel_style.content_margin_left = 7
+    roundel_style.content_margin_right = 7
+    roundel_style.content_margin_top = 6
+    roundel_style.content_margin_bottom = 6
+    roundel.add_theme_stylebox_override("panel", roundel_style)
+    roundel.add_child(_icon(glyph_key, 26, Color("#ffe9a8")))
+    row.add_child(roundel)
+    var heading := _label(title, heading_size, Color("#ffe6a0"))
+    # One line by choice: a screen's name reads best unbroken, and at 200%
+    # text a two-line heading alone eats a quarter of a short window's card.
+    # The responsive clamp adds wrap itself when a narrow window truly needs
+    # it — that is the one place width, not height, is the tighter budget.
+    heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    heading.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    row.add_child(heading)
+    box.add_child(row)
+    if not subtitle.is_empty():
+        box.add_child(_centered_label(subtitle, 14, Color("#dcebbd")))
+    return box
 
 func _scrollbar_style() -> StyleBoxFlat:
     ## A slim warm track instead of the default grey bar, so a menu that still

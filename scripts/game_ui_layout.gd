@@ -8,6 +8,15 @@ const MODAL_MARGIN_X := 68.0
 ## ever leave slack and never make a row overflow.
 const MODAL_SCROLLBAR_ALLOWANCE := 14.0
 
+## One deferred settle pass after every fit. A panel built this frame reports
+## stale minimums on purpose — its rows have not been measured, clamped and
+## wrapped yet — so the size a fit writes during the build pass can be
+## several times the card's real minimum (a 200%-text settings card once
+## settled at 3108px tall against a 440px minimum, because nothing ever
+## re-fit it after the rows shrank). One deferred re-run catches the settled
+## numbers; it schedules nothing itself, so the chain is exactly two fits.
+var _settle_fit_pending := false
+
 ## Responsive placement for every HUD and modal control, plus the helpers that
 ## measure the real parent rect instead of trusting pre-tree anchor offsets.
 
@@ -30,7 +39,7 @@ func _safe_margins(canvas: Vector2) -> Vector4:
         maxf(0.0, window.x - area.end.x) * scale,
         maxf(0.0, window.y - area.end.y) * scale)
 
-func _fit_layout() -> void:
+func _fit_layout(settle: bool = true) -> void:
     # Responsive pass: place the vitals ring, minimap, log and both modal cards
     # so small/portrait windows show controls, not clipped panels.
     if _root == null or _overlay_card == null:
@@ -167,6 +176,24 @@ func _fit_layout() -> void:
     # it back off-screen.
     _fit_modal_card(_overlay_card)
     _fit_modal_card(_shop_card)
+    # The settle pass: a re-run two process frames out, with the post-layout
+    # numbers. Same-frame deferral is too early — the scroll's own first
+    # layout has not happened yet, so the pass reads the same stale minimums
+    # it was meant to correct (a 200%-text settings card stayed 3108px tall
+    # against a 331px minimum because of exactly that). The settle call
+    # passes settle=false, so the chain can never loop.
+    if settle and not _settle_fit_pending:
+        _settle_fit_pending = true
+        _run_settle_fit()
+
+func _run_settle_fit() -> void:
+    _settle_fit_pending = false
+    if not is_inside_tree() or get_tree() == null:
+        return
+    await get_tree().process_frame
+    await get_tree().process_frame
+    if is_inside_tree():
+        _fit_layout(false)
 
 func _refit_content(container: Node, card: PanelContainer = null) -> void:
     if not is_instance_valid(container):

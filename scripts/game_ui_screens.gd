@@ -9,10 +9,7 @@ func show_menu(meta: Dictionary) -> void:
     _hud.visible = false
     set_text_chrome_visible(true)
     _show_menu_overlay()
-    var title := _label("Beauty Forest", 46, Color("#ffe6a0"))
-    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    _overlay_content.add_child(title)
-    _overlay_content.add_child(_centered_label("a gentle walk", 18, Color("#dcebbd")))
+    _overlay_content.add_child(_card_header("Beauty Forest", GardenGlyphs.LANTERN, "a gentle walk · thirty floors of forest below", 40))
     _overlay_content.add_child(_spacer(4))
     # The menu shows, never tells. One row of three pictures stands where a
     # paragraph of promises used to be; what each picture means is one hover
@@ -48,6 +45,7 @@ func show_menu(meta: Dictionary) -> void:
     styles.last_wrap_alignment = FlowContainer.LAST_WRAP_ALIGNMENT_CENTER
     styles.add_theme_constant_override("hseparation", 10)
     styles.add_theme_constant_override("vseparation", 10)
+    _overlay_content.add_child(_section_label("PICK A TRAIL"))
     _overlay_content.add_child(styles)
     var menu_style_marks := {
         "gentle": GardenGlyphs.SOUL,
@@ -115,6 +113,7 @@ func show_menu(meta: Dictionary) -> void:
         count.tooltip_text = chip_tip
         (chip_box.get_child(0) as Control).tooltip_text = chip_tip
         record.add_child(chip_box)
+    _overlay_content.add_child(_section_label("THE RECORD SO FAR"))
     _overlay_content.add_child(record)
     _fit_layout()
     # Refit AFTER building: the panels are authored at comfortable desktop
@@ -181,8 +180,7 @@ func show_pause(meta: Dictionary) -> void:
     # charm list and the control keys. Read on purpose, not while walking.
     set_text_chrome_visible(true)
     _show_overlay()
-    _overlay_content.add_child(_centered_label("Paused ♥", 38, Color("#ffe6a0")))
-    _overlay_content.add_child(_centered_label("The forest waits for you.", 16, Color("#dce9c2")))
+    _overlay_content.add_child(_card_header("Paused ♥", GardenGlyphs.HEART, "The forest waits for you."))
     _overlay_content.add_child(_spacer(10))
     _overlay_content.add_child(_walker_summary())
     _overlay_content.add_child(_spacer(14))
@@ -319,12 +317,7 @@ func show_death(floor_number: int, meta: Dictionary) -> void:
     _hud.visible = false
     _beat_ring.visible = false
     _show_overlay()
-    _overlay_content.add_child(_centered_label("You took a soft nap ♥", 42, Color("#ffe6a0")))
-    # "Mote tucked your lantern into a mossy pocket. No one is cross. The forest
-    # will be here when you wake." was 95 characters of reassurance. It is also
-    # the only thing on this screen saying the run is not a failure -- so it
-    # stays, but it says it in one sentence instead of three.
-    _overlay_content.add_child(_centered_label("Mote tucked your lantern away. Nobody is cross, and the forest waits.", 18, Color("#e9f0d4")))
+    _overlay_content.add_child(_card_header("You took a soft nap ♥", GardenGlyphs.MOTE, "Mote tucked your lantern away. Nobody is cross, and the forest waits."))
     _overlay_content.add_child(_spacer(12))
     # Both rows are floors, so they carry the same glyph rather than a stair beside
     # a lantern -- a lantern is warmth, and printing one next to a depth number
@@ -349,12 +342,8 @@ func show_ending(dragons: int, meta: Dictionary) -> void:
     _hud.visible = false
     _beat_ring.visible = false
     _show_overlay()
-    _overlay_content.add_child(_centered_label("The dragons are snuggled ♥", 42, Color("#ffe6a0")))
-    # Snoozle's cousin yawning "more lullabies when you're ready" is the moment,
-    # and it is one sentence rather than a paragraph. The follow-up line about
-    # the forest growing a floor deeper was a second promise on top of it; it is
-    # now the hover on the button that makes it.
-    _overlay_content.add_child(_centered_label("Snoozle’s family sleeps in a warm heap. Far below, one enormous cousin yawns: ‘More lullabies when you’re ready.’", 18, Color("#e9f0d4")))
+    _overlay_content.add_child(_card_header("The dragons are snuggled ♥", GardenGlyphs.DRAGON, "Snoozle’s family sleeps in a warm heap."))
+    _overlay_content.add_child(_centered_label("Far below, one enormous cousin yawns: ‘More lullabies when you’re ready.’", 18, Color("#e9f0d4")))
     _overlay_content.add_child(_spacer(12))
     _overlay_content.add_child(_tally_rows([
         [GardenGlyphs.DRAGON, "%d" % dragons],
@@ -374,8 +363,7 @@ func show_ending(dragons: int, meta: Dictionary) -> void:
 
 func show_journal(meta: Dictionary, facts_learned: Array, stickers: Array) -> void:
     _present_panel()
-    _shop_frame.add_child(_label("Mote’s memory book ♥", 30, Color("#ffe49b")))
-    _shop_frame.add_child(_label("Fun facts and stickers you collected. Just for smiles — never a test.", 14, Color("#dce9c4")))
+    _shop_frame.add_child(_card_header("Mote’s memory book ♥", GardenGlyphs.BOOK, "Fun facts and stickers you collected. Just for smiles — never a test."))
     _shop_frame.add_child(_separator())
     var list := _panel_list(9)
     list.add_child(_section_label("FUN FACTS YOU FOUND · %d ♥" % facts_learned.size()))
