@@ -5,6 +5,7 @@ extends RefCounted
 # editor-built global-class cache, and bare names would not parse
 # on first boot. regression_architecture holds this file to it.
 const DungeonGenerator := preload("res://scripts/dungeon_generator.gd")
+const Adventures := preload("res://scripts/floor_surprise_adventures.gd")
 
 ## Every floor hides exactly one small surprise — a place you stumble on, not
 ## a task you are given. The kind is chosen deterministically from the floor
@@ -24,17 +25,25 @@ const KINDS: Array = [
     {"key": "picnic", "name": "a wisp picnic", "line": "Three wisps are sharing something on a blanket."},
     {"key": "star_glade", "name": "a star glade", "line": "A little ring of stars hums in a clearing."},
     {"key": "singing_ring", "name": "a singing mushroom ring", "line": "Mushrooms stand in a perfect circle, waiting."},
+    {"key": "wisp_choir", "name": "a wisp choir", "line": "Three little wisps hum a round, off-key and earnest."},
     {"key": "lantern_bloom", "name": "a lantern bloom", "line": "Five unlit lantern-flowers lean toward the path."},
     {"key": "comet_log", "name": "a comet-watching log", "line": "A soft log sits alone, pointed at the sky."},
+    {"key": "lantern_release", "name": "a waiting sky-lantern", "line": "A little paper lantern rests on a stick, ready to fly."},
     {"key": "mossy_doodle", "name": "a mossy doodle", "line": "Something drew a glowing picture in the moss."},
     {"key": "balloon_puffs", "name": "balloon puffs", "line": "A few round puffs float just above the grass."},
+    {"key": "treasure_sprout", "name": "a treasure sprout", "line": "A golden sprout shivers in the shade, thirsty."},
     {"key": "firefly_chase", "name": "a firefly chase", "line": "Three fireflies zigzag above the grass, playing catch-me."},
+    {"key": "rainbow_puddle", "name": "a rainbow puddle", "line": "A shallow puddle holds a whole small rainbow."},
     {"key": "star_trail", "name": "a star trail", "line": "Little blue stars dot a winding path, one after another."},
+    {"key": "mushroom_house", "name": "a mushroom house", "line": "A tiny round door waits under a big red cap."},
     {"key": "echo_shell", "name": "an echo shell", "line": "A big spiral shell sits quietly, holding a sound."},
+    {"key": "shooting_star", "name": "a fallen star", "line": "A small star steams gently in the grass, still warm."},
+    {"key": "hedge_nook", "name": "a hedge nook", "line": "A soft leaf bed hides in the hedge, big enough for a nap."},
+    {"key": "butterfly_parade", "name": "a butterfly parade", "line": "Butterflies cross the clearing in a slow glittering line."},
 ]
 
 ## The multipliers that keep consecutive floors on different surprises: the
-## step shares no factor with the wheel's size (7 against 10), so stepping
+## step shares no factor with the wheel's size (7 against 18), so stepping
 ## one floor always turns the wheel to a different kind, and a full turn of
 ## the wheel visits every kind.
 const WHEEL_STEP := 7
@@ -56,6 +65,16 @@ static func verb_for(key: String) -> String:
             return "Look closer"
         "echo_shell":
             return "Listen to the shell"
+        "wisp_choir":
+            return "Hum along"
+        "lantern_release":
+            return "Release the lantern"
+        "treasure_sprout":
+            return "Water the sprout"
+        "mushroom_house":
+            return "Knock on the door"
+        "shooting_star":
+            return "Greet the star"
     return ""
 
 static func kind_for_floor(floor_number: int) -> Dictionary:
@@ -98,6 +117,22 @@ static func spawn(parent: Node3D, dungeon: Dictionary, rng: RandomNumberGenerato
             _build_star_trail(root, rng)
         "echo_shell":
             _build_echo_shell(root)
+        "wisp_choir":
+            Adventures._build_wisp_choir(root)
+        "lantern_release":
+            Adventures._build_lantern_release(root)
+        "treasure_sprout":
+            Adventures._build_treasure_sprout(root)
+        "rainbow_puddle":
+            Adventures._build_rainbow_puddle(root)
+        "mushroom_house":
+            Adventures._build_mushroom_house(root)
+        "shooting_star":
+            Adventures._build_shooting_star(root)
+        "hedge_nook":
+            Adventures._build_hedge_nook(root)
+        "butterfly_parade":
+            Adventures._build_butterfly_parade(root, rng)
     # The scatter around the surprise's cell is blind to the forest the
     # generator just drew: a bulb, a puff, a firefly or a star can land
     # inside a grove trunk's collision box, where the hero can never walk

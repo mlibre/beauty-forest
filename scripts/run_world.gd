@@ -71,6 +71,7 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
     _soothes_this_floor = 0
     _mote_joy = 0.0
     _surprise = null
+    _minor_wonders.clear()
     _glade_time = 0.0
     floor_modifier = BeautyContent.random_modifier(BeautyContent.story_floor(floor_number)) if not menu_stage else {}
 

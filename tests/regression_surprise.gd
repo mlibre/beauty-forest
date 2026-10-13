@@ -84,7 +84,7 @@ func _check_surprise_answers(game: Node, floor_number: int, key: String) -> bool
     var player: Node3D = game.player
     var before_sparkles := int(game.sparkles)
     match key:
-        "picnic", "singing_ring", "comet_log", "mossy_doodle":
+        "picnic", "singing_ring", "comet_log", "mossy_doodle", "wisp_choir", "lantern_release", "treasure_sprout", "mushroom_house", "shooting_star":
             player.global_position = surprise.global_position + Vector3(1.2, 0.05, 0)
             if not ok(game._surprise_interact(), "floor %d's %s did not answer E" % [floor_number, key]):
                 return false
@@ -153,6 +153,24 @@ func _check_surprise_answers(game: Node, floor_number: int, key: String) -> bool
             if not ok(bool(surprise.get_meta("surprise_used")), "floor %d's echo shell did not mark itself used" % floor_number):
                 return false
             if not ok(not game._surprise_interact(), "floor %d's echo shell answered twice" % floor_number):
+                return false
+        "rainbow_puddle":
+            player.global_position = surprise.global_position + Vector3(0.2, 0.05, 0)
+            game._tick_surprise(0.05)
+            if not ok(bool(surprise.get_meta("surprise_used")), "standing in the puddle on floor %d granted nothing" % floor_number):
+                return false
+        "hedge_nook":
+            player.global_position = surprise.global_position + Vector3(0.2, 0.05, 0)
+            game._tick_surprise(1.0)
+            if not ok(not bool(surprise.get_meta("surprise_used")), "a one-second stop in floor %d's nook already paid out" % floor_number):
+                return false
+            game._tick_surprise(2.0)
+            if not ok(bool(surprise.get_meta("surprise_used")), "resting in the nook on floor %d granted nothing" % floor_number):
+                return false
+        "butterfly_parade":
+            player.global_position = surprise.global_position + Vector3(1.0, 0.05, 0)
+            game._tick_surprise(0.05)
+            if not ok(bool(surprise.get_meta("surprise_used")), "walking into the parade on floor %d granted nothing" % floor_number):
                 return false
         _:
             return fail("floor %d carries an unknown surprise kind '%s'" % [floor_number, key])
