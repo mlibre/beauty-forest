@@ -55,7 +55,80 @@ func _run() -> void:
         return
     if not await _check_the_ending_facts_row_uses_the_book_glyph(game):
         return
+    if not await _check_the_menu_wears_its_medals(game):
+        return
+    if not await _check_the_pause_doors_read_as_a_shelf(game):
+        return
+    if not await _check_the_memory_book_shelves_its_stickers(game):
+        return
     finish(game, "BEAUTY_FOREST_SCREENS")
+
+func _check_the_menu_wears_its_medals(game: Node) -> bool:
+    ## The record row used to be three bare icons and three bare numbers
+    ## floating on the card — readable, but with nothing anchoring them, they
+    ## read as decoration. Each figure now sits on its own medal plate, and
+    ## the three promises lead with named pictures. If a refactor drops the
+    ## plates or swaps a medal's glyph for an unknown key (which _icon would
+    ## silently replace with Mote), this catches it.
+    game.ui.close_panels()
+    game.ui.show_menu({"runs": 3, "best_floor": 7, "wisps_soothed": 12})
+    await frames(4)
+    var icons: Array[String] = glyph_keys_in(game.ui._overlay_content)
+    for medal: String in ["boots", "stairs", "wisp"]:
+        if not ok(icons.has(medal),
+                "the menu's record lost its %s medal picture: %s" % [medal, str(icons)]):
+            return false
+    var plates := 0
+    for node in game.ui._overlay_content.find_children("*", "PanelContainer", true, false):
+        plates += 1
+    return ok(plates >= 6,
+            "the menu's promises and medals lost their plates (found %d PanelContainers)" % plates)
+
+func _check_the_pause_doors_read_as_a_shelf(game: Node) -> bool:
+    ## The pause card's four secondary doors used to be four stacked
+    ## full-width rows. They are a two-by-two shelf of half-width picture
+    ## plates now; the shelf must hold all four, each with its own picture,
+    ## and the settings door must still be singularly named (regression_options
+    ## pins the words, this pins the shape).
+    game.ui.close_panels()
+    game.ui.show_pause(game.meta)
+    await frames(4)
+    var flows: Array = game.ui._overlay_content.find_children("*", "HFlowContainer", true, false)
+    if not ok(flows.size() == 1,
+            "the pause card's door shelf is missing or duplicated (%d flows)" % flows.size()):
+        return false
+    var doors := 0
+    var pictured := 0
+    for node in (flows[0] as Node).get_children():
+        var button := node as Button
+        if button == null:
+            continue
+        doors += 1
+        if button.icon != null:
+            pictured += 1
+    return ok(doors == 4 and pictured == 4,
+            "the pause door shelf holds %d doors, %d with pictures (want 4/4)" % [doors, pictured])
+
+func _check_the_memory_book_shelves_its_stickers(game: Node) -> bool:
+    ## The memory book's stickers used to be a list of names — an inventory.
+    ## They are a shelf of picture plates now, each wearing the glyph of the
+    ## memory that earned it, and every fact row leads with the book's own
+    ## mark. The shelf must paint each sticker's own picture (not the
+    ## everything-looks-the-same heart) for the stickers that own a glyph.
+    game.ui.close_panels()
+    game.ui.show_journal(game.meta, ["Mote hums when it is thinking."], ["dragon_friend", "shopper", "mystery_key"])
+    await frames(4)
+    var icons: Array[String] = glyph_keys_in(game.ui._shop_frame)
+    if not ok(icons.has("dragon") and icons.has("cart"),
+            "the sticker shelf did not paint each sticker's own picture: %s" % str(icons)):
+        return false
+    var fact_bullets := 0
+    for node in game.ui._shop_frame.find_children("*", "TextureRect", true, false):
+        var icon := node as TextureRect
+        if icon != null and icon.name == "book":
+            fact_bullets += 1
+    return ok(fact_bullets >= 2,
+            "the memory book's fact rows lost their book-mark bullets (found %d)" % fact_bullets)
 
 func _check_the_ending_facts_row_uses_the_book_glyph(game: Node) -> bool:
     ## The ending's third tally row counts fun facts. It carried the CHIME --

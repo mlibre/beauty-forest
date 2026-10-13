@@ -346,6 +346,28 @@ static func sticker_name(key: String) -> String:
 static func sticker_line(key: String) -> String:
     return String(STICKERS.get(key, {}).get("line", "a gentle thing worth remembering"))
 
+## The picture a sticker wears in the memory book. Each sticker borrows the
+## glyph of the thing that earned it — the dragon sticker wears the dragon,
+## the cart sticker wears Peddle's cart — so a shelf of them reads as a row
+## of little memories rather than eleven identical hearts. Unknown keys fall
+## back to the heart: every sticker is a kindness first.
+const STICKER_GLYPHS := {
+    "first_nap": "mote",
+    "dragon_friend": "dragon",
+    "big_hug": "wisp",
+    "pacifist": "shield",
+    "shopper": "cart",
+    "fact_finder": "book",
+    "feeling_friend": "heart",
+    "curious": "soul",
+    "long_lullaby": "chime",
+    "kindling": "lantern",
+    "century": "sparkle",
+}
+
+static func sticker_glyph(key: String) -> String:
+    return String(STICKER_GLYPHS.get(key, "heart"))
+
 ## The charm behind `key`, or an empty dict if the key is not a charm.
 ##
 ## Callers read the shelf through this rather than indexing CHARMS, so a charm

@@ -37,6 +37,7 @@ func _run() -> void:
         await _check_high_contrast_reaches_the_text()
         await _check_bump_softness_drags_toward_softness()
         await _check_accessibility_toggles_name_what_they_change()
+        await _check_settings_rows_wear_their_pictures()
         await _check_vitals_follow_the_accessibility_settings()
         await _check_the_settings_door_has_one_name(game)
         await _check_settings_takes_the_whole_screen(game)
@@ -87,6 +88,37 @@ func _check_the_settings_door_has_one_name(game: Node) -> void:
                         wrong += 1
         ok(named == 1 and wrong == 0,
                         "the pause card's settings door is not singularly named: comfort=%d gentler=%d" % [named, wrong])
+
+## Every control on the gentler-forest panel leads with its own picture: the
+## row a player reads is "this picture, this setting", the same grammar the
+## pause summary and the shop shelves speak. A panel that loses its pictures
+## (or silently swaps one for the Mote fallback, which _icon does for unknown
+## keys) has drifted back to being the one form in a game of picture books.
+func _check_settings_rows_wear_their_pictures() -> void:
+        _ui.apply_settings(BeautyData.default_settings())
+        await frames(3)
+        _ui.show_settings(_ui._settings)
+        await frames(4)
+        var icons: Array[String] = glyph_keys_in(_ui._shop_frame)
+        for wanted: String in ["soul", "book", "lantern", "moss", "chime", "wisp", "lullaby", "camp"]:
+                ok(icons.has(wanted),
+                        "the settings panel lost the %s row picture: %s" % [wanted, str(icons)])
+        var plates := 0
+        for node in _ui._shop_content.find_children("*", "PanelContainer", true, false):
+                plates += 1
+        ok(plates >= 8,
+                "the settings rows lost their plates (found %d PanelContainers)" % plates)
+        # The picture must not steal the row's meaning: every slider row still
+        # carries its title label beside its slider (the bump-softness check
+        # pins one row; this walks them all).
+        var titled := 0
+        for title: String in ["Text size", "Bump softness", "Extra song time", "Wisp speed", "Volume"]:
+                if _find_row(title) != null:
+                        titled += 1
+        ok(titled == 5,
+                "the settings slider rows lost their titles (%d of 5 found)" % titled)
+        _ui.close_settings()
+        await frames(2)
 
 func _check_vitals_follow_the_accessibility_settings() -> void:
         ## The vitals ring, sparkle count and charm sockets drew with whatever flags

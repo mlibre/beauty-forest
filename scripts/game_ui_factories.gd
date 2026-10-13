@@ -105,6 +105,13 @@ func _icon(glyph_key: String, side: float, tint: Color = Color.WHITE) -> Texture
     icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
     return icon
 
+## An icon that centres itself inside a full-width row — the vertical-stack
+## sibling of _icon, for plates that lead with a picture over a name.
+func _centered_icon(glyph_key: String, side: float, tint: Color = Color.WHITE) -> TextureRect:
+    var icon := _icon(glyph_key, side, tint)
+    icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+    return icon
+
 func _button(text: String, primary: bool) -> Button:
     var button := Button.new()
     button.text = text
@@ -179,19 +186,7 @@ func _card_header(title: String, glyph_key: String, subtitle: String = "", headi
     var row := HBoxContainer.new()
     row.alignment = BoxContainer.ALIGNMENT_CENTER
     row.add_theme_constant_override("separation", 12)
-    var roundel := PanelContainer.new()
-    var roundel_style := StyleBoxFlat.new()
-    roundel_style.bg_color = Color(0.32, 0.22, 0.06, 0.60)
-    roundel_style.border_color = Color("#ffe29a")
-    roundel_style.set_border_width_all(2)
-    roundel_style.set_corner_radius_all(24)
-    roundel_style.content_margin_left = 7
-    roundel_style.content_margin_right = 7
-    roundel_style.content_margin_top = 6
-    roundel_style.content_margin_bottom = 6
-    roundel.add_theme_stylebox_override("panel", roundel_style)
-    roundel.add_child(_icon(glyph_key, 26, Color("#ffe9a8")))
-    row.add_child(roundel)
+    row.add_child(_roundel(glyph_key, 26))
     var heading := _label(title, heading_size, Color("#ffe6a0"))
     # One line by choice: a screen's name reads best unbroken, and at 200%
     # text a two-line heading alone eats a quarter of a short window's card.
@@ -204,6 +199,86 @@ func _card_header(title: String, glyph_key: String, subtitle: String = "", headi
     if not subtitle.is_empty():
         box.add_child(_centered_label(subtitle, 14, Color("#dcebbd")))
     return box
+
+## One glyph sitting in a small gold-rimmed disc. The identity band's picture,
+## extracted so the rest of the interface can wear the same jewelry: a row
+## that leads with a roundel reads as "this screen speaks in pictures" the
+## same way every other one does. `side` is the glyph's px size; the disc
+## breathes 7px around it.
+func _roundel(glyph_key: String, side: float, tint: Color = Color("#ffe9a8")) -> PanelContainer:
+    var roundel := PanelContainer.new()
+    var style := StyleBoxFlat.new()
+    style.bg_color = Color(0.32, 0.22, 0.06, 0.60)
+    style.border_color = Color("#ffe29a")
+    style.set_border_width_all(2)
+    style.set_corner_radius_all(int(side * 0.92) + 3)
+    style.content_margin_left = 7
+    style.content_margin_right = 7
+    style.content_margin_top = 6
+    style.content_margin_bottom = 6
+    roundel.add_theme_stylebox_override("panel", style)
+    roundel.add_child(_icon(glyph_key, side, tint))
+    return roundel
+
+## A soft grounded plate a group of widgets stands on. The interface's quiet
+## third layer: cards hold screens, buttons hold presses, and plates hold
+## ROWS — a settings control, a record medal, a sticker — so related pieces
+## read as one thing without a word of explanation. Shy on purpose: half
+## opacity, so a stack of them never turns the card into a brick wall.
+func _plate(accent: Color = Color("#9dbb80")) -> PanelContainer:
+    var plate := PanelContainer.new()
+    var style := StyleBoxFlat.new()
+    style.bg_color = Color(0.07, 0.15, 0.10, 0.55)
+    style.border_color = Color(accent, 0.55)
+    style.set_border_width_all(1)
+    style.set_corner_radius_all(14)
+    style.content_margin_left = 12
+    style.content_margin_right = 12
+    style.content_margin_top = 9
+    style.content_margin_bottom = 9
+    plate.add_theme_stylebox_override("panel", style)
+    plate.mouse_filter = Control.MOUSE_FILTER_PASS
+    return plate
+
+## One figure of the record as a medal: a roundel, a number, and a hover that
+## says what is being counted. Bare icons-and-digits used to float on the card
+## with nothing anchoring them, so a row of three numbers read as decoration;
+## on a plate they read as three facts worth keeping.
+func _medal_chip(glyph_key: String, value: String, tip: String) -> Control:
+    var chip := _plate(Color("#ffe29a"))
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 8)
+    chip.add_child(row)
+    row.add_child(_icon(glyph_key, 20, Color("#ffe9a8")))
+    var count := _label(value, 15, Color("#fff0c8"))
+    count.tooltip_text = tip
+    row.add_child(count)
+    chip.tooltip_text = tip
+    return chip
+
+## A keyboard key drawn as a little cap: a rounded plate holding one or two
+## characters. The draft's "press 1 · 2 · 3" line used to be a sentence; three
+## caps in a row are read the way the player will press them — as keys.
+func _key_cap(label_text: String) -> Control:
+    var cap := PanelContainer.new()
+    var style := StyleBoxFlat.new()
+    style.bg_color = Color(0.16, 0.28, 0.18, 0.92)
+    style.border_color = Color("#ffe29a")
+    style.set_border_width_all(1)
+    style.set_corner_radius_all(8)
+    style.content_margin_left = 7
+    style.content_margin_right = 7
+    style.content_margin_top = 2
+    style.content_margin_bottom = 2
+    cap.add_theme_stylebox_override("panel", style)
+    var key_label := _label(label_text, 13, Color("#fff0c8"))
+    key_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    cap.add_child(key_label)
+    # PASS, not IGNORE: a cap the mouse passes through cannot show its own
+    # tooltip, and "Press 1" is the whole point of drawing the key at all.
+    cap.mouse_filter = Control.MOUSE_FILTER_PASS
+    cap.tooltip_text = "Press %s" % label_text
+    return cap
 
 func _scrollbar_style() -> StyleBoxFlat:
     ## A slim warm track instead of the default grey bar, so a menu that still

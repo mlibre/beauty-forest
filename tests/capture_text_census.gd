@@ -165,15 +165,22 @@ func _run() -> void:
         # With the blind spots closed, these are the numbers, each measured on a real
         # screen and repeated across runs:
         #   PLAYING    0   the rule in AGENTS.md
-        #   MENU     120    88: title, one subtitle, three quiet promise
-        #                 glyphs (captions moved to hovers), six short buttons
-        #                 and the record as three icon chips with no words
+        #   MENU     200    the title, one subtitle, six short buttons, the
+        #                 record as three medal plates, and three two-word
+        #                 promise captions ("Sings by itself", "Just wander",
+        #                 "Gifts, never fights"). The captions used to live on
+        #                 desktop-only hovers; a touchscreen player could not
+        #                 read a promise at all, and a promise nobody can read
+        #                 is decoration.
         #   PAUSE    820   705 + one drawn floor-mood line (see below)
         #   SHOP     700   601: 34 ware names, 4 shelf headings, sparkle count
         #   NAP      250   200: the cozy-nap card (two floor rows + one warm line)
         #   ENDING   240   176: the dragons-are-snuggled card (dragon, heart, chime)
         #   JOURNAL  380   294: two facts and two stickers; grows with collection
-        #   SETTINGS 320   250: checkboxes and slider rows
+        #   SETTINGS 500   checkboxes and slider rows, plus the one-line "what
+        #                 this changes" note under each slider. A bare "×1.40"
+        #                 says nothing a new player can act on; the notes are
+        #                 five short lines, one per slider, not a paragraph.
         #
         # JOURNAL's budget has the most room on purpose. Its length is a player's
         # collection, not an author's paragraph -- every fact they found and every
@@ -263,13 +270,13 @@ const CUE_BUDGET := 32
 ## that covers only the screens somebody remembered to point it at is half a gate.
 const BUDGETS := {
         "PLAYING": 0,
-        "MENU": 120,
+        "MENU": 200,
         "PAUSE": 820,
         "SHOP": 700,
         "NAP": 250,
         "ENDING": 240,
         "JOURNAL": 380,
-        "SETTINGS": 320,
+        "SETTINGS": 500,
         # DRAFT's own words are one heading, one fact line, three cards that
         # name themselves AND their effect, and one closing line (~250 chars);
         # like the other _root screens the count includes the log strip beneath,

@@ -11,20 +11,29 @@ func show_menu(meta: Dictionary) -> void:
     _show_menu_overlay()
     _overlay_content.add_child(_card_header("Beauty Forest", GardenGlyphs.LANTERN, "a gentle walk · thirty floors of forest below", 40))
     _overlay_content.add_child(_spacer(4))
-    # The menu shows, never tells. One row of three pictures stands where a
-    # paragraph of promises used to be; what each picture means is one hover
-    # away, and the first ten seconds of play teach it better than words did.
+    # The menu shows, never tells. One row of three little plates stands where
+    # a paragraph of promises used to be — each a picture with a two-word name
+    # so the promise reads with no hover at all, and the full sentence stays
+    # one hover away. Bare glyphs floated here once; on plates they read as
+    # three things the forest promises, not three decorations.
     var promises := HBoxContainer.new()
     promises.alignment = BoxContainer.ALIGNMENT_CENTER
-    promises.add_theme_constant_override("separation", 30)
+    promises.add_theme_constant_override("separation", 14)
     for promise: Array in [
-        ["lantern", "The lantern sings all by itself — there is no attack button."],
-        ["boots", "You just wander. No hurry, no losing."],
-        ["heart", "Gifts, never fights. Leaving is always okay."],
+        ["lantern", "Sings by itself", "The lantern sings all by itself — there is no attack button."],
+        ["boots", "Just wander", "You just wander. No hurry, no losing."],
+        ["heart", "Gifts, never fights", "Gifts, never fights. Leaving is always okay."],
     ]:
-        var mark := _icon(String(promise[0]), 38, Color("#ffe497"))
-        mark.tooltip_text = String(promise[1])
-        promises.add_child(mark)
+        var vow := _plate(Color("#ffe29a"))
+        var vow_box := VBoxContainer.new()
+        vow_box.alignment = BoxContainer.ALIGNMENT_CENTER
+        vow_box.add_theme_constant_override("separation", 3)
+        vow_box.add_child(_centered_icon(String(promise[0]), 26, Color("#ffe497")))
+        var vow_name := _centered_label(String(promise[1]), 13, Color("#e9f0d4"))
+        vow_box.add_child(vow_name)
+        vow.add_child(vow_box)
+        vow.tooltip_text = String(promise[2])
+        promises.add_child(vow)
     _overlay_content.add_child(promises)
     _overlay_content.add_child(_spacer(8))
     # PLAY. One word, one picture, the biggest plate on the card.
@@ -93,26 +102,20 @@ func show_menu(meta: Dictionary) -> void:
     doors.add_child(leave)
     _overlay_content.add_child(doors)
     _overlay_content.add_child(_spacer(6))
-    # The record: three pictures and their numbers, no words. What a number
+    # The record: three medals and their numbers, no words. What a number
     # counts is one hover away; on the screen, the shape of the walk reads at
-    # a glance — boots walked, stairs reached, wisps hugged home.
+    # a glance — boots walked, stairs reached, wisps hugged home. Each medal
+    # sits on its own little plate so the row reads as three kept facts
+    # rather than loose digits drifting on the card.
     var record := HBoxContainer.new()
     record.alignment = BoxContainer.ALIGNMENT_CENTER
-    record.add_theme_constant_override("separation", 18)
+    record.add_theme_constant_override("separation", 12)
     for chip: Array in [
         ["boots", int(meta.get("runs", 0)), "Visits — walks begun"],
         [GardenGlyphs.STAIRS, int(meta.get("best_floor", 0)), "Deepest floor reached"],
         [GardenGlyphs.WISP, int(meta.get("wisps_soothed", 0)), "Wisps guided home"],
     ]:
-        var chip_box := HBoxContainer.new()
-        chip_box.add_theme_constant_override("separation", 6)
-        chip_box.add_child(_icon(String(chip[0]), 20, Color("#cbdcb7")))
-        var count := _label(str(int(chip[1])), 15, Color("#cbdcb7"))
-        chip_box.add_child(count)
-        var chip_tip := String(chip[2])
-        count.tooltip_text = chip_tip
-        (chip_box.get_child(0) as Control).tooltip_text = chip_tip
-        record.add_child(chip_box)
+        record.add_child(_medal_chip(String(chip[0]), str(int(chip[1])), String(chip[2])))
     _overlay_content.add_child(_section_label("THE RECORD SO FAR"))
     _overlay_content.add_child(record)
     _fit_layout()
@@ -168,7 +171,17 @@ func show_draft(offers: Array, level: int, fact: String = "") -> void:
             arrive.tween_property(column, "modulate:a", 1.0, 0.24).set_delay(0.08 + index * 0.07) \
                 .set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
     _overlay_content.add_child(cards)
-    _overlay_content.add_child(_centered_label("tap a card  ·  or press 1 · 2 · 3", 14, Color("#cbdcb7")))
+    # The press-a-number hint as three key caps: read the way the keys sit on
+    # the keyboard, left to right, instead of a sentence the eye skips.
+    var key_row := HBoxContainer.new()
+    key_row.alignment = BoxContainer.ALIGNMENT_CENTER
+    key_row.add_theme_constant_override("separation", 6)
+    key_row.add_child(_centered_label("tap a card  ·  or press", 14, Color("#cbdcb7")))
+    for number in ["1", "2", "3"]:
+        key_row.add_child(_key_cap(number))
+    var key_center := CenterContainer.new()
+    key_center.add_child(key_row)
+    _overlay_content.add_child(key_center)
     _fit_layout()
     _focus_first_enabled(_overlay_content)
 
@@ -185,13 +198,28 @@ func show_pause(meta: Dictionary) -> void:
     _overlay_content.add_child(_walker_summary())
     _overlay_content.add_child(_spacer(14))
     _overlay_content.add_child(_centered_button("Keep wandering", true, func(): resume_requested.emit()))
-    _overlay_content.add_child(_centered_button("Comfort options", false, func(): settings_open_requested.emit()))
-    _overlay_content.add_child(_centered_button("Fresh walk", false, func(): restart_requested.emit(false)))
-    # The title used to be a one-visit room: nothing anywhere returned to it,
-    # so the style trails and the front door were reachable exactly once per
-    # app launch. This is the way back.
-    _overlay_content.add_child(_centered_button("Title screen", false, func(): menu_requested.emit()))
-    _overlay_content.add_child(_centered_button("Leave", false, func(): quit_requested.emit()))
+    # The four secondary doors used to be four stacked full-width rows, which
+    # read as four equally likely choices and pushed the keys reference a full
+    # card-height down. A two-by-two shelf of half-width picture plates reads
+    # in one glance, keeps the four apart (no two adjacent doors share a
+    # picture), and gives the pause card its breathing room back.
+    var doors := HFlowContainer.new()
+    doors.alignment = FlowContainer.ALIGNMENT_CENTER
+    doors.last_wrap_alignment = FlowContainer.LAST_WRAP_ALIGNMENT_CENTER
+    doors.add_theme_constant_override("hseparation", 10)
+    doors.add_theme_constant_override("vseparation", 10)
+    for door: Array in [
+        ["Comfort options", GardenGlyphs.HEART, func(): settings_open_requested.emit(), "Reduce hits, calm motion, turn up contrast — anytime."],
+        ["Fresh walk", GardenGlyphs.MOTE, func(): restart_requested.emit(false), "Start over from floor one."],
+        ["Title screen", GardenGlyphs.CAMP, func(): menu_requested.emit(), "Back to the front door."],
+        ["Leave", GardenGlyphs.STAIRS, func(): quit_requested.emit(), "No pressure. The forest keeps your spot warm."],
+    ]:
+        var door_button := _menu_button(String(door[0]), false, String(door[1]))
+        door_button.custom_minimum_size = Vector2(236, 46)
+        door_button.tooltip_text = String(door[3])
+        door_button.pressed.connect(door[2] as Callable)
+        doors.add_child(door_button)
+    _overlay_content.add_child(doors)
     _overlay_content.add_child(_spacer(10))
     _overlay_content.add_child(_keys_reference())
     _overlay_content.add_child(_centered_label("Deepest floor %d  ·  Wisps hugged home %d  ·  Fun facts %d" % [int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0)), int(meta.get("facts", 0))], 14, Color("#bdcea9")))
@@ -312,6 +340,15 @@ func _tally_rows(rows: Array) -> Control:
         box.add_child(line)
     return box
 
+## The tally rows framed on a plate — the nap card's and ending's scoreboard.
+## Same rows, one quiet frame: a summary that sits on its own plate reads as
+## the run's record kept safe, the same way the menu's medals do.
+func _tally_plate(rows: Array) -> Control:
+    var plate := _plate(Color("#ffe29a"))
+    plate.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    plate.add_child(_tally_rows(rows))
+    return plate
+
 func show_death(floor_number: int, meta: Dictionary) -> void:
     _clear(_overlay_content)
     _hud.visible = false
@@ -324,7 +361,7 @@ func show_death(floor_number: int, meta: Dictionary) -> void:
     # would say the wrong thing in a picture. The words "Reached" and "Deepest"
     # are the one part no glyph pair carries, so they stay, as labels rather than
     # a sentence: which figure is which.
-    _overlay_content.add_child(_tally_rows([
+    _overlay_content.add_child(_tally_plate([
         ["Reached", GardenGlyphs.STAIRS, "%d" % floor_number],
         ["Deepest", GardenGlyphs.STAIRS, "%d" % int(meta.get("best_floor", 0))],
     ]))
@@ -345,7 +382,7 @@ func show_ending(dragons: int, meta: Dictionary) -> void:
     _overlay_content.add_child(_card_header("The dragons are snuggled ♥", GardenGlyphs.DRAGON, "Snoozle’s family sleeps in a warm heap."))
     _overlay_content.add_child(_centered_label("Far below, one enormous cousin yawns: ‘More lullabies when you’re ready.’", 18, Color("#e9f0d4")))
     _overlay_content.add_child(_spacer(12))
-    _overlay_content.add_child(_tally_rows([
+    _overlay_content.add_child(_tally_plate([
         [GardenGlyphs.DRAGON, "%d" % dragons],
         [GardenGlyphs.HEART, "%d" % int(meta.get("wisps_soothed", 0))],
         # The facts row carried the CHIME, the icon every other screen uses
@@ -370,16 +407,54 @@ func show_journal(meta: Dictionary, facts_learned: Array, stickers: Array) -> vo
     if facts_learned.is_empty():
         list.add_child(_label("No facts yet. Level up gently or soothe a curious wisp; Mote will share one.", 16, Color("#eee8c8")))
     else:
+        # Every fact leads with the book's own little mark: the page reads as
+        # "something Mote wrote" before the words do, and the numbers say the
+        # order they were learned in — a growing collection, not a test sheet.
         for index in range(facts_learned.size()):
-            list.add_child(_label("%02d  ·  %s" % [index + 1, facts_learned[index]], 16, Color("#fff0c8")))
+            var fact_row := HBoxContainer.new()
+            fact_row.add_theme_constant_override("separation", 8)
+            fact_row.add_child(_icon(GardenGlyphs.BOOK, 14, Color("#c9e7a6")))
+            var fact := _label("%02d  ·  %s" % [index + 1, facts_learned[index]], 16, Color("#fff0c8"))
+            fact.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+            fact.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+            fact_row.add_child(fact)
+            list.add_child(fact_row)
     list.add_child(_section_label("YOUR STICKERS ♥"))
     if stickers.is_empty():
         list.add_child(_label("First Nap is waiting somewhere ahead. It is not a prize cup; it is simply a little proof you wandered kindly.", 16, Color("#eee8c8")))
     else:
-        for sticker in stickers:
-            list.add_child(_label("✦ " + BeautyContent.sticker_name(sticker), 16, Color("#ffe8a2")))
+        # The sticker shelf: one picture plate per kindness, each wearing the
+        # glyph of the memory that earned it, its award line one hover away.
+        # A list of names read as an inventory; a shelf of little plates reads
+        # as the wall of a child's room, which is what this book is.
+        var shelf := GridContainer.new()
+        var window := get_viewport().get_visible_rect().size.x if get_viewport() != null else 1280.0
+        var shelf_width := minf(900.0, window * 0.94) - MODAL_MARGIN_X - 8.0
+        shelf.columns = clampi(int(shelf_width / 158.0), 2, 5)
+        shelf.add_theme_constant_override("hseparation", 10)
+        shelf.add_theme_constant_override("vseparation", 10)
+        shelf.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        for sticker: String in stickers:
+            var sticker_plate := _plate(Color("#ffe29a"))
+            var sticker_box := VBoxContainer.new()
+            sticker_box.alignment = BoxContainer.ALIGNMENT_CENTER
+            sticker_box.add_theme_constant_override("separation", 4)
+            sticker_box.add_child(_centered_icon(BeautyContent.sticker_glyph(sticker), 30, Color("#ffe8a2")))
+            sticker_box.add_child(_centered_label(BeautyContent.sticker_name(sticker), 13, Color("#ffe8a2")))
+            sticker_plate.add_child(sticker_box)
+            sticker_plate.tooltip_text = BeautyContent.sticker_line(sticker)
+            shelf.add_child(sticker_plate)
+        list.add_child(shelf)
     list.add_child(_section_label("YOUR KINDNESS SO FAR ♥"))
-    list.add_child(_label("Walks: %d    Deepest floor: %d    Wisps hugged home: %d    Dragons tucked in: %d" % [int(meta.get("runs", 0)), int(meta.get("best_floor", 0)), int(meta.get("wisps_soothed", 0)), int(meta.get("dragons_sung", 0))], 16, Color("#dce9c4")))
+    # The same tally rows the nap and ending cards use, so the book's summary
+    # reads with the eyes the rest of the game taught it: a picture, then the
+    # number it counts.
+    list.add_child(_tally_rows([
+        ["Walks", "boots", "%d" % int(meta.get("runs", 0))],
+        ["Deepest", GardenGlyphs.STAIRS, "%d" % int(meta.get("best_floor", 0))],
+        ["Wisps", GardenGlyphs.WISP, "%d" % int(meta.get("wisps_soothed", 0))],
+        ["Dragons", GardenGlyphs.DRAGON, "%d" % int(meta.get("dragons_sung", 0))],
+    ]))
     _shop_frame.add_child(_centered_button("Close the book", true, func(): close_journal()))
     _fit_layout()
     _focus_first_enabled(_shop_frame)
