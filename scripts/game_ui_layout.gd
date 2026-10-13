@@ -251,7 +251,10 @@ func _touch_cluster_rect() -> Rect2:
     var cluster := Rect2()
     var found := false
     for button in _touch_buttons:
-        if not is_instance_valid(button):
+        if not is_instance_valid(button) or not button.visible:
+            # The contextual action button exists only beside something worth
+            # answering; while it hides, the corner is free for the map to
+            # claim instead of reserving space for a ghost plate.
             continue
         var rect := _effective_rect(button)
         cluster = cluster.merge(rect) if found else rect

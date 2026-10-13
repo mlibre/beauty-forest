@@ -172,14 +172,18 @@ func show_context_hint(verb: String) -> void:
 
 ## The touch action button's face follows the same context: the button IS the
 ## E key on a touchscreen, so it re-labels itself to whatever the hero stands
-## beside. An empty verb returns it to its resting name.
+## beside — and when the hero stands beside nothing, it disappears. A
+## permanent SING plate over the walk was one more icon to parse; a button
+## that only exists when something is near teaches itself.
 func set_action_label(verb: String) -> void:
     if _touch_action_button == null or not is_instance_valid(_touch_action_button):
         return
     var wanted := verb.strip_edges()
-    var label := "SING ♥"
-    if not wanted.is_empty():
-        label = "%s ♥" % wanted.to_upper()
+    if wanted.is_empty():
+        _touch_action_button.visible = false
+        return
+    var label := "%s ♥" % wanted.to_upper()
+    _touch_action_button.visible = true
     if _touch_action_button.text == label:
         return
     _touch_action_button.text = label

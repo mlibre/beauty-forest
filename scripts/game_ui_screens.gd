@@ -269,8 +269,10 @@ func _keys_reference() -> Control:
     # One action key: E answers whatever the hero stands beside — hug, sing,
     # wish, descend, and Peddle's cart too (the walk itself says so with a
     # little "E · Descend" hint at the bottom of the screen, and F still
-    # opens the cart for hands that learned it first).
-    var keys := _label("Wander: WASD / arrows / stick  ·  Dash: Shift  ·  Everything nearby: E (cart: F too)  ·  Memories: J  ·  Comfort options: C  ·  Pause: Esc", 13, Color("#cbdcb7"))
+    # opens the cart for hands that learned it first). On a touchscreen the
+    # same hint lights the action button, and the dash is a double-tap on
+    # the stick — the thumb never has to leave home to hop.
+    var keys := _label("Wander: WASD / arrows / stick  ·  Dash: Shift (touch: double-tap the stick)  ·  Everything nearby: E (cart: F too)  ·  Memories: J  ·  Comfort options: C  ·  Pause: Esc", 13, Color("#cbdcb7"))
     keys.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     box.add_child(keys)
     return box

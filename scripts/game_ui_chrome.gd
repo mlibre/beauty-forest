@@ -386,35 +386,34 @@ func _build_touch_controls() -> void:
     # the log, under the joystick) out of the way instead of letting the opaque
     # buttons paint over them.
     #
-    # Four buttons, not six. CART is gone because E answers it: the action
-    # button below IS the context, so standing beside Peddle re-labels it
-    # "CART" and a touch press opens the stall -- one button that is always
-    # the right one, wherever the hero stands. COMFORT moved into the pause
-    # card, which a touch player reaches with the PAUSE button and which
-    # already carries the "Comfort options" door; a cluster of six crowded
-    # plates taught none of them.
+    # Two buttons, not six. The ACTION button below is the context: standing
+    # beside anything singable, wishable, descendable or buyable re-labels it
+    # and lights it, and away from everything it disappears entirely -- the
+    # walk screen stays clean instead of carrying a SING plate nobody could
+    # parse. DASH lives in the stick: a quick double-tap is a hop (the pause
+    # card's keys line says so), so the corner keeps BOOK and PAUSE only.
     var use_button := _touch_button("SING ♥", Color("#ffe29a"), Vector2(-280, -180))
+    use_button.visible = false
     use_button.tooltip_text = "Whatever is near you: hug, sing, wish, or go down. Same as E."
     use_button.pressed.connect(func(): touch_interact_requested.emit())
     touch_root.add_child(use_button)
     _touch_action_button = use_button
-    var dash_button := _touch_button("DASH", Color("#a9d9ff"), Vector2(-170, -180))
-    dash_button.tooltip_text = "A quick soft hop. Same as Shift."
-    dash_button.pressed.connect(func(): touch_dash_requested.emit())
-    touch_root.add_child(dash_button)
     var journal_button := _touch_button("BOOK ♥", Color("#c9e7a6"), Vector2(-280, -118))
     journal_button.tooltip_text = "Your memories and stickers. Same as J."
     journal_button.pressed.connect(func(): touch_journal_requested.emit())
     touch_root.add_child(journal_button)
 
     # A touchscreen has no Escape key and this project maps no back gesture,
-    # so without this the buttons above are only half the control set: the
-    # player could sing, dash and read but never reach the pause card -- the
-    # card that carries the comfort options, the summary and the way home.
+    # so without this the button above is only half the control set: the
+    # player could read but never reach the pause card -- the card that
+    # carries the comfort options, the summary and the way home.
     var pause_button := _touch_button("PAUSE", Color("#cfd8e8"), Vector2(-170, -118))
     pause_button.tooltip_text = "Rest a moment. Same as Esc."
     pause_button.pressed.connect(func(): touch_pause_requested.emit())
     touch_root.add_child(pause_button)
+    # A quick double-tap on the stick is the dash: the thumb never has to
+    # leave home to hop, and the corner never grows a DASH plate back.
+    joystick.dash_flicked.connect(func(): touch_dash_requested.emit())
 
 func _touch_button(text: String, color: Color, offset: Vector2) -> Button:
     var button := _button(text, true)
