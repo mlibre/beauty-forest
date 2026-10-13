@@ -44,7 +44,7 @@ func _ready() -> void:
             audio.play_tone(659.25, 0.05, 0.012, 1)
         else:
             audio.play_tone(493.88, 0.07, 0.020, 1)
-    _apply_settings(settings, false)
+    _apply_settings(settings)
 
     _load_floor(1, true)
     ui.set_selected_style(selected_style)
@@ -84,7 +84,7 @@ func _connect_ui() -> void:
     ui.touch_interact_requested.connect(_try_interact)
     ui.touch_journal_requested.connect(_open_journal)
     ui.touch_pause_requested.connect(_touch_pause)
-    ui.settings_changed.connect(func(value): _apply_settings(value, true))
+    ui.settings_changed.connect(_apply_settings)
 
 func _unhandled_input(event: InputEvent) -> void:
     # The intro owns every key while it is being told: any key turns the page,

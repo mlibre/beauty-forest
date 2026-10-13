@@ -162,7 +162,7 @@ func _recalculate_loadout(reset_hp: bool) -> void:
         player.setup(dungeon, charm_effects, bool(settings.get("reduced_motion", false)))
         player.set_control_enabled(_gameplay_controls_enabled())
 
-func _apply_settings(value: Dictionary, persist: bool) -> void:
+func _apply_settings(value: Dictionary) -> void:
     settings = value.duplicate(true)
     ui.apply_settings(settings)
     # The HUD collapses based on text_scale, but apply_settings lives in the base
@@ -183,5 +183,3 @@ func _apply_settings(value: Dictionary, persist: bool) -> void:
             wisp.set_reduced_motion(bool(settings.get("reduced_motion", false)))
     if player and is_instance_valid(player) and player.hero:
         player.hero.set_reduced_motion(bool(settings.get("reduced_motion", false)))
-    if persist:
-        BeautyData.save_settings(settings)

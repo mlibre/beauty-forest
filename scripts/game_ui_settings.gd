@@ -137,9 +137,41 @@ func _slider_row(title: String, key: String, minimum: float, maximum: float, ste
             value_label.text = format % int(value * display_scale)
         else:
             value_label.text = format % value
-        _emit_settings()
+        _queue_settings_apply()
     )
     return row
+
+## A drag applies ONCE, shortly after its last tick. A slider fires
+## value_changed for every tick, and each tick used to pay the full pipeline:
+## a settings-file write, a whole-interface refresh and a full responsive
+## layout pass (twice, counting the director's own persist) -- dozens of times
+## for one drag. The value label follows the handle live; the WORLD hears the
+## settled answer. Toggles skip this and apply on the press.
+var _settings_settle: Timer = null
+
+func _queue_settings_apply() -> void:
+    ## Coalesce the ticks of one drag into a single apply+persist, 0.3s after
+    ## the last one. The timer lives on the interface (PROCESS_MODE_ALWAYS),
+    ## so a settle promised from a panel opened over a paused walk still
+    ## fires; reopening or closing the panel flushes it first, so the last
+    ## tick of a drag is never left unheard.
+    if _settings_settle == null or not is_instance_valid(_settings_settle):
+        _settings_settle = Timer.new()
+        _settings_settle.one_shot = true
+        _settings_settle.wait_time = 0.3
+        _settings_settle.timeout.connect(_emit_settings)
+        add_child(_settings_settle)
+    _settings_settle.start()
+
+func _flush_pending_settings() -> void:
+    if _settings_settle != null and is_instance_valid(_settings_settle) \
+            and not _settings_settle.is_stopped():
+        _settings_settle.stop()
+        _emit_settings()
+
+func close_settings() -> void:
+    _flush_pending_settings()
+    super()
 
 func _inverted_slider_row(title: String, key: String, minimum: float, maximum: float, format: String, display_scale: float = 1.0, icon_key: String = "") -> HBoxContainer:
     ## A row whose label names a QUALITY of comfort rather than a raw amount.
@@ -167,7 +199,7 @@ func _inverted_slider_row(title: String, key: String, minimum: float, maximum: f
             value_label.text = format % int(stored * display_scale)
         else:
             value_label.text = format % stored
-        _emit_settings()
+        _queue_settings_apply()
     )
     # Place the handle where the stored value belongs, without firing the
     # callback for a move the player did not make.

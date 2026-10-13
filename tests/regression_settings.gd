@@ -53,7 +53,85 @@ func _run() -> void:
     if not await _check_settings_hands_the_nap_and_ending_cards_back(game):
         return
 
+    if not await _check_a_slider_drag_applies_once(game):
+        return
+
     finish(game, "BEAUTY_FOREST_SETTINGS")
+
+func _check_a_slider_drag_applies_once(game: Node) -> bool:
+    ## A slider fires value_changed for every tick of a drag, and the panel
+    ## used to pay the FULL pipeline once per tick: a settings-file write, a
+    ## full interface refresh, a whole responsive layout pass, and a second
+    ## write from the director -- dozens of times for one drag, stuttering the
+    ## frame budget on every platform. The drag now applies ONCE, shortly
+    ## after the last tick; the value label still follows the handle live;
+    ## toggles still apply the moment they are pressed.
+    game.ui.close_panels()
+    game.ui.show_settings(game.ui._settings)
+    await frames(4)
+    var emissions := [0]
+    game.ui.settings_changed.connect(func(_value): emissions[0] += 1)
+    var row := _find_slider_row(game.ui._shop_content, "Text size")
+    if not ok(row != null, "the Text size row is missing"):
+        return false
+    var slider: HSlider = null
+    var value_label: Label = null
+    for child in row.get_children():
+        if child is HSlider:
+            slider = child
+        elif child is Label and child != row.get_child(0) and (child as Label).text.begins_with("%"):
+            value_label = child
+    if not ok(slider != null, "the Text size row has no slider"):
+        return false
+    # Six rapid ticks: one drag, six value_changed emissions from the handle.
+    for tick in [1.1, 1.2, 1.3, 1.4, 1.5, 1.6]:
+        slider.value = tick
+    await frames(2)
+    if value_label == null:
+        # The label lives at the row's end; find it the honest way if the
+        # heuristic above missed.
+        for child in row.get_children():
+            if child is Label and (child as Label).horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT:
+                value_label = child
+    ok(value_label != null and value_label.text == "160%",
+            "the value label did not follow the handle live (got %s)" % (value_label.text if value_label != null else "nothing"))
+    ok(emissions[0] == 0,
+            "a drag applied %d times BEFORE the settle -- the jank the debounce exists to remove" % emissions[0])
+    # The settle is 0.3 WALL seconds (a Timer, not a frame count): headless
+    # frames run uncapped, so awaiting frames would outpace the clock the
+    # player's own device ticks on.
+    await root.get_tree().create_timer(0.5).timeout
+    await frames(2)
+    ok(emissions[0] == 1,
+            "a six-tick drag emitted settings_changed %d times (want exactly 1 after the settle)" % emissions[0])
+    ok(is_equal_approx(float(game.ui._settings.get("text_scale", 0.0)), 1.6),
+            "the settled settings lost the last tick's value (%s)" % str(game.ui._settings.get("text_scale")))
+    # A toggle is a discrete press: it applies the moment it happens, not on
+    # a timer.
+    var before: int = emissions[0]
+    game.ui._settings["muted"] = not bool(game.ui._settings.get("muted", false))
+    game.ui._emit_settings()
+    await frames(2)
+    ok(emissions[0] == before + 1, "a toggle did not apply immediately")
+    game.ui.close_panels()
+    await frames(2)
+    return true
+
+func _find_slider_row(node: Node, title: String) -> HBoxContainer:
+    for row in _slider_rows(node):
+        for lbl in row.find_children("*", "Label", true, false):
+            var label := lbl as Label
+            if label != null and label.text == title:
+                return row
+    return null
+
+func _slider_rows(node: Node) -> Array[HBoxContainer]:
+    var out: Array[HBoxContainer] = []
+    for child in node.get_children():
+        if child is HBoxContainer:
+            out.append(child)
+        out.append_array(_slider_rows(child))
+    return out
 
 func _check_settings_open_from_every_modal(game: Node) -> bool:
     ## The COMFORT button stays lit and enabled while Peddle's cart or the memory

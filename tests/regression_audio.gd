@@ -101,10 +101,12 @@ func _run() -> void:
         "two different regions rendered the same song")
 
     # A volume change while a lullaby is sounding must adjust the level in
-    # place. The settings panel emits one settings_changed per slider tick, so
-    # a restart here turns every volume drag into a bar-zero stutter on a
-    # second voice. The voice index is the restart detector: the stream is a
-    # cached resource whose instance id survives a restart.
+    # place. The settings panel coalesces a slider drag into ONE
+    # settings_changed after the last tick (regression_settings pins the
+    # count), so a drag never spams the music director; a restart here would
+    # still turn that one apply into a bar-zero stutter on a second voice.
+    # The voice index is the restart detector: the stream is a cached
+    # resource whose instance id survives a restart.
     var playing_voice: int = music._active_voice
     var playing_stream: int = music.current_stream().get_instance_id()
     music.set_master(0.5, false)

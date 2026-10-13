@@ -312,6 +312,8 @@ func _contrast_cards() -> Array[PanelContainer]:
     return cards
 
 func _emit_settings() -> void:
+    ## Persist the panel's answer and hand it to the director ONCE. The
+    ## director applies it to the interface and the world; this used to apply
+    ## here too, so every change paid the whole interface refresh twice.
     BeautyData.save_settings(_settings)
-    apply_settings(_settings)
     settings_changed.emit(_settings.duplicate(true))
