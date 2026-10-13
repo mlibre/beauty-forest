@@ -169,6 +169,23 @@ func _build_stairwell(world_position: Vector3) -> void:
         mote.position = Vector3(sin(mote_angle) * 1.42, 0.55 + 0.38 * sin(mote_angle * 2.7), 0.15 + cos(mote_angle) * 1.42)
         stairwell.add_child(mote)
 
+    # Three stepping stones walk the last stretch for you, so the dais reads
+    # as somewhere you arrive AT, not a disc parked on the grass. They sit
+    # low (y < 0.3) so the arch-vine audit, which counts every short cylinder
+    # above that line, never mistakes one for a vine.
+    for stone_step in range(3):
+        var stone := MeshInstance3D.new()
+        var stone_mesh := CylinderMesh.new()
+        stone_mesh.top_radius = 0.34 - float(stone_step) * 0.03
+        stone_mesh.bottom_radius = 0.40 - float(stone_step) * 0.03
+        stone_mesh.height = 0.07
+        stone_mesh.radial_segments = 11
+        stone.mesh = stone_mesh
+        stone.material_override = _pbr(Color("#b3a077").darkened(0.05 + float(stone_step) * 0.04), 0.94)
+        stone.position = Vector3(0.1 * sin(float(stone_step) * 1.8), 0.035, 2.05 - float(stone_step) * 0.55)
+        stone.rotation.y = 0.5 * float(stone_step)
+        stairwell.add_child(stone)
+
     var glow := MeshInstance3D.new()
     var disk := CylinderMesh.new()
     disk.top_radius = 1.0
@@ -347,6 +364,105 @@ func _build_merchant(world_position: Vector3) -> void:
         crate.rotation.y = 0.4 * crate_offset.x + 0.2 * crate_offset.z
         body.add_child(crate)
 
+    # A chalkboard announces the stall from a distance: hand-posted, slightly
+    # tilted, the way a real peddler parks his pitch.
+    var chalk_post := MeshInstance3D.new()
+    var chalk_post_mesh := CylinderMesh.new()
+    chalk_post_mesh.top_radius = 0.04
+    chalk_post_mesh.bottom_radius = 0.055
+    chalk_post_mesh.height = 0.95
+    chalk_post_mesh.radial_segments = 7
+    chalk_post.mesh = chalk_post_mesh
+    chalk_post.material_override = _pbr(Color("#72503a"), 0.92)
+    chalk_post.position = Vector3(-1.45, 0.48, 0.75)
+    chalk_post.rotation.z = 0.06
+    body.add_child(chalk_post)
+    var chalk_board := MeshInstance3D.new()
+    var chalk_board_mesh := BoxMesh.new()
+    chalk_board_mesh.size = Vector3(0.78, 0.5, 0.06)
+    chalk_board.mesh = chalk_board_mesh
+    chalk_board.material_override = _pbr(Color("#6d4632"), 0.9)
+    chalk_board.position = Vector3(-1.45, 1.15, 0.75)
+    chalk_board.rotation.y = 0.35
+    body.add_child(chalk_board)
+    var chalk_face := MeshInstance3D.new()
+    var chalk_face_mesh := BoxMesh.new()
+    chalk_face_mesh.size = Vector3(0.68, 0.4, 0.015)
+    chalk_face.mesh = chalk_face_mesh
+    chalk_face.material_override = _pbr(Color("#3d4a42"), 0.95)
+    chalk_face.position = chalk_board.position + Vector3(0, 0, 0.038)
+    chalk_face.rotation.y = 0.35
+    body.add_child(chalk_face)
+    var chalk_label := Label3D.new()
+    chalk_label.text = "Peddle's Wares\n~ fair prices ~"
+    chalk_label.font_size = 30
+    chalk_label.pixel_size = 0.0035
+    chalk_label.modulate = Color("#e8dfc8")
+    chalk_label.outline_size = 0
+    chalk_label.position = chalk_face.position + Vector3(0, 0, 0.012)
+    chalk_label.rotation.y = 0.35
+    chalk_label.width = 220
+    body.add_child(chalk_label)
+
+    # A bunting line runs from the chalk post to the counter's far corner,
+    # four small pennants sagging along it.
+    var bunting_colors: Array[Color] = [Color("#f3a95f"), Color("#9ec7ef"), Color("#f0b7d4"), Color("#8fd0a0")]
+    var bunting_start := Vector3(-1.42, 1.42, 0.72)
+    var bunting_end := Vector3(-0.82, 1.18, 0.68)
+    for pennant_index in range(4):
+        var t := (float(pennant_index) + 0.5) / 4.0
+        var sag := sin(t * PI) * 0.09
+        var pennant := MeshInstance3D.new()
+        var pennant_mesh := CylinderMesh.new()
+        pennant_mesh.top_radius = 0.0
+        pennant_mesh.bottom_radius = 0.055
+        pennant_mesh.height = 0.13
+        pennant_mesh.radial_segments = 4
+        pennant.mesh = pennant_mesh
+        pennant.material_override = _pbr(bunting_colors[pennant_index], 0.88)
+        pennant.position = bunting_start.lerp(bunting_end, t) + Vector3(0, -sag - 0.06, 0)
+        pennant.rotation.y = 0.35
+        body.add_child(pennant)
+
+    # A small bird perches on the canopy crown — the stall's resident, and
+    # the reason the crown bead no longer sits alone.
+    var bird := MeshInstance3D.new()
+    var bird_mesh := SphereMesh.new()
+    bird_mesh.radius = 0.075
+    bird_mesh.height = 0.15
+    bird.mesh = bird_mesh
+    bird.material_override = _pbr(Color("#6d8fa8"), 0.80)
+    bird.position = Vector3(0.14, 2.42, 0.05)
+    bird.rotation.y = 0.9
+    body.add_child(bird)
+    var bird_head := MeshInstance3D.new()
+    var bird_head_mesh := SphereMesh.new()
+    bird_head_mesh.radius = 0.045
+    bird_head_mesh.height = 0.08
+    bird_head.mesh = bird_head_mesh
+    bird_head.material_override = _pbr(Color("#6d8fa8"), 0.80)
+    bird_head.position = bird.position + Vector3(0.05, 0.07, 0.06)
+    body.add_child(bird_head)
+    var beak := MeshInstance3D.new()
+    var beak_mesh := CylinderMesh.new()
+    beak_mesh.top_radius = 0.0
+    beak_mesh.bottom_radius = 0.018
+    beak_mesh.height = 0.055
+    beak_mesh.radial_segments = 5
+    beak.mesh = beak_mesh
+    beak.material_override = _pbr(Color("#e8a54f"), 0.85)
+    beak.position = bird_head.position + Vector3(0.03, 0.0, 0.05)
+    beak.rotation.x = -1.25
+    body.add_child(beak)
+    var bird_tail := MeshInstance3D.new()
+    var bird_tail_mesh := BoxMesh.new()
+    bird_tail_mesh.size = Vector3(0.03, 0.02, 0.14)
+    bird_tail.mesh = bird_tail_mesh
+    bird_tail.material_override = _pbr(Color("#5a7a92"), 0.85)
+    bird_tail.position = bird.position + Vector3(-0.02, 0.03, -0.09)
+    bird_tail.rotation.x = 0.35
+    body.add_child(bird_tail)
+
     # Peddle themself: a glowing round keeper with eyes and a little hat.
     var peddle := MeshInstance3D.new()
     peddle.mesh = SphereMesh.new()
@@ -430,6 +546,96 @@ func _build_wishing_pool(world_position: Vector3) -> void:
         stone.scale = Vector3(1.0, 0.72, 1.0)
         stone.position = Vector3(cos(angle) * 1.28, 0.18, sin(angle) * 1.28)
         pool.add_child(stone)
+
+    # Lily pads drift on the water, each one a flat green coin with a bite
+    # taken out where the notch folds: two overlapping discs read as one pad
+    # without any CSG work.
+    for pad_index in range(3):
+        var pad_angle := TAU * float(pad_index) / 3.0 + 0.5
+        var pad := MeshInstance3D.new()
+        var pad_mesh := CylinderMesh.new()
+        pad_mesh.top_radius = 0.17
+        pad_mesh.bottom_radius = 0.15
+        pad_mesh.height = 0.012
+        pad_mesh.radial_segments = 12
+        pad.mesh = pad_mesh
+        pad.material_override = _pbr(Color("#5e9457").lerp(Color("#79c46f"), 0.3 * float(pad_index)), 0.90)
+        pad.position = Vector3(cos(pad_angle) * 0.62, 0.065, sin(pad_angle) * 0.62)
+        pool.add_child(pad)
+        var notch := MeshInstance3D.new()
+        var notch_mesh := CylinderMesh.new()
+        notch_mesh.top_radius = 0.06
+        notch_mesh.bottom_radius = 0.055
+        notch_mesh.height = 0.016
+        notch_mesh.radial_segments = 8
+        notch.mesh = notch_mesh
+        notch.material_override = _pbr(Color("#3e9e93"), 0.85)
+        notch.position = pad.position + Vector3(cos(pad_angle + 2.2) * 0.10, 0.002, sin(pad_angle + 2.2) * 0.10)
+        pool.add_child(notch)
+
+    # Cattail reeds crowd two rim gaps: thin stalks with brown seed heads,
+    # the pool's excuse to rustle when the floor's breeze passes.
+    for reed_cluster in range(2):
+        var cluster_angle := 2.4 + float(reed_cluster) * 3.1
+        for reed_index in range(3):
+            var reed_angle := cluster_angle + float(reed_index) * 0.16
+            var reed := MeshInstance3D.new()
+            var reed_mesh := CylinderMesh.new()
+            reed_mesh.top_radius = 0.012
+            reed_mesh.bottom_radius = 0.018
+            reed_mesh.height = 0.66
+            reed_mesh.radial_segments = 5
+            reed.mesh = reed_mesh
+            reed.material_override = _pbr(Color("#6f9d5c"), 0.94)
+            reed.position = Vector3(cos(reed_angle) * 1.36, 0.38, sin(reed_angle) * 1.36)
+            reed.rotation.z = 0.06 * float(reed_index - 1)
+            pool.add_child(reed)
+            var head := MeshInstance3D.new()
+            var head_mesh := CapsuleMesh.new()
+            head_mesh.radius = 0.035
+            head_mesh.height = 0.15
+            head.mesh = head_mesh
+            head.material_override = _pbr(Color("#7b593c"), 0.92)
+            head.position = reed.position + Vector3(0, 0.38, 0)
+            pool.add_child(head)
+
+    # The wishing post: a knotted pole by the rim with two ribbon wishes
+    # already tied on, so the pool explains its own ritual.
+    var post := MeshInstance3D.new()
+    var post_mesh := CylinderMesh.new()
+    post_mesh.top_radius = 0.05
+    post_mesh.bottom_radius = 0.07
+    post_mesh.height = 1.15
+    post_mesh.radial_segments = 8
+    post.mesh = post_mesh
+    post.material_override = _pbr(Color("#7d5538"), 0.92)
+    post.position = Vector3(1.52, 0.58, -0.42)
+    post.rotation.z = -0.05
+    pool.add_child(post)
+    var ribbon_colors: Array[Color] = [Color("#e8707a"), Color("#9ec7ef")]
+    for ribbon_index in range(2):
+        var ribbon := MeshInstance3D.new()
+        var ribbon_mesh := BoxMesh.new()
+        ribbon_mesh.size = Vector3(0.05, 0.34, 0.014)
+        ribbon.mesh = ribbon_mesh
+        ribbon.material_override = _pbr(ribbon_colors[ribbon_index], 0.88)
+        ribbon.position = Vector3(1.52 - 0.02 + float(ribbon_index) * 0.045, 1.02 - float(ribbon_index) * 0.09, -0.42 + 0.02)
+        ribbon.rotation.z = 0.16 - float(ribbon_index) * 0.3
+        ribbon.rotation.x = 0.1 * float(ribbon_index)
+        pool.add_child(ribbon)
+
+    # Four water motes hover over the pool, the wish-light the sign in the
+    # lobby promises. Seed-fixed heights, the same trick the stairwell uses.
+    for mote_index in range(4):
+        var mote_angle := TAU * float(mote_index) / 4.0 + 0.4
+        var mote := MeshInstance3D.new()
+        var mote_mesh := SphereMesh.new()
+        mote_mesh.radius = 0.04
+        mote_mesh.height = 0.075
+        mote.mesh = mote_mesh
+        mote.material_override = _emissive(Color("#c8f0e2"), 2.0)
+        mote.position = Vector3(cos(mote_angle) * 0.8, 0.42 + 0.16 * sin(mote_angle * 3.1), sin(mote_angle) * 0.8)
+        pool.add_child(mote)
 
 func _build_sign(world_position: Vector3) -> void:
     var sign := Node3D.new()

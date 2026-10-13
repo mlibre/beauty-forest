@@ -32,6 +32,8 @@ var _eye_meshes: Array[MeshInstance3D] = []
 var _cape: MeshInstance3D
 var _cape_hem: MeshInstance3D
 var _contact_shadow: MeshInstance3D
+var _hat_pivot: Node3D
+var _spark_pivot: Node3D
 
 func _ready() -> void:
     _build_character()
@@ -207,6 +209,26 @@ func _build_character() -> void:
     _scarf.position = Vector3(0, 0.66, 0)
     hips.add_child(_scarf)
 
+    # A round coin purse hangs off the belt's back-left, so even the rear view
+    # reads "traveler who owns exactly two important things".
+    var purse := MeshInstance3D.new()
+    var purse_mesh := SphereMesh.new()
+    purse_mesh.radius = 0.085
+    purse_mesh.height = 0.15
+    purse.mesh = purse_mesh
+    purse.material_override = _toot(Color("#8a5e3b"))
+    purse.position = Vector3(-0.28, -0.02, -0.28)
+    purse.scale = Vector3(1.0, 1.15, 0.8)
+    hips.add_child(purse)
+    var purse_knot := MeshInstance3D.new()
+    var knot_mesh := SphereMesh.new()
+    knot_mesh.radius = 0.03
+    knot_mesh.height = 0.05
+    purse_knot.mesh = knot_mesh
+    purse_knot.material_override = gold
+    purse_knot.position = Vector3(-0.28, 0.05, -0.28)
+    hips.add_child(purse_knot)
+
     # The cape hangs from a pivot at the shoulders so it can sway as one
     # piece; the gold hem rides at its foot and moves with it.
     var cape_pivot := Node3D.new()
@@ -262,6 +284,23 @@ func _build_character() -> void:
     _build_leg("LeftLegPivot", Vector3(-0.18, 0.02, 0), trousers, boots)
     _build_leg("RightLegPivot", Vector3(0.18, 0.02, 0), trousers, boots)
 
+    # A leather patch on each knee, sewn where a traveler actually kneels.
+    for knee_side in [-1.0, 1.0]:
+        var knee := get_node_or_null("Model/Hips/%sPivot" % ("Left" if knee_side < 0.0 else "Right"))
+        if knee == null:
+            continue
+        var patch := MeshInstance3D.new()
+        var patch_mesh := SphereMesh.new()
+        patch_mesh.radius = 0.075
+        patch_mesh.height = 0.05
+        patch.mesh = patch_mesh
+        patch.material_override = _toot(Color("#7a5236"))
+        patch.position = Vector3(0, -0.28, -0.115)
+        patch.scale = Vector3(1.0, 0.6, 0.75)
+        knee.add_child(patch)
+
+    _build_hat(scarf_mat, hair)
+
     # The staff is attached to the hand and is purely cosmetic; automatic
     # lantern combat is implemented by the game, never by this prop.
     var staff_pivot := Node3D.new()
@@ -290,6 +329,21 @@ func _build_character() -> void:
     lantern_frame_top.material_override = gold
     lantern_frame_top.rotation.x = PI * 0.5
     crown.add_child(lantern_frame_top)
+    # Embers that escaped the core circle the crown; the pivot turns them all,
+    # so the orbit costs one transform per frame instead of one per spark.
+    _spark_pivot = Node3D.new()
+    _spark_pivot.name = "LanternSparks"
+    crown.add_child(_spark_pivot)
+    for spark_index in range(3):
+        var spark := MeshInstance3D.new()
+        var spark_mesh := SphereMesh.new()
+        spark_mesh.radius = 0.022
+        spark_mesh.height = 0.04
+        spark.mesh = spark_mesh
+        spark.material_override = _emissive(Color("#ffe9ad"), 2.6)
+        var spark_angle := TAU * float(spark_index) / 3.0
+        spark.position = Vector3(sin(spark_angle) * 0.22, 0.06 + 0.05 * cos(spark_angle * 2.0), cos(spark_angle) * 0.22)
+        _spark_pivot.add_child(spark)
     _lantern_core = MeshInstance3D.new()
     _lantern_core.mesh = SphereMesh.new()
     _lantern_core.mesh.radius = 0.145
@@ -302,6 +356,90 @@ func _build_character() -> void:
     _lantern_light.omni_range = 7.5
     _lantern_light.shadow_enabled = false
     crown.add_child(_lantern_light)
+
+func _build_hat(scarf_material: ShaderMaterial, hair_material: ShaderMaterial) -> void:
+    ## A wide-brimmed traveler's hat with a soft, flopped crown and a feather:
+    ## the single biggest silhouette upgrade the hero can wear, readable from
+    ## any angle and against any backdrop the canopy offers.
+    var head := get_node_or_null("Model/Hips/Head")
+    if head == null:
+        return
+    _hat_pivot = Node3D.new()
+    _hat_pivot.name = "HatPivot"
+    _hat_pivot.position = Vector3(0, 0.20, 0.01)
+    _hat_pivot.rotation_degrees = Vector3(4.0, 0.0, -3.0)
+    head.add_child(_hat_pivot)
+
+    var brim := MeshInstance3D.new()
+    var brim_mesh := CylinderMesh.new()
+    brim_mesh.top_radius = 0.46
+    brim_mesh.bottom_radius = 0.50
+    brim_mesh.height = 0.035
+    brim_mesh.radial_segments = 18
+    brim.mesh = brim_mesh
+    brim.material_override = _toon(Color("#5f8f5a"), 0.08, 0.84)
+    brim.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+    _hat_pivot.add_child(brim)
+
+    # The crown leans back and its tip flops forward: a cone split at the top
+    # would need bones, so the flop is one extra bent segment kissing the first.
+    var crown := MeshInstance3D.new()
+    var crown_mesh := CylinderMesh.new()
+    crown_mesh.top_radius = 0.16
+    crown_mesh.bottom_radius = 0.30
+    crown_mesh.height = 0.34
+    crown_mesh.radial_segments = 14
+    crown.mesh = crown_mesh
+    crown.material_override = _toon(Color("#5f8f5a"), 0.08, 0.84)
+    crown.position = Vector3(0, 0.18, -0.02)
+    crown.rotation.x = -0.10
+    crown.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+    _hat_pivot.add_child(crown)
+    var flop := MeshInstance3D.new()
+    var flop_mesh := SphereMesh.new()
+    flop_mesh.radius = 0.155
+    flop_mesh.height = 0.30
+    flop.mesh = flop_mesh
+    flop.material_override = _toon(Color("#548057"), 0.08, 0.84)
+    flop.position = Vector3(0, 0.36, 0.05)
+    flop.rotation.x = 0.85
+    flop.scale = Vector3(1.0, 1.0, 1.25)
+    _hat_pivot.add_child(flop)
+
+    # The band repeats the scarf, so hat and neck answer each other.
+    var band := MeshInstance3D.new()
+    var band_mesh := CylinderMesh.new()
+    band_mesh.top_radius = 0.305
+    band_mesh.bottom_radius = 0.315
+    band_mesh.height = 0.09
+    band_mesh.radial_segments = 16
+    band.mesh = band_mesh
+    band.material_override = scarf_material
+    band.position = Vector3(0, 0.045, -0.02)
+    _hat_pivot.add_child(band)
+
+    # One goose feather, pinned where band meets crown, tips forward-left.
+    var quill := MeshInstance3D.new()
+    var quill_mesh := CylinderMesh.new()
+    quill_mesh.top_radius = 0.008
+    quill_mesh.bottom_radius = 0.014
+    quill_mesh.height = 0.26
+    quill_mesh.radial_segments = 6
+    quill.mesh = quill_mesh
+    quill.material_override = _toot(Color("#c9b48a"))
+    quill.position = Vector3(-0.24, 0.19, -0.06)
+    quill.rotation_degrees = Vector3(-12.0, 0.0, -38.0)
+    _hat_pivot.add_child(quill)
+    var vane := MeshInstance3D.new()
+    var vane_mesh := SphereMesh.new()
+    vane_mesh.radius = 0.05
+    vane_mesh.height = 0.20
+    vane.mesh = vane_mesh
+    vane.material_override = _toon(Color("#e8707a"), 0.10, 0.78)
+    vane.position = Vector3(-0.32, 0.28, -0.07)
+    vane.rotation.z = -0.55
+    vane.scale = Vector3(0.35, 1.0, 0.8)
+    _hat_pivot.add_child(vane)
 
 func _attach_pivot(node_name: String, pivot_position: Vector3) -> Node3D:
     var pivot := Node3D.new()
@@ -526,6 +664,16 @@ func _process(delta: float) -> void:
             core_material.emission = core_material.emission.lerp(_warmth_tint(), 1.0 - exp(-delta * 4.0))
     if _scarf:
         _scarf.rotation.z = 0.0 if _reduced_motion else sin(_time * 1.6) * 0.025
+    if _hat_pivot and is_instance_valid(_hat_pivot):
+        # The hat breathes against the walk: a nod that peaks on each step,
+        # folded into the pivot's authored tilt so the base pose never moves.
+        var hat_nod := sin(_time * 7.0) * 0.045 * _walk_current
+        _hat_pivot.rotation.x = 0.07 + (0.0 if _reduced_motion else hat_nod)
+    if _spark_pivot and is_instance_valid(_spark_pivot):
+        # Lantern embers circle the crown once every few seconds; Still Forest
+        # pins the wheel instead of hiding it, so the sparks stay lit.
+        _spark_pivot.rotation.y += 0.0 if _reduced_motion else delta * 1.9
+        _spark_pivot.rotation.x = 0.0 if _reduced_motion else sin(_time * 1.3) * 0.18
     if _cape and is_instance_valid(_cape):
         # The cape sways as one cloth: a slow breath plus a walk flutter that
         # rises with pace. Reduced motion keeps a whisper of the breath.

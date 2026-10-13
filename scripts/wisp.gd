@@ -51,6 +51,8 @@ var _big_light: OmniLight3D
 var _pupils: Array[MeshInstance3D] = []
 var _mouth_dots: Array[MeshInstance3D] = []
 var _brows: Array[MeshInstance3D] = []
+var _tail: MeshInstance3D
+var _sparkle_pivot: Node3D
 
 func setup(p_type_key: String, p_floor_number: int, p_is_big: bool = false, p_feeling: Dictionary = {}) -> void:
     type_key = p_type_key
@@ -169,6 +171,33 @@ func _build() -> void:
     _halo.mesh.material = _halo_material
     _halo.position = Vector3(0, 1.36 * visual_scale, 0)
     _visual.add_child(_halo)
+
+    # A spirit needs a spirit's lower half: the capsule body melts into a
+    # tapered tail whose tip hangs just above the turf, so a wisp reads as
+    # rendered light wearing a body instead of a pill with a face.
+    _tail = MeshInstance3D.new()
+    var tail_mesh := CylinderMesh.new()
+    tail_mesh.top_radius = 0.30 * visual_scale
+    tail_mesh.bottom_radius = 0.05 * visual_scale
+    tail_mesh.height = 0.52 * visual_scale
+    tail_mesh.radial_segments = 14
+    _tail.mesh = tail_mesh
+    _tail.material_override = _body_material
+    _tail.position = Vector3(0, 0.28 * visual_scale, 0)
+    _visual.add_child(_tail)
+
+    # Three motes that came loose from the halo wheel around it; one pivot
+    # turns them all, and Still Forest pins the wheel (the motes stay lit).
+    _sparkle_pivot = Node3D.new()
+    _sparkle_pivot.name = "HaloSparkles"
+    _sparkle_pivot.position = _halo.position
+    _visual.add_child(_sparkle_pivot)
+    for sparkle_index in range(3):
+        var sparkle := _sphere(0.028 * visual_scale, Color("#eaf6ff"))
+        sparkle.material_override = _emissive(Color("#dceeff"), 2.3)
+        var sparkle_angle := TAU * float(sparkle_index) / 3.0
+        sparkle.position = Vector3(sin(sparkle_angle) * 0.30 * visual_scale, 0.02 * visual_scale, cos(sparkle_angle) * 0.30 * visual_scale)
+        _sparkle_pivot.add_child(sparkle)
 
     _add_type_prop(color)
     # Nobody arrives happy. The face is laid sad before the first frame.
@@ -336,6 +365,14 @@ func tick_behavior(delta: float, player_position: Vector3, aggro_range: float, s
         _visual.scale = Vector3(bob_scale, bob_scale, bob_scale)
     if _halo and not is_big and not reduced_motion:
         _halo.rotation.y += delta * 0.9
+    if _sparkle_pivot and not reduced_motion:
+        _sparkle_pivot.rotation.y -= delta * 1.4
+    if _tail and is_instance_valid(_tail) and not reduced_motion:
+        # The tail drags a half-beat behind the bob, the way smoke answers a
+        # candle: slower, softer, always agreeing with the body above it.
+        var drift := sin(Time.get_ticks_msec() * 0.004 + _seed - 0.9)
+        _tail.rotation.x = drift * 0.07
+        _tail.rotation.z = sin(Time.get_ticks_msec() * 0.0031 + _seed * 1.7) * 0.05
     if _body_material:
         _body_material.set_shader_parameter("glow", (0.34 if shielded else 0.10) + _hurt_time * 0.20 + happiness * 0.06)
     if _aura_material:
