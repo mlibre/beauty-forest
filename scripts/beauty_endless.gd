@@ -37,6 +37,12 @@ const REGION_NOUNS := [
     "Hollow", "Terrace", "Grove", "Fen", "Meadows", "Warrens", "Vale",
     "Rootways", "Boughs", "Clearing", "Steps", "Loft", "Underglade", "Thickets",
 ]
+## The marks a composed region may wear on its story page, drawn from the warm
+## set the campaign's own regions wear. The dragon stays out of the pool: that
+## mark says "a sleeper is promised here", and in a chapter only its fifth and
+## thirteenth beats may say that.
+const REGION_GLYPHS := ["lantern", "sparkle", "mote", "heart"]
+
 const REGION_ENTRIES := [
     "%s smells of warm bread and old sunlight. Mote says maps down here are more of a hopeful art.",
     "The %s hum in a major key. Everything here is two shades cozier than the floor above.",
@@ -136,6 +142,16 @@ static func region(chapter: int) -> Dictionary:
         var rotated := base.lerp(Color("#fff2c4"), shift * 0.4)
         colors[field] = "#" + rotated.to_html(false)
     var first_floor := CAMPAIGN_LENGTH + (chapter - 1) * CHAPTER_LENGTH + 1
+    ## The chapter's mark rides its own seeded draw, not the palette's rng:
+    ## adding a hand to an existing draw would reshuffle every chapter's
+    ## palette and entry line, and the compose promise ("the same chapter is
+    ## always the same forest") is what saves and word of mouth stand on. A
+    ## composed dict without this field at all is the miss that shipped: the
+    ## story page reads region.get("glyph", "mote"), so every chapter past the
+    ## Roost wore the same generic Mote picture the campaign reserves for one
+    ## region of eight.
+    var glyph_rng := RandomNumberGenerator.new()
+    glyph_rng.seed = hash("endless-glyph-%d" % maxi(1, chapter))
     var composed := {
         "key": "endless-%d" % chapter,
         "ambient": AMBIENT_MOODS[chapter % AMBIENT_MOODS.size()],
@@ -143,6 +159,7 @@ static func region(chapter: int) -> Dictionary:
         "min": first_floor,
         "max": first_floor + CHAPTER_LENGTH - 1,
         "entry": String(REGION_ENTRIES[rng.randi() % REGION_ENTRIES.size()]) % name,
+        "glyph": REGION_GLYPHS[glyph_rng.randi() % REGION_GLYPHS.size()],
     }
     composed.merge(colors)
     return composed

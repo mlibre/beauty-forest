@@ -84,6 +84,23 @@ func _check_endless_regions_compose(game: Node) -> bool:
     if not ok(third["ambient"] in BeautyEndless.AMBIENT_MOODS,
             "chapter 3 borrows an ambient mood the score does not know: %s" % str(third.get("ambient"))):
         return false
+    ## Every composed region must carry a mark the glyph table can draw. The
+    ## field shipped missing, and the story page reads region.get("glyph",
+    ## "mote"), so all one hundred ninety-six chapters wore the same generic
+    ## Mote picture the campaign reserves for one region of eight. The draw
+    ## must also be its own seed: palettes and entry lines may not move
+    ## because a mark joined the compose.
+    for chapter in range(1, 9):
+        var marked: Dictionary = BeautyEndless.region(chapter)
+        if not ok(GardenGlyphs.has_glyph(String(marked.get("glyph", ""))),
+                "chapter %d's region wears a mark the glyph table cannot draw: %s" % [chapter, str(marked.get("glyph"))]):
+            return false
+    if not ok(String(third["glyph"]) == String(BeautyEndless.region(3)["glyph"]),
+            "chapter 3's mark redrew between calls; the compose must be deterministic"):
+        return false
+    if not ok(String(third["glyph"]) in BeautyEndless.REGION_GLYPHS and not BeautyEndless.REGION_GLYPHS.has("dragon"),
+            "the composed mark pool drifted: %s" % str(BeautyEndless.REGION_GLYPHS)):
+        return false
     for chapter in range(1, 9):
         var composed: Dictionary = BeautyEndless.region(chapter)
         var first: int = BeautyContent.CAMPAIGN_LENGTH + (chapter - 1) * BeautyEndless.CHAPTER_LENGTH + 1
