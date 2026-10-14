@@ -348,4 +348,30 @@ func _run() -> void:
     if not ok(game.mode == game.Mode.PLAYING and game.floor_number == 1,
             "starting from the returned-to title did not begin a fresh floor-1 walk (mode %d, floor %d)" % [int(game.mode), int(game.floor_number)]):
         return
+
+    # Mote's idle chatter must wait for the floor's opening film. Her timer
+    # lands on the story card -- the very card the film is speaking through --
+    # and since an outside voice now ends the film's turns, her chatter would
+    # cut the floor's own scene short. While the prologue owns the card she
+    # stays quiet; the moment the frame leaves she speaks again.
+    if not _check_mote_waits_for_the_film(game):
+        return
     finish(game, "BEAUTY_FOREST_MAIN_FLOW")
+
+func _check_mote_waits_for_the_film(game: Node) -> bool:
+    game.ui._cinematic_on = true
+    game.ui._cinematic_owner = "prologue"
+    game._mote_line_timer = 0.0
+    game._process(0.02)
+    if not ok(not game.ui._story_card.visible or game.ui._story_title.text != "Mote ✦",
+            "Mote talked over the floor's own film"):
+        return false
+    game.ui._cinematic_on = false
+    game.ui._cinematic_owner = ""
+    game._mote_line_timer = 0.0
+    game._process(0.02)
+    if not ok(game.ui._story_title.text == "Mote ✦",
+            "Mote never spoke once the film's frame had left (card says %s)" % game.ui._story_title.text):
+        return false
+    game.ui._story_card.visible = false
+    return true
