@@ -20,6 +20,7 @@ extends "res://scripts/game_ui_layout.gd"
 # editor-built global-class cache, and bare names would not parse
 # on first boot. regression_architecture holds this file to it.
 const CozyCard := preload("res://scripts/cozy_card.gd")
+const CozyPeddle := preload("res://scripts/cozy_peddle.gd")
 
 func _clear_panel() -> void:
     ## Empty the shared modal panel (cart, memory book, gentler-forest options).
@@ -248,7 +249,13 @@ func show_shop(state: Dictionary, focus_key: String = "") -> void:
     var heading := HBoxContainer.new()
     heading.add_theme_constant_override("separation", 10)
     list.add_child(heading)
-    heading.add_child(_icon(GardenGlyphs.CART, 26, Color("#ffe49b")))
+    # The keeper comes to the counter: the portrait where the cart glyph used
+    # to sit, drawn in primitives, blinking and breathing the way the stall's
+    # Peddle does in the world. The shop finally has a face while it sells.
+    var portrait := CozyPeddle.new()
+    portrait.name = "PeddlePortrait"
+    portrait.set_reduced_motion(_reduced_motion)
+    heading.add_child(portrait)
     var title := _label("Peddle’s cart ♥", 30, Color("#ffe49b"))
     title.theme_type_variation = "HeadingLabel"
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -275,11 +282,22 @@ func show_shop(state: Dictionary, focus_key: String = "") -> void:
     # so the shop answers the player's state instead of repeating a fixed
     # welcome at every opening. Kept as ink in the cart's own voice: it is the
     # same character the log already quotes.
-    var greeting := _label("“%s”" % _peddle_greeting(sparkles, warmth_full, slots_full), 14, Color("#d8cfae"))
+    var greeting := _label("“%s”" % CozyPeddle.greeting(sparkles, warmth_full, slots_full), 14, Color("#d8cfae"))
     greeting.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     greeting.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     greeting.mouse_filter = Control.MOUSE_FILTER_IGNORE
     list.add_child(greeting)
+
+    # The keeper's advice, one line of ink under the greeting: the ware
+    # Peddle would press in this visitor's boots. It points at the shelves
+    # rather than duplicating them -- the cards stay the only way to buy.
+    var pick := CozyPeddle.peddles_pick(state)
+    if not String(pick.get("line", "")).is_empty():
+        var pick_line := _label("Peddle tips his hat: “%s”" % String(pick["line"]), 13, Color("#c8e0b4"))
+        pick_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        pick_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        pick_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        list.add_child(pick_line)
 
     # Warm tea: one ware, so it gets a shelf of its own only because it is
     # bought constantly and heals. Spending sparkles on tea while already warm
@@ -386,24 +404,8 @@ func show_shop(state: Dictionary, focus_key: String = "") -> void:
     _flash_card(focus_key)
     _focus_first_enabled(_shop_frame)
 
-## Peddle's one line under the heading, tuned to what the cart can see of the
-## visit. Every branch answers a state the shelves themselves show -- an empty
-## purse, a full lantern, warmth already carried -- so the greeting never
-## contradicts the wares it sits above.
-func _peddle_greeting(sparkles: int, warmth_full: bool, slots_full: bool) -> String:
-    if warmth_full and slots_full and sparkles >= 9:
-        return "Warm, lantern full, and a purse that still sings — the deeper shelves are watching you."
-    if warmth_full and sparkles == 0:
-        return "Warm as a toast and not a sparkle to spare — browse anyway. The wares keep."
-    if warmth_full:
-        return "You look warm as a toast. The shelf glitters a little brighter for it."
-    if slots_full:
-        return "That lantern is full of light! Wander deeper — the floors below open more room."
-    if sparkles == 0:
-        return "The purse hums quietly today. The heart-gifts are always free."
-    if sparkles >= 12:
-        return "A glittering purse! The top shelf is yours to browse."
-    return "Welcome back to the cart. Everything is leaf-wrapped and waiting."
+## Peddle's one line under the heading lives with the keeper now -- see
+## CozyPeddle.greeting -- along with the portrait that faces the counter.
 
 ## After a rebuild, the purse digits flash warm once and settle: the one thing
 ## a purchase changed is the thing the eye should find. Skipped entirely under
