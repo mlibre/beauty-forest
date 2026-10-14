@@ -175,3 +175,129 @@ static func build_leg(rig: Node3D, node_name: String, pivot_position: Vector3, t
     cuff.material_override = toot(Color("#e8d9b8"))
     cuff.position = Vector3(0, -0.50, -0.02)
     pivot.add_child(cuff)
+
+## The traveler's cloak: a shoulder mantle and three cloth panels over a pale
+## lining, where the old cape was one flat box. The center panel and its gold
+## hem come back as `panel` and `hem` so the rig's sway keeps driving the
+## same two members it always has -- the mantle and side panels hang from the
+## same pivot, so the whole cloak still breathes as one cloth.
+static func build_cloak(rig: Node3D, pivot: Node3D, cloak_material: Material, lining_material: Material, hem_material: Material) -> Dictionary:
+    # The mantle hides the join: a squashed dome across the shoulders, so the
+    # panels appear to grow out of cloth gathered at the neck instead of
+    # starting at a hard box edge.
+    var mantle := MeshInstance3D.new()
+    var mantle_mesh := SphereMesh.new()
+    mantle_mesh.radius = 0.365
+    mantle_mesh.height = 0.26
+    mantle_mesh.is_hemisphere = true
+    mantle_mesh.radial_segments = 16
+    mantle_mesh.rings = 8
+    mantle.mesh = mantle_mesh
+    mantle.material_override = cloak_material
+    mantle.position = Vector3(0, 0.01, 0)
+    mantle.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+    pivot.add_child(mantle)
+
+    # The lining sits a whisper behind the center panel: from the camera's
+    # usual seat -- behind and above the hero -- it frames the panel edges in
+    # the pale shade, so the cloak reads as cloth with a inside, not a slab.
+    var liner := MeshInstance3D.new()
+    var liner_mesh := BoxMesh.new()
+    liner_mesh.size = Vector3(0.52, 0.78, 0.02)
+    liner.mesh = liner_mesh
+    liner.material_override = lining_material
+    liner.position = Vector3(0, -0.42, 0.035)
+    pivot.add_child(liner)
+
+    var panel := MeshInstance3D.new()
+    var panel_mesh := BoxMesh.new()
+    panel_mesh.size = Vector3(0.60, 0.88, 0.045)
+    panel.mesh = panel_mesh
+    panel.material_override = cloak_material
+    panel.position = Vector3(0, -0.46, 0)
+    panel.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+    pivot.add_child(panel)
+    var hem := MeshInstance3D.new()
+    var hem_mesh := BoxMesh.new()
+    hem_mesh.size = Vector3(0.62, 0.05, 0.055)
+    hem.mesh = hem_mesh
+    hem.material_override = hem_material
+    hem.position = Vector3(0, -0.88, 0)
+    pivot.add_child(hem)
+
+    # Two shorter side panels, swung a little outward, give the silhouette a
+    # taper: wide at the shoulders, broken at the knee, the way a cloak hangs
+    # when its wearer walks. Each carries its own hem so the gold line stays
+    # continuous across all three panels.
+    for side in [-1.0, 1.0]:
+        var wing := MeshInstance3D.new()
+        var wing_mesh := BoxMesh.new()
+        wing_mesh.size = Vector3(0.20, 0.64, 0.04)
+        wing.mesh = wing_mesh
+        wing.material_override = cloak_material
+        wing.position = Vector3(side * 0.25, -0.35, 0.015)
+        wing.rotation.y = -side * 0.15
+        wing.rotation.x = 0.05
+        wing.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+        pivot.add_child(wing)
+        var wing_hem := MeshInstance3D.new()
+        var wing_hem_mesh := BoxMesh.new()
+        wing_hem_mesh.size = Vector3(0.21, 0.045, 0.05)
+        wing_hem.mesh = wing_hem_mesh
+        wing_hem.material_override = hem_material
+        wing_hem.position = Vector3(side * 0.25, -0.655, 0.015)
+        wing_hem.rotation.y = -side * 0.15
+        pivot.add_child(wing_hem)
+    return {"panel": panel, "hem": hem}
+
+## The lantern's glass and cage: four gold uprights, a foot ring, a finial and
+## a breath of glass over the core, so the lamp reads as a built thing -- a
+## lantern someone made -- instead of a bare glowing ball.
+static func dress_lantern(crown: Node3D, gold_material: Material) -> void:
+    for post_index in range(4):
+        var angle := TAU * float(post_index) / 4.0 + PI * 0.25
+        var post := MeshInstance3D.new()
+        var post_mesh := CylinderMesh.new()
+        post_mesh.top_radius = 0.011
+        post_mesh.bottom_radius = 0.013
+        post_mesh.height = 0.33
+        post_mesh.radial_segments = 6
+        post.mesh = post_mesh
+        post.material_override = gold_material
+        post.position = Vector3(cos(angle) * 0.148, 0.005, sin(angle) * 0.148)
+        crown.add_child(post)
+    var foot := MeshInstance3D.new()
+    var foot_mesh := TorusMesh.new()
+    foot_mesh.inner_radius = 0.125
+    foot_mesh.outer_radius = 0.165
+    foot_mesh.rings = 18
+    foot_mesh.ring_segments = 6
+    foot.mesh = foot_mesh
+    foot.material_override = gold_material
+    foot.rotation.x = PI * 0.5
+    foot.position = Vector3(0, -0.155, 0)
+    crown.add_child(foot)
+    var finial := MeshInstance3D.new()
+    var finial_mesh := SphereMesh.new()
+    finial_mesh.radius = 0.030
+    finial_mesh.height = 0.055
+    finial.mesh = finial_mesh
+    finial.material_override = gold_material
+    finial.position = Vector3(0, 0.185, 0)
+    crown.add_child(finial)
+    # The glass: almost nothing -- ten percent alpha, no shading, both faces
+    # -- just enough of a shell that the core's light appears to sit INSIDE
+    # something rather than floating free.
+    var glass := MeshInstance3D.new()
+    var glass_mesh := SphereMesh.new()
+    glass_mesh.radius = 0.162
+    glass_mesh.height = 0.324
+    glass.mesh = glass_mesh
+    var glass_material := StandardMaterial3D.new()
+    glass_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    glass_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    glass_material.albedo_color = Color(1.0, 0.93, 0.68, 0.10)
+    glass_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    glass.mesh.material = glass_material
+    glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    crown.add_child(glass)

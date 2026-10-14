@@ -231,28 +231,20 @@ func _build_character() -> void:
     purse_knot.position = Vector3(-0.28, 0.05, -0.28)
     hips.add_child(purse_knot)
 
-    # The cape hangs from a pivot at the shoulders so it can sway as one
-    # piece; the gold hem rides at its foot and moves with it.
+    # The cloak hangs from a pivot at the shoulders so it sways as one
+    # piece; the tailor cuts the mantle, the three panels, the lining and
+    # their gold hems, and hands back the center pair the sway drives.
     var cape_pivot := Node3D.new()
     cape_pivot.name = "CapePivot"
     cape_pivot.position = Vector3(0, 0.62, 0.36)
     cape_pivot.rotation.x = 0.14
     hips.add_child(cape_pivot)
-    _cape = MeshInstance3D.new()
-    var cape_mesh := BoxMesh.new()
-    cape_mesh.size = Vector3(0.62, 0.82, 0.042)
-    _cape.mesh = cape_mesh
-    _cape.material_override = HeroTailor.toon(Color("#3f7a52"), 0.08, 0.82)
-    _cape.position = Vector3(0, -0.41, 0)
-    _cape.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-    cape_pivot.add_child(_cape)
-    _cape_hem = MeshInstance3D.new()
-    var hem_mesh := BoxMesh.new()
-    hem_mesh.size = Vector3(0.63, 0.05, 0.05)
-    _cape_hem.mesh = hem_mesh
-    _cape_hem.material_override = gold
-    _cape_hem.position = Vector3(0, -0.80, 0)
-    cape_pivot.add_child(_cape_hem)
+    var cloak := HeroTailor.build_cloak(self, cape_pivot,
+        HeroTailor.toon(Color("#3f7a52"), 0.08, 0.82),
+        HeroTailor.toon(Color("#9fc49b"), 0.06, 0.88),
+        gold)
+    _cape = cloak["panel"]
+    _cape_hem = cloak["hem"]
 
     # A soft contact shadow grounds the hero even where the canopy thins the
     # directional light: a quiet dark pool, not a second silhouette.
@@ -358,6 +350,9 @@ func _build_character() -> void:
     _lantern_light.omni_range = 7.5
     _lantern_light.shadow_enabled = false
     crown.add_child(_lantern_light)
+    # The lamp's cage and glass go on last, so the light sits inside a built
+    # thing -- four gold posts, a foot ring, a finial and a breath of glass.
+    HeroTailor.dress_lantern(crown, gold)
 
 func _build_animations() -> void:
     var player := AnimationPlayer.new()

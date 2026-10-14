@@ -55,6 +55,10 @@ var _mouth_dots: Array[MeshInstance3D] = []
 var _brows: Array[MeshInstance3D] = []
 var _tail: MeshInstance3D
 var _sparkle_pivot: Node3D
+## The pool of light the wisp casts on the ground: a child of the BODY, not
+## the visual, so the bob and the spawn-pop never lift the light off the
+## grass it is supposed to land on.
+var _ground_glow: MeshInstance3D
 
 func setup(p_type_key: String, p_floor_number: int, p_is_big: bool = false, p_feeling: Dictionary = {}) -> void:
     type_key = p_type_key
@@ -140,6 +144,13 @@ func _build() -> void:
     aura.mesh.material = _aura_material
     aura.position = Vector3(0, 0.68 * visual_scale, 0)
     _visual.add_child(aura)
+
+    # The light's landing pad: a soft additive pool on the ground under the
+    # wisp. It hangs off the body rather than the visual on purpose -- the
+    # bob lifts the wisp, never its light.
+    _ground_glow = WispKit.ground_glow(0.48 * visual_scale, color)
+    _ground_glow.position = Vector3(0, 0.03, 0)
+    add_child(_ground_glow)
 
     for side in [-1.0, 1.0]:
         var eye_white := WispKit.sphere(0.078 * visual_scale, Color("#fffaf0"))
@@ -367,6 +378,13 @@ func tick_behavior(delta: float, player_position: Vector3, aggro_range: float, s
         _visual.scale = Vector3(bob_scale, bob_scale, bob_scale)
     if _halo and not is_big and not reduced_motion:
         _halo.rotation.y += delta * 0.9
+    if _ground_glow and is_instance_valid(_ground_glow):
+        # The pool breathes with the same slow clock the aura twinkles on, so
+        # the light above and the light below agree that this is one creature.
+        var pool_material := _ground_glow.mesh.material as StandardMaterial3D
+        if pool_material and not is_big:
+            var breathe := 0.0 if reduced_motion else sin(Time.get_ticks_msec() * 0.005 + _seed) * 0.035
+            pool_material.albedo_color.a = 0.13 + happiness * 0.05 + breathe
     if _sparkle_pivot and not reduced_motion:
         _sparkle_pivot.rotation.y -= delta * 1.4
     if _tail and is_instance_valid(_tail) and not reduced_motion:

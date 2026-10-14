@@ -6,6 +6,7 @@ extends "res://scripts/world_scenery.gd"
 # on first boot. regression_architecture holds this file to it.
 const BeautyContent := preload("res://scripts/beauty_content.gd")
 const BeautyLore := preload("res://scripts/beauty_lore.gd")
+const WorldPlaceDressing := preload("res://scripts/world_place_dressing.gd")
 
 ## The grove's places to visit: Peddle's stall, the wishing pool and the
 ## spawn-side sign. Split out of WorldLandmarks when that file outgrew the
@@ -275,6 +276,11 @@ func _build_merchant(world_position: Vector3) -> void:
     bird_tail.position = bird.position + Vector3(-0.02, 0.03, -0.09)
     bird_tail.rotation.x = 0.35
     body.add_child(bird_tail)
+
+    # The lived-in layer -- drying herbs, paper price tags, a rolled blanket
+    # against the counter -- hung by the dressing static so the furniture
+    # above stays exactly where the suites and the minimap expect it.
+    WorldPlaceDressing.dress_stall(body)
 
     # Peddle themself: a glowing round keeper with eyes and a little hat.
     var peddle := MeshInstance3D.new()
