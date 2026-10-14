@@ -60,6 +60,14 @@ func _run() -> void:
         stop(null, suite_name)
         return
 
+    # The gold vulnerability window had the same blind spot: its halo PULSE
+    # ran a sine against the wall-clock even with Still Forest on, while the
+    # waypoint glow and the boss light had both already learned the setting.
+    # The colour and the lift stay (state must read); only the pulse holds.
+    if not await _check_gold_halo_respects_still_forest():
+        stop(null, suite_name)
+        return
+
     # Happiness is the whole arc of a wisp: sad on arrival, warmer with every
     # step of help, and the face has to carry it — frown to smile, corners
     # below centre to above it.
@@ -165,6 +173,48 @@ func _check_boss_light_respects_still_forest() -> bool:
             wisp.free()
             await frames(1)
             fail("the boss light never breathes, so this test cannot see it (%.5f)" % swing)
+            return false
+        wisp.free()
+        await frames(1)
+    return true
+
+func _check_gold_halo_respects_still_forest() -> bool:
+    # The gold window is driven from tick_behavior, but the unit under test is
+    # set_gold_window itself: the pulse lives there, so the check holds the
+    # window open directly and samples the halo across real wall-clock time --
+    # the same clock the sine reads. Still Forest must hold the lift flat at
+    # its lit scale; the walk needs to SEE the pulse or the check is blind.
+    for enabled in [false, true]:
+        var wisp := Wisp.new()
+        root.add_child(wisp)
+        wisp.setup("Shambler", 3, true)
+        wisp.set_reduced_motion(enabled)
+        if wisp._halo == null or not is_instance_valid(wisp._halo):
+            wisp.free()
+            await frames(1)
+            fail("the big wisp has no halo for the gold window to lift")
+            return false
+        for _settle in range(40):
+            wisp.set_gold_window(true)
+        var lowest := INF
+        var highest := -INF
+        var started := Time.get_ticks_msec()
+        while Time.get_ticks_msec() - started < 900:
+            wisp.set_gold_window(true)
+            var halo_scale: float = wisp._halo.scale.x
+            lowest = minf(lowest, halo_scale)
+            highest = maxf(highest, halo_scale)
+        var swing: float = highest - lowest
+        print("GOLD_HALO_SWING reduced_motion=%s swing=%.5f" % [enabled, swing])
+        if enabled and swing > 0.001:
+            wisp.free()
+            await frames(1)
+            fail("the gold halo still pulses with Still Forest on (%.5f)" % swing)
+            return false
+        if not enabled and swing < 0.01:
+            wisp.free()
+            await frames(1)
+            fail("the gold halo never pulses, so this test cannot see it (%.5f)" % swing)
             return false
         wisp.free()
         await frames(1)

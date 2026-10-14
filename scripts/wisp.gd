@@ -450,7 +450,15 @@ func set_gold_window(gold: bool) -> void:
     _halo_material.emission = color
     _halo_material.emission_energy_multiplier = 2.7 if gold else 1.5
     if _halo:
-        var target_scale := 1.10 + sin(Time.get_ticks_msec() * 0.012) * 0.10 if gold else 1.0
+        # The gold window's PULSE was the one animated channel Still Forest
+        # never reached: the waypoint glow and the boss light both learned the
+        # setting before it, but this sine kept breathing against a player who
+        # had asked every other piece of the forest for stillness. The colour
+        # and the lift stay -- they are state, and the vulnerability window
+        # must still read -- only the pulse holds still.
+        var target_scale := 1.0
+        if gold:
+            target_scale = 1.10 if reduced_motion else 1.10 + sin(Time.get_ticks_msec() * 0.012) * 0.10
         _halo.scale = _halo.scale.lerp(Vector3(target_scale, target_scale, target_scale), 0.25)
 
 func set_reduced_motion(value: bool) -> void:
