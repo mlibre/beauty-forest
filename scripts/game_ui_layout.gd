@@ -395,6 +395,7 @@ func _show_menu_overlay() -> void:
 func _show_overlay(for_menu: bool = false) -> void:
     _dismiss_beat_ring()
     _cancel_story()
+    _cancel_prologue()
     _reset_touch_joystick()
     # Same transient as _present_panel's: the pill draws above the scrim, so
     # the pause card (and every other overlay) must put it away itself rather

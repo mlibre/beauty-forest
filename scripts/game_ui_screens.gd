@@ -133,6 +133,7 @@ func show_menu(meta: Dictionary) -> void:
 func show_draft(offers: Array, level: int, fact: String = "") -> void:
     _dismiss_beat_ring()
     _cancel_story()
+    _cancel_prologue()
     _reset_touch_joystick()
     _clear(_overlay_content)
     _hud.visible = true

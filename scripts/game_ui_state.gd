@@ -174,6 +174,10 @@ var _cinematic_on := false
 ## owns them, so a ceremony that claims the cinema mid-scene is never cut
 ## short by the story's exit.
 var _cinematic_owner := ""
+## The film prologue's generation: every raise (a newer floor, a superseding
+## scene, a panel taking the stage) bumps it, and the pending beats of an
+## older scene check it after every wait and quietly die when it moved on.
+var _prologue_generation := 0
 ## The page-turn wipe: one soft wash of light when the walk descends past a
 ## stair, so floors change the way a book turns its page.
 var _page_wipe: ColorRect
@@ -294,6 +298,50 @@ func _cancel_story() -> void:
 func _reset_touch_joystick() -> void:
     if _touch_joystick != null and is_instance_valid(_touch_joystick):
         _touch_joystick.reset()
+
+## The cinema: letterbox bars that frame the song ceremonies while they play
+## and leave when the song ends. The walk's biggest moments stage themselves
+## instead of arriving as prose over the normal HUD. This lives in the BASE
+## on purpose: the floor's film prologue (one file up, in GameUITelling)
+## raises the same bars under an owner tag, and the panels must be able to
+## take the stage back -- a base can call what lives beside it, never what
+## lives up the chain.
+func set_cinematic(on: bool, owner_tag: String = "") -> void:
+    if _cinematic_top == null or _cinematic_bottom == null or not is_instance_valid(_cinematic_top):
+        return
+    if _cinematic_tween != null and _cinematic_tween.is_valid():
+        _cinematic_tween.kill()
+    _cinematic_tween = null
+    _cinematic_on = on
+    _cinematic_owner = owner_tag if on else ""
+    if not on:
+        _cinematic_top.visible = false
+        _cinematic_bottom.visible = false
+        return
+    var bar_height := _root.size.y * 0.085
+    _cinematic_top.visible = true
+    _cinematic_bottom.visible = true
+    if _reduced_motion:
+        _cinematic_top.offset_bottom = bar_height
+        _cinematic_bottom.offset_top = -bar_height
+        return
+    _cinematic_top.offset_bottom = 0.0
+    _cinematic_bottom.offset_top = 0.0
+    _cinematic_tween = create_tween()
+    _cinematic_tween.set_parallel(true)
+    _cinematic_tween.tween_property(_cinematic_top, "offset_bottom", bar_height, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+    _cinematic_tween.tween_property(_cinematic_bottom, "offset_top", -bar_height, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+## The film leaves when a modal takes the stage. The story card is the
+## panel's to clear (_cancel_story does that), but the letterbox and the
+## pending cuts are the prologue's own: panels and overlays call this beside
+## _cancel_story, so a shop opened mid-scene gets a silent stage, not a film
+## still cutting cards behind its scrim. A ceremony's claim is respected as
+## always -- the bars go only if the prologue still owns them.
+func _cancel_prologue() -> void:
+    _prologue_generation += 1
+    if _cinematic_owner == "prologue":
+        set_cinematic(false, "prologue")
 
 func apply_settings(settings: Dictionary) -> void:
     _settings = settings.duplicate(true)

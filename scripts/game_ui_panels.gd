@@ -194,6 +194,7 @@ func _present_panel() -> void:
     # until the director's next slow tick noticed.
     _dismiss_beat_ring()
     _cancel_story()
+    _cancel_prologue()
     _reset_touch_joystick()
     if _context_hint != null and is_instance_valid(_context_hint):
         _context_hint.visible = false

@@ -431,6 +431,24 @@ func _check_the_floor_opens_like_a_film(game: Node) -> bool:
         if not ok(_ui._story_card.visible and _ui._story_title.text == "The Next Floor",
                         "the superseding prologue did not own the card"):
                 return false
+        # A modal takes the stage mid-scene: opening the shop must dismiss the
+        # film -- bars down, card away, generation bumped so the pending cuts
+        # die quietly behind the scrim instead of painting over the wares.
+        var generation_before_shop: int = _ui._prologue_generation
+        _ui.show_shop({
+                "sparkles": 4, "charms": [], "owned": [], "stanzas": {"petals": true},
+                "mote_verse": {}, "hp": 60.0, "hp_max": 100.0, "capacity": 2,
+        })
+        await frames(3)
+        if not ok(not _ui._cinematic_on and not _ui._story_card.visible
+                        and _ui._prologue_generation == generation_before_shop + 1,
+                        "opening a panel mid-film left the letterbox, the card or the cuts alive"):
+                return false
+        _ui.close_shop()
+        await frames(2)
+        if not ok(not _ui._cinematic_on, "the film came back after the panel closed"):
+                return false
+
         # A ceremony claims the cinema mid-scene. The prologue's own exit rule
         # reads the ownership before touching the bars: it no longer owns
         # them, so when its timers run out the bars STAY UP for the ceremony.

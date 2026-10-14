@@ -278,35 +278,6 @@ func _stop_intro_fireflies() -> void:
             tween.kill()
     _intro_firefly_tweens.clear()
 
-## The cinema: letterbox bars that frame the song ceremonies while they play
-## and leave when the song ends. The walk's biggest moments stage themselves
-## instead of arriving as prose over the normal HUD.
-func set_cinematic(on: bool, owner_tag: String = "") -> void:
-    if _cinematic_top == null or _cinematic_bottom == null or not is_instance_valid(_cinematic_top):
-        return
-    if _cinematic_tween != null and _cinematic_tween.is_valid():
-        _cinematic_tween.kill()
-    _cinematic_tween = null
-    _cinematic_on = on
-    _cinematic_owner = owner_tag if on else ""
-    if not on:
-        _cinematic_top.visible = false
-        _cinematic_bottom.visible = false
-        return
-    var bar_height := _root.size.y * 0.085
-    _cinematic_top.visible = true
-    _cinematic_bottom.visible = true
-    if _reduced_motion:
-        _cinematic_top.offset_bottom = bar_height
-        _cinematic_bottom.offset_top = -bar_height
-        return
-    _cinematic_top.offset_bottom = 0.0
-    _cinematic_bottom.offset_top = 0.0
-    _cinematic_tween = create_tween()
-    _cinematic_tween.set_parallel(true)
-    _cinematic_tween.tween_property(_cinematic_top, "offset_bottom", bar_height, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-    _cinematic_tween.tween_property(_cinematic_bottom, "offset_top", -bar_height, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-
 ## The floor's opening scene, staged like film: the letterbox slides in, the
 ## floor's page arrives with its ink and its mark, and then the story KEEPS
 ## PLAYING across its next two shots -- cut, line, cut, line -- the way a
@@ -315,8 +286,9 @@ func set_cinematic(on: bool, owner_tag: String = "") -> void:
 ## movie's dialogue over a living shot. A newer floor (or Still Forest)
 ## cancels the rest through the generation, and a ceremony that claims the
 ## letterbox mid-scene is left alone: the prologue only lowers bars it
-## still owns.
-var _prologue_generation := 0
+## still owns. (The cinema itself and the cancel live one file down, in
+## GameUIState: the panels have to call the cancel when a modal takes the
+## stage, and a base cannot call up the chain.)
 
 ## One beat of the prologue's clock, as a tween owned by THIS node. A bare
 ## SceneTreeTimer outlives the interface -- if the floor (or the whole game)
