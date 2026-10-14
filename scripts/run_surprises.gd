@@ -183,6 +183,39 @@ func _tick_surprise(delta: float) -> void:
                     audio.play_chord([659.25, 783.99, 1046.5], 0.7, 0.07)
                     ui.show_toast("The parade swirls around you — the meadow's applause. +2 sparkles.", 3.2)
                     _refresh_ui()
+        "dew_web":
+            # The dew-web harp: a drop only falls for a hero who stands
+            # beneath it long enough to catch it, so the adventure asks for a
+            # different kind of attention than the chase or the trail — not
+            # speed, not order, just a stillness paid four times. Each caught
+            # drop pays a sparkle on the spot; the fourth lands the chord and
+            # the bonus. The drip clock is per drop, so wandering between
+            # strands never loses the patience already spent on one.
+            if not _surprise.get_meta("surprise_used"):
+                var caught := 0
+                for index in range(4):
+                    var drop := _surprise.get_node_or_null("Drop%d" % index) as MeshInstance3D
+                    if drop == null or not drop.visible:
+                        caught += 1
+                        continue
+                    if player.global_position.distance_to(drop.global_position) < 1.25:
+                        var drip := float(drop.get_meta("drip_time", 0.0)) + delta
+                        if drip >= 0.45:
+                            drop.visible = false
+                            caught += 1
+                            sparkles += 1
+                            audio.play_tone(659.25 * pow(1.26, float(index)), 0.30, 0.055, 1)
+                            CozyVFX.burst(world, drop.global_position, Color("#bfe8ff"), 10, 0.9, 0.7)
+                            _refresh_ui()
+                        else:
+                            drop.set_meta("drip_time", drip)
+                if caught >= 4:
+                    _surprise.set_meta("surprise_used", true)
+                    sparkles += 2
+                    audio.play_chord([659.25, 783.99, 987.77], 0.7, 0.07)
+                    CozyVFX.ring(world, _surprise.global_position + Vector3.UP * 0.4, Color("#bfe8ff"), 2.4, 1.0)
+                    ui.show_toast("Every dewdrop caught — the web hums the whole chord. +2 sparkles.", 3.2)
+                    _refresh_ui()
 
 ## The floor's small wonders, answered on walk-in: one sparkle each, a soft
 ## chord, a burst of light. A wonder nobody finds costs nothing — that is

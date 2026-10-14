@@ -40,10 +40,11 @@ const KINDS: Array = [
     {"key": "shooting_star", "name": "a fallen star", "line": "A small star steams gently in the grass, still warm."},
     {"key": "hedge_nook", "name": "a hedge nook", "line": "A soft leaf bed hides in the hedge, big enough for a nap."},
     {"key": "butterfly_parade", "name": "a butterfly parade", "line": "Butterflies cross the clearing in a slow glittering line."},
+    {"key": "dew_web", "name": "a dew-web harp", "line": "Four dewdrops hang from a silver web, heavy with waiting."},
 ]
 
 ## The multipliers that keep consecutive floors on different surprises: the
-## step shares no factor with the wheel's size (7 against 18), so stepping
+## step shares no factor with the wheel's size (7 against 19), so stepping
 ## one floor always turns the wheel to a different kind, and a full turn of
 ## the wheel visits every kind.
 const WHEEL_STEP := 7
@@ -133,6 +134,8 @@ static func spawn(parent: Node3D, dungeon: Dictionary, rng: RandomNumberGenerato
             Adventures._build_hedge_nook(root)
         "butterfly_parade":
             Adventures._build_butterfly_parade(root, rng)
+        "dew_web":
+            _build_dew_web(root)
     # The scatter around the surprise's cell is blind to the forest the
     # generator just drew: a bulb, a puff, a firefly or a star can land
     # inside a grove trunk's collision box, where the hero can never walk
@@ -151,6 +154,7 @@ static func spawn(parent: Node3D, dungeon: Dictionary, rng: RandomNumberGenerato
 ## one of them is a prop a bump or a nudge can take away.
 static func _keep_reachable(root: Node3D, dungeon: Dictionary) -> void:
     var base := Vector2(root.position.x, root.position.z)
+    var pulled := 0
     for child in root.get_children():
         var prop := child as Node3D
         if prop == null or prop == root:
@@ -158,7 +162,16 @@ static func _keep_reachable(root: Node3D, dungeon: Dictionary) -> void:
         var world := base + Vector2(prop.position.x, prop.position.z)
         if _is_floor_cell(dungeon, world):
             continue
-        prop.position = Vector3(prop.position.x * 0.1, prop.position.y, prop.position.z * 0.1)
+        # The sliver has to stay INSIDE the root's own cell: the root stands
+        # at the cell's corner (an integer position), so keeping the offset's
+        # sign at one-tenth -- or any offset past half a cell -- landed the
+        # rescued prop in the NEIGHBOURING cell, which on a walled border is
+        # exactly the wall the rescue came from. Pulled props queue along the
+        # inner diagonal instead, where floor and round both read the root's
+        # own cell and every rescued prop keeps its own spot on the strand.
+        var step := 0.10 + 0.07 * float(pulled)
+        prop.position = Vector3(step, prop.position.y, step)
+        pulled += 1
 
 ## Whether a world-space position sits on a cell the hero can walk to, under
 ## both sampling conventions (floor and round): a prop on a cell boundary is
@@ -191,6 +204,31 @@ static func _ball(radius: float, color: Color, lit: bool = false) -> MeshInstanc
     visual.mesh = mesh
     visual.material_override = glow(color) if lit else _pbr(color)
     return visual
+
+## The dew-web harp: a silver web strung low, carrying four hanging dewdrops
+## at fixed points of the compass-plus-diagonal so every one sits in a spot a
+## hero can stand beneath. The drops are direct children named Drop0..3 -- the
+## same contract the star trail's Star0..4 keep -- so the reachability pass
+## can pull a walled-in drop home and the run chain can find each one.
+static func _build_dew_web(root: Node3D) -> void:
+    var web := MeshInstance3D.new()
+    var web_mesh := CylinderMesh.new()
+    web_mesh.top_radius = 0.95
+    web_mesh.bottom_radius = 0.95
+    web_mesh.height = 0.03
+    web.mesh = web_mesh
+    web.material_override = _pbr(Color("#cdd9e8"))
+    web.position = Vector3(0, 1.15, 0)
+    root.add_child(web)
+    var bead := _ball(0.05, Color("#e8f0fa"), true)
+    bead.position = Vector3(0, 1.17, 0)
+    root.add_child(bead)
+    for index in range(4):
+        var angle := TAU * float(index) / 4.0 + 0.4
+        var drop := _ball(0.09, Color("#bfe8ff"), true)
+        drop.name = "Drop%d" % index
+        drop.position = Vector3(cos(angle) * 0.55, 0.62, sin(angle) * 0.55)
+        root.add_child(drop)
 
 static func _build_picnic(root: Node3D) -> void:
     # A checkered blanket (two flat boxes), a basket, and three little guests

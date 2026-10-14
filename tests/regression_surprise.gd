@@ -67,8 +67,9 @@ func _run() -> void:
             return
     # Reachability: a prop scattered into a wall cell comes home, a prop on
     # a floor cell keeps its scatter, and the check fails for the reason it
-    # names (see the mutation note below).
-    _check_walled_in_props_come_home()
+    # names (see the mutation note below). Awaited: the live path now walks
+    # every kind, and the frames between spawns belong to this check.
+    await _check_walled_in_props_come_home()
 
     # AudioServer drains stopped playbacks asynchronously (see the same note
     # in runtime_smoke.gd); quitting before it settles leaks ObjectDB refs.
@@ -172,6 +173,24 @@ func _check_surprise_answers(game: Node, floor_number: int, key: String) -> bool
             game._tick_surprise(0.05)
             if not ok(bool(surprise.get_meta("surprise_used")), "walking into the parade on floor %d granted nothing" % floor_number):
                 return false
+        "dew_web":
+            # A drop falls only for a hero who STANDS beneath it: a glance
+            # under one drop must not complete anything, and the chord lands
+            # on the fourth catch, not the first.
+            for index in range(4):
+                var drop := surprise.get_node_or_null("Drop%d" % index) as Node3D
+                if not ok(drop != null, "floor %d's dew-web is missing drop %d" % [floor_number, index]):
+                    return false
+                if index == 0 and not ok(drop.visible, "floor %d's dew-web drop 0 arrived already caught" % floor_number):
+                    return false
+                player.global_position = drop.global_position + Vector3(0.2, 0.05, 0)
+                game._tick_surprise(0.2)
+                if index == 0 and not ok(not bool(surprise.get_meta("surprise_used")),
+                        "floor %d's dew-web paid out on a glance instead of a wait" % floor_number):
+                    return false
+                game._tick_surprise(0.6)
+            if not ok(bool(surprise.get_meta("surprise_used")), "catching every dewdrop on floor %d granted nothing" % floor_number):
+                return false
         _:
             return fail("floor %d carries an unknown surprise kind '%s'" % [floor_number, key])
     print("SURPRISE_FLOOR_%02d kind=%s sparkles %d -> %d" % [floor_number, key, before_sparkles, int(game.sparkles)])
@@ -186,24 +205,35 @@ func _check_surprise_answers(game: Node, floor_number: int, key: String) -> bool
 ## keeps its scatter. Mutation evidence: comment the _keep_reachable call
 ## in FloorSurprise.spawn and the first check fails by name.
 func _check_walled_in_props_come_home() -> void:
+    # A clearing the size the generator actually makes (rooms are 7x7 at the
+    # smallest) with one walled patch inside it: big enough that honest
+    # scatter fits, walled enough that a bad offset has something to hit.
+    var size := 14
     var dungeon := {
-        "width": 6, "height": 6,
-        "grid": PackedInt32Array([
-            0, 0, 0, 0, 0, 0,
-            0, 1, 1, 1, 1, 0,
-            0, 1, 1, 0, 1, 0,
-            0, 1, 1, 1, 1, 0,
-            0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0,
-        ]),
+        "width": size, "height": size,
+        "grid": PackedInt32Array(),
     }
+    dungeon["grid"].resize(size * size)
+    dungeon["grid"].fill(1)
+    for edge in range(size):
+        dungeon["grid"][edge] = 0
+        dungeon["grid"][(size - 1) * size + edge] = 0
+        dungeon["grid"][edge * size] = 0
+        dungeon["grid"][edge * size + size - 1] = 0
+    # The patch: rows 5-6, cols 4-7 -- a wall a scatter can land in and a
+    # rescue can pull a prop out of.
+    for row in range(5, 7):
+        for col in range(4, 8):
+            dungeon["grid"][row * size + col] = 0
     var parent := Node3D.new()
     root.add_child(parent)
     var surprise_root := Node3D.new()
     surprise_root.position = Vector3(2, 0, 2)
     parent.add_child(surprise_root)
     var walled := Node3D.new()
-    walled.position = Vector3(1.7, 0.5, 0)
+    # The offset lands its world cell inside the patch (floor and round both
+    # read a wall), so the rescue has something to do.
+    walled.position = Vector3(2.5, 0.5, 3.5)
     surprise_root.add_child(walled)
     var free := Node3D.new()
     free.position = Vector3(0.3, 0.4, 1.2)
@@ -219,20 +249,27 @@ func _check_walled_in_props_come_home() -> void:
             "a prop on a floor cell lost its scatter (at %s)" % free.position):
         return
     # The live path: spawning on this dungeon never leaves a prop in a wall
-    # cell, whichever kind the wheel turns up.
+    # cell, whichever kind the wheel turns up. Floors 1..19 visit every kind
+    # exactly once, so every builder's scatter faces the same rescue.
     var rng := RandomNumberGenerator.new()
     rng.seed = 11
     dungeon["rooms"] = [{"cx": 2, "cy": 2, "x": 1, "y": 1, "w": 2, "h": 2}]
-    var spawned := FloorSurprise.spawn(parent, dungeon, rng, 8, {})
-    if not ok(spawned != null, "the synthetic floor spawned no surprise"):
-        return
-    var home := Vector2(spawned.position.x, spawned.position.z)
-    for child in spawned.get_children():
-        var prop := child as Node3D
-        if prop == null:
-            continue
-        var world := home + Vector2(prop.position.x, prop.position.z)
-        if not ok(FloorSurprise._is_floor_cell(dungeon, world),
-                "a spawned prop stands inside a wall cell (at %s)" % world):
+    for live_floor in range(1, FloorSurprise.KINDS.size() + 1):
+        var spawned := FloorSurprise.spawn(parent, dungeon, rng, live_floor, {})
+        if not ok(spawned != null, "the synthetic floor %d spawned no surprise" % live_floor):
             return
+        var home := Vector2(spawned.position.x, spawned.position.z)
+        if not ok(FloorSurprise._is_floor_cell(dungeon, home),
+                "the synthetic floor %d spawned its surprise inside a wall (at %s)" % [live_floor, home]):
+            return
+        for child in spawned.get_children():
+            var prop := child as Node3D
+            if prop == null:
+                continue
+            var world := home + Vector2(prop.position.x, prop.position.z)
+            if not ok(FloorSurprise._is_floor_cell(dungeon, world),
+                    "a spawned prop stands inside a wall cell (floor %d, at %s)" % [live_floor, world]):
+                return
+        spawned.queue_free()
+        await frames(1)
     parent.queue_free()
