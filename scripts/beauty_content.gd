@@ -476,7 +476,35 @@ static func is_chapter_final_floor(floor_number: int) -> bool:
         return floor_number == BeautyEndless.CAMPAIGN_LENGTH + BeautyEndless.chapter_for_floor(floor_number) * BeautyEndless.CHAPTER_LENGTH
     return story_floor(floor_number) == BeautyEndless.CAMPAIGN_LENGTH
 
+## The floor's position in the story ITSELF belongs to: below the Roost that
+## is the campaign's thirty-floor wrap, above it the chapter's thirteen. The
+## merchant cadence, the dragon naps and the Roost's hush all read this — a
+## deep chapter keeps the rhythm the campaign taught, instead of a 30-floor
+## echo landing its beats on whatever chapter floor happens to be underneath.
+static func story_plan(floor_number: int) -> int:
+    if BeautyEndless.is_endless(floor_number):
+        return BeautyEndless.story_in_chapter(floor_number)
+    return story_floor(floor_number)
+
+## Where Peddle parks the cart. The campaign's hand-placed floors; an endless
+## chapter keeps the opening rhythm's own shape (2, 4, 7, 10), so a chapter
+## reads as a small campaign of its own — a cart to visit on the second and
+## fourth floors, a cousin to tuck in on the fifth, the roost at the end —
+## and never a cart on a sleeping dragon's floor.
+static func is_merchant_floor(floor_number: int) -> bool:
+    if BeautyEndless.is_endless(floor_number):
+        return BeautyEndless.story_in_chapter(floor_number) in [2, 4, 7, 10]
+    return story_floor(floor_number) in [2, 4, 7, 10, 14, 16, 19, 22, 25, 27]
+
 static func is_dragon_floor(floor_number: int) -> bool:
+    ## The endless chapters promise their own sleeper: the fifth beat of every
+    ## chapter is "Someone Sleeps Here" (five Dream Chimes, Mote translating),
+    ## and a chapter finale is its own roost. The old answer read the campaign
+    ## wrap at every depth, so the beat's chimes almost never had a dragon
+    ## under them while wrap dragons materialised on floors whose beat says
+    ## nothing of sleeping cousins.
+    if BeautyEndless.is_endless(floor_number):
+        return BeautyEndless.story_in_chapter(floor_number) == 5 or is_chapter_final_floor(floor_number)
     return story_floor(floor_number) in [5, 13, 21, 29] or is_chapter_final_floor(floor_number)
 
 static func random_choice(items: Array) -> Variant:
@@ -484,7 +512,10 @@ static func random_choice(items: Array) -> Variant:
         return null
     return items[randi() % items.size()]
 
-static func random_modifier(story: int) -> Dictionary:
+static func modifier_for_floor(floor_number: int) -> Dictionary:
+    ## The Lantern-hush belongs to the roost beat — campaign story 13, the
+    ## campaign's own final floor, and every endless chapter's thirteenth.
+    var story := story_plan(floor_number)
     if story == 13 or story == BeautyEndless.CAMPAIGN_LENGTH:
         return {"name": "Lantern-hush morning", "description": "the Roost rests easy", "heart_rate": 0.55}
     return FLOOR_MODIFIERS[randi() % FLOOR_MODIFIERS.size()].duplicate(true)

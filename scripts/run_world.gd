@@ -73,15 +73,15 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
     _surprise = null
     _minor_wonders.clear()
     _glade_time = 0.0
-    floor_modifier = BeautyContent.random_modifier(BeautyContent.story_floor(floor_number)) if not menu_stage else {}
+    floor_modifier = {}
 
     if not menu_stage:
         _spawn_wisps()
         _spawn_surprise()
-        var story := BeautyContent.story_floor(floor_number)
-        merchant_exists = story in [2, 4, 7, 10, 14, 16, 19, 22, 25, 27] and not BeautyContent.is_dragon_floor(floor_number)
+        merchant_exists = BeautyContent.is_merchant_floor(floor_number)
         dragon_exists = BeautyContent.is_dragon_floor(floor_number)
         dragon_finale = BeautyContent.is_chapter_final_floor(floor_number)
+        floor_modifier = BeautyContent.modifier_for_floor(floor_number)
         if dragon_exists:
             # The hero arrives at the centre of rooms[0], and Snoozle is 5m of
             # sleeping barrel with no collider to push the hero out. Sleeping in

@@ -30,6 +30,8 @@ func _run() -> void:
         return
     if not await _check_feelings_exist_below(game):
         return
+    if not await _check_the_deep_floor_plan_is_chapter_relative():
+        return
     if not await _check_endless_story_pages(game):
         return
     if not await _check_charm_tiers_deepen(game):
@@ -137,6 +139,50 @@ func _check_feelings_exist_below(game: Node) -> bool:
         return false
     if not ok(String(other_chapter.get("name", "")) != String(chapter_feeling.get("name", "")),
             "chapter 2 reused chapter 1's Feeling name"):
+        return false
+    return true
+
+func _check_the_deep_floor_plan_is_chapter_relative() -> bool:
+    ## The endless chapters tell their own thirteen-floor story: a cart on the
+    ## second, fourth, seventh and tenth, a sleeper on the fifth ("Someone
+    ## Sleeps Here" promises the chimes a dragon), the roost at the end. The
+    ## old plan read the campaign's thirty-floor wrap at every depth, so the
+    ## beat's chimes almost never had a dragon under them while wrap dragons
+    ## materialised on floors whose beat says nothing of sleeping cousins.
+    var first_chapter := BeautyEndless.CAMPAIGN_LENGTH + 1
+    var dragon_floor := first_chapter + 4
+    if not ok(BeautyContent.is_dragon_floor(dragon_floor),
+            "chapter story 5 (floor %d) lost its promised sleeper" % dragon_floor):
+        return false
+    if not ok(not BeautyContent.is_merchant_floor(dragon_floor),
+            "the cart parked on a deep dragon's floor"):
+        return false
+    for off in [1, 3, 6, 9]:
+        if not ok(BeautyContent.is_merchant_floor(first_chapter + off),
+                "chapter story %d lost its promised cart" % (off + 1)):
+            return false
+    for off in [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11]:
+        if not ok(not BeautyContent.is_dragon_floor(first_chapter + off),
+                "chapter story %d grew an unplanned dragon" % (off + 1)):
+            return false
+    if not ok(BeautyContent.is_dragon_floor(first_chapter + 12),
+            "the chapter's roost (story 13) lost its finale dragon"):
+        return false
+    # One chapter deeper: the whole rhythm repeats with the chapter, so a
+    # long walk meets the same plan wearing new words.
+    var second_dragon := first_chapter + BeautyEndless.CHAPTER_LENGTH + 4
+    if not ok(BeautyContent.is_dragon_floor(second_dragon),
+            "chapter 2 story 5 (floor %d) lost its promised sleeper" % second_dragon):
+        return false
+    if not ok(not BeautyContent.is_dragon_floor(first_chapter + BeautyEndless.CHAPTER_LENGTH),
+            "chapter 2's opener grew an unplanned dragon"):
+        return false
+    # The campaign keeps its own hand-placed list underneath the Roost.
+    if not ok(BeautyContent.is_dragon_floor(21) and BeautyContent.is_dragon_floor(29),
+            "the campaign lost a hand-placed dragon floor"):
+        return false
+    if not ok(not BeautyContent.is_dragon_floor(31) and not BeautyContent.is_dragon_floor(first_chapter + BeautyEndless.CHAPTER_LENGTH),
+            "an endless chapter opener grew a dragon from the campaign wrap"):
         return false
     return true
 
