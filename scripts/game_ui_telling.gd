@@ -281,13 +281,14 @@ func _stop_intro_fireflies() -> void:
 ## The cinema: letterbox bars that frame the song ceremonies while they play
 ## and leave when the song ends. The walk's biggest moments stage themselves
 ## instead of arriving as prose over the normal HUD.
-func set_cinematic(on: bool) -> void:
+func set_cinematic(on: bool, owner_tag: String = "") -> void:
     if _cinematic_top == null or _cinematic_bottom == null or not is_instance_valid(_cinematic_top):
         return
     if _cinematic_tween != null and _cinematic_tween.is_valid():
         _cinematic_tween.kill()
     _cinematic_tween = null
     _cinematic_on = on
+    _cinematic_owner = owner_tag if on else ""
     if not on:
         _cinematic_top.visible = false
         _cinematic_bottom.visible = false
@@ -305,6 +306,60 @@ func set_cinematic(on: bool) -> void:
     _cinematic_tween.set_parallel(true)
     _cinematic_tween.tween_property(_cinematic_top, "offset_bottom", bar_height, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
     _cinematic_tween.tween_property(_cinematic_bottom, "offset_top", -bar_height, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+## The floor's opening scene, staged like film: the letterbox slides in, the
+## floor's page arrives with its ink and its mark, and then the story KEEPS
+## PLAYING across its next two shots -- cut, line, cut, line -- the way a
+## film carries a scene past its first frame. Nothing pauses and nothing
+## blocks: the walk stays live underneath the whole time, exactly like a
+## movie's dialogue over a living shot. A newer floor (or Still Forest)
+## cancels the rest through the generation, and a ceremony that claims the
+## letterbox mid-scene is left alone: the prologue only lowers bars it
+## still owns.
+var _prologue_generation := 0
+
+## One beat of the prologue's clock, as a tween owned by THIS node. A bare
+## SceneTreeTimer outlives the interface -- if the floor (or the whole game)
+## tears down mid-scene, its timeout would resume this coroutine on a freed
+## instance; a node-bound tween is killed with the node, so the scene just
+## quietly never speaks again.
+func _prologue_wait(seconds: float) -> void:
+    var beat := create_tween()
+    beat.tween_interval(seconds)
+    await beat.finished
+
+func play_floor_prologue(story: Array, shots: Array, glyph: String) -> void:
+    _prologue_generation += 1
+    var generation := _prologue_generation
+    if story.is_empty():
+        return
+    var title := String(story[0])
+    var body := String(story[1])
+    if _reduced_motion:
+        # Still Forest: one page, no cinema. The story arrives exactly as it
+        # always did; the shots stay in the telling for readers who seek it.
+        show_story(title, body, 3.8, glyph)
+        return
+    set_cinematic(true, "prologue")
+    show_story(title, body, 5.0, glyph)
+    for shot: String in shots:
+        await _prologue_wait(3.1)
+        if generation != _prologue_generation or not is_inside_tree():
+            return
+        if _cinematic_owner != "prologue":
+            # A ceremony claimed the cinema mid-scene: the story stops cutting
+            # and leaves the stage -- and the bars -- to the ceremony, whose
+            # own card (and exit) now owns the moment.
+            return
+        # The cut: the previous card is cancelled mid-hold and the next shot
+        # arrives with the same ink and mark, so the scene reads as one story
+        # speaking in frames rather than three cards queueing.
+        show_story(title, shot, 5.0, glyph)
+    await _prologue_wait(3.3)
+    if generation != _prologue_generation or not is_inside_tree():
+        return
+    if _cinematic_owner == "prologue":
+        set_cinematic(false, "prologue")
 
 ## The page-turn wipe: one wash of ivory light when the walk goes deeper, so
 ## a floor changes the way a book turns its page instead of snapping. A

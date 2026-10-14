@@ -141,9 +141,12 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
         player.set_control_enabled(true)
         var vignette: Array = BeautyContent.story_for_floor(floor_number)
         if not vignette.is_empty():
-            # The floor's opening page arrives illustrated: the region's own
-            # mark rides above the words, the way the intro's pages do.
-            ui.show_story(String(vignette[0]), String(vignette[1]), 3.8, String(region.get("glyph", "mote")))
+            # The floor opens like a film and stays one: letterbox in, the
+            # page with its ink and mark, then the story keeps playing across
+            # its next two shots while the walk stays live underneath. Nothing
+            # blocks -- the player can keep wandering mid-scene, which is the
+            # deal the adventures struck with the floors.
+            ui.play_floor_prologue(vignette, BeautyContent.prologue_for_floor(floor_number), String(region.get("glyph", "mote")))
         # A region says hello on its first floor: `min` is that floor for the
         # campaign's own regions and for a composed endless chapter alike.
         # A toast, not the hidden log: the greeting is the region's one moment.

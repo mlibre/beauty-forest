@@ -169,6 +169,11 @@ var _cinematic_top: ColorRect
 var _cinematic_bottom: ColorRect
 var _cinematic_tween: Tween
 var _cinematic_on := false
+## Who raised the letterbox: "" for the song ceremonies, "prologue" for the
+## floor's opening scene. The prologue lowers the bars only while it still
+## owns them, so a ceremony that claims the cinema mid-scene is never cut
+## short by the story's exit.
+var _cinematic_owner := ""
 ## The page-turn wipe: one soft wash of light when the walk descends past a
 ## stair, so floors change the way a book turns its page.
 var _page_wipe: ColorRect

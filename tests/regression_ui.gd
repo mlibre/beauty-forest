@@ -384,4 +384,75 @@ func _run() -> void:
         if unaffordable != null:
                 ok(unaffordable.disabled, "an unowned charm was offered with 0 sparkles")
 
+        if not await _check_the_floor_opens_like_a_film(game):
+                return
+
         finish(game, suite_name)
+
+
+## The floor's opening scene is a film now: letterbox in, the page, two more
+## shots, letterbox out -- and the walk never stops. The checks pin the
+## staging (bars up, card up), the supersede (a newer floor's prologue takes
+## over without waiting for the old one's timers) and the ownership rule
+## (a ceremony that claims the cinema keeps its bars after the story leaves).
+func _check_the_floor_opens_like_a_film(game: Node) -> bool:
+        _ui.apply_settings({
+                "reduced_motion": false,
+                "text_scale": 1.0,
+                "high_contrast": false,
+                "damage_taken": 1.0,
+                "rhythm_window": 1.0,
+                "wisp_speed": 1.0,
+                "volume": 0.8,
+                "muted": true,
+        })
+        _ui.play_floor_prologue(
+                ["The Test Floor", "A page for the prologue to speak."],
+                ["First shot continues the scene.", "Second shot lands the cut."],
+                "mote")
+        await frames(3)
+        if not ok(_ui._cinematic_on and _ui._cinematic_owner == "prologue",
+                        "the prologue did not raise the letterbox in its own name"):
+                return false
+        if not ok(_ui._story_card.visible, "the prologue's page never arrived"):
+                return false
+        # A newer floor supersedes: the second call bumps the generation, so
+        # the first sequence's timers become noise and the second owns the
+        # stage -- no double-bars, no queue of stale cards.
+        var first_generation: int = _ui._prologue_generation
+        _ui.play_floor_prologue(
+                ["The Next Floor", "The scene moves on."],
+                ["One more shot."],
+                "mote")
+        await frames(3)
+        if not ok(_ui._prologue_generation == first_generation + 1,
+                        "a second prologue did not supersede the first"):
+                return false
+        if not ok(_ui._story_card.visible and _ui._story_title.text == "The Next Floor",
+                        "the superseding prologue did not own the card"):
+                return false
+        # A ceremony claims the cinema mid-scene. The prologue's own exit rule
+        # reads the ownership before touching the bars: it no longer owns
+        # them, so when its timers run out the bars STAY UP for the ceremony.
+        # (The prologue also stops cutting cards -- enforced by the same
+        # ownership check in play_floor_prologue.)
+        _ui.set_cinematic(true)
+        await frames(2)
+        if not ok(_ui._cinematic_on and _ui._cinematic_owner == "",
+                        "the ceremony could not claim the cinema from the prologue"):
+                return false
+        _ui.set_cinematic(false)
+        await frames(2)
+        if not ok(not _ui._cinematic_on and _ui._cinematic_owner == "",
+                        "the ceremony's exit left the letterbox hanging"):
+                return false
+        # A fresh prologue still raises its own cinema afterwards, and the
+        # story card is back on stage.
+        _ui.play_floor_prologue(["A Later Floor", "The film plays again."], [], "mote")
+        await frames(3)
+        var bars_back: bool = _ui._cinematic_on and _ui._cinematic_owner == "prologue"
+        var card_back: bool = _ui._story_card.visible
+        _ui.play_floor_prologue([], [], "")  # supersede: bumps the generation
+        await frames(2)
+        return ok(bars_back and card_back and _ui._prologue_generation >= 2,
+                        "a later prologue could not raise the cinema again")

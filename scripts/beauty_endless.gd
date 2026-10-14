@@ -186,6 +186,25 @@ static func story_for_floor(floor_number: int) -> Array:
         body += " Welcome to the %s." % region_name
     return [title, body]
 
+## The endless floors keep the film going too: two composed shots per floor,
+## cut from the chapter's own mood, cycling so a long walk never watches the
+## same frame twice in a row.
+const PROLOGUE_BEATS := [
+    ["The %s keeps its oldest light for the path ahead, and the path walks with you like it has been waiting all day.", "Somewhere below, the harmony shifts one note warmer. The floor noticed you coming."],
+    ["Every step down lands on a chord the %s has been holding since the last visitor left.", "A drift of gold passes overhead, pointed the way you are going. The forest grown polite."],
+    ["The %s exhales, slow as tide, and the moss lights up in a wave that follows your feet.", "Far off, a chime tries a note and likes it. The dark keeps the rest for you."],
+]
+
+static func prologue_for_floor(floor_number: int) -> Array:
+    if not is_endless(floor_number):
+        return []
+    var story := story_in_chapter(floor_number)
+    var region_name := String(region(chapter_for_floor(floor_number))["name"])
+    var shots: Array = []
+    for beat: String in PROLOGUE_BEATS[(story - 1) % PROLOGUE_BEATS.size()]:
+        shots.append(beat % region_name if "%s" in beat else beat)
+    return shots
+
 ## Deeper floors rotate new wisp types into the pool: the depths are supposed
 ## to keep meeting you with things you have not soothed yet.
 static func deep_wisp_rotation(floor_number: int) -> Array:
