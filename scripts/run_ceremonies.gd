@@ -171,8 +171,11 @@ func _win_dragon() -> void:
         # The floor's own sleeper names the moment: Snoozle hands the walk to
         # the cousins, a cousin hands it to the next branch of the family. One
         # sentence each, because the tuck-in is the moment, not the epilogue.
+        # The plan, not the wrap: Snoozle's own line belongs to HIS floor --
+        # a deep chapter's fifth-beat dragon is a cousin, whatever number the
+        # campaign wrap happens to be counting underneath it.
         var epilogue := "Snoozle snoozes on, warm and enormous. But Mote tugs your sleeve: there are cousins below, and the forest grows deeper than any map."
-        if BeautyContent.story_floor(floor_number) != 5:
+        if BeautyContent.story_plan(floor_number) != 5:
             epilogue = "The cousin curls tighter, purring like a small landslide. Mote tugs your sleeve: the family grows bigger below, and the forest grows deeper than any map."
         ui.show_story("DEEPER STILL", epilogue, 4.2)
         ui.add_log("Mote: “Snoozle sleeps soundly. The stair is glowing now.”")

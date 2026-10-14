@@ -42,7 +42,12 @@ func _spawn_wisps() -> void:
         var wisp := _new_wisp(cell, BeautyWisps.pick_wisp_type(floor_number), floor_number)
         wisp.set_meta("attack_cooldown", _rng.randf_range(0.2, 1.1))
         wisp.set_meta("said_grumble", false)
-    var story := BeautyContent.story_floor(floor_number)
+    # The spawn rhythm reads the plan, not the wrap: a deep chapter breathes
+    # like the campaign's opening did — a boss on the third, sixth and ninth
+    # beat, none on the twelfth — instead of the wrap's echo landing Very Big
+    # Wisps on arbitrary beats (one used to land beside the sleeper on the
+    # dragon floor itself).
+    var story := BeautyContent.story_plan(floor_number)
     if story % 3 == 0 and story >= 3 and story != 12:
         _spawn_boss()
     var feeling := BeautyContent.feeling_for_floor(floor_number)
