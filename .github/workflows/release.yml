@@ -151,16 +151,30 @@ jobs:
           # This job checks out nothing, so gh cannot discover the repository
           # from git; every call names it explicitly with -R.
           #
-          # A push to master re-points the rolling `latest` release at the new
-          # commit: the old release is deleted WITH its tag (--cleanup-tag),
-          # then recreated from the exact sha this run built. A versioned tag
-          # (v*) keeps its own name and never collides with `latest`.
-          if [[ "$GITHUB_REF_NAME" == latest ]]; then
+          # On a push to master GITHUB_REF_NAME is the BRANCH (`master`), never
+          # `latest` — the old ref-name check could not fire, no release was
+          # created, and the upload then looked for a release named `master`
+          # ("release not found", four runs in a row). So the branch the run
+          # came from decides which release the assets land on: master
+          # re-points the rolling `latest` at the new commit (the old release
+          # is deleted WITH its tag via --cleanup-tag, then recreated from the
+          # exact sha this run built); a versioned tag (v*) gets (or keeps) its
+          # own release and never collides with `latest`.
+          if [[ "$GITHUB_REF_NAME" == "master" ]]; then
+            REL=latest
             gh release delete latest -R mlibre/beauty-forest --yes --cleanup-tag >/dev/null 2>&1 || true
+            sleep 2
             gh release create latest -R mlibre/beauty-forest \
               --target "$GITHUB_SHA" \
               --title "Beauty Forest — latest build" \
               --notes "Built from commit $GITHUB_SHA. A gentle walk — no hurry, no losing. Unzip, run, wander. The Android APK is self-signed: allow installs from this source when your phone asks. The web build also lives on the GitHub Pages site."
+          else
+            REL="$GITHUB_REF_NAME"
+            gh release view "$REL" -R mlibre/beauty-forest >/dev/null 2>&1 || \
+              gh release create "$REL" -R mlibre/beauty-forest \
+                --target "$GITHUB_SHA" \
+                --title "Beauty Forest $REL" \
+                --notes "Built from commit $GITHUB_SHA. A gentle walk — no hurry, no losing. Unzip, run, wander. The Android APK is self-signed: allow installs from this source when your phone asks. The web build also lives on the GitHub Pages site."
           fi
-          gh release upload -R mlibre/beauty-forest "$GITHUB_REF_NAME" \
+          gh release upload -R mlibre/beauty-forest "$REL" \
             BeautyForest-Windows.zip BeautyForest-Linux.zip BeautyForest-Web.zip BeautyForest-Android.apk --clobber
