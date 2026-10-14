@@ -181,5 +181,11 @@ func _apply_settings(value: Dictionary) -> void:
     for wisp: Wisp in wisps:
         if is_instance_valid(wisp):
             wisp.set_reduced_motion(bool(settings.get("reduced_motion", false)))
+    if _waypoint != null and is_instance_valid(_waypoint):
+        # The glow in the world was the one live widget the toggle never
+        # reached: it took the setting only at birth, so a waypoint raised
+        # before the toggle kept bobbing and pulsing against the calm the
+        # player had just asked every other piece of the forest for.
+        _waypoint.set_reduced_motion(bool(settings.get("reduced_motion", false)))
     if player and is_instance_valid(player) and player.hero:
         player.hero.set_reduced_motion(bool(settings.get("reduced_motion", false)))

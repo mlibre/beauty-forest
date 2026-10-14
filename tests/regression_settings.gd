@@ -56,6 +56,9 @@ func _run() -> void:
     if not await _check_a_slider_drag_applies_once(game):
         return
 
+    if not await _check_the_calm_toggle_reaches_the_glow(game):
+        return
+
     finish(game, "BEAUTY_FOREST_SETTINGS")
 
 func _check_a_slider_drag_applies_once(game: Node) -> bool:
@@ -325,4 +328,37 @@ func _check_settings_hands_the_nap_and_ending_cards_back(game: Node) -> bool:
                     game.mode, str(game.ui._overlay_card.visible)]):
         return false
     print("SETTINGS nap/ending: the card comes back, under its own name")
+    return true
+
+func _check_the_calm_toggle_reaches_the_glow(game: Node) -> bool:
+    ## Reduced Motion used to stop at the world, the wisps and the hero: the
+    ## waypoint glow took the setting only at birth, so one raised before the
+    ## toggle kept bobbing and pulsing against the calm the player had asked
+    ## every other piece of the forest for. The run's own settings handler now
+    ## carries it, and the suite holds the propagation open BOTH ways -- a
+    ## toggle that can only switch things on is half a toggle.
+    game._start_run(2)
+    await frames(4)
+    game._set_waypoint_active(true)
+    await frames(2)
+    if not ok(game._waypoint != null and is_instance_valid(game._waypoint),
+            "the waypoint glow never rose for the calm-toggle check"):
+        return false
+    if not ok(not game._waypoint._reduced_motion,
+            "a fresh waypoint did not follow the setting the run already holds"):
+        return false
+    var calm: Dictionary = game.settings.duplicate(true)
+    calm["reduced_motion"] = true
+    game._apply_settings(calm)
+    if not ok(game._waypoint._reduced_motion,
+            "the calm toggle did not reach a waypoint raised before it"):
+        return false
+    if not ok(game.world._reduced_motion,
+            "the calm toggle no longer reaches the world beside the waypoint"):
+        return false
+    calm["reduced_motion"] = false
+    game._apply_settings(calm)
+    if not ok(not game._waypoint._reduced_motion,
+            "the calm toggle's exit did not release the waypoint either"):
+        return false
     return true
