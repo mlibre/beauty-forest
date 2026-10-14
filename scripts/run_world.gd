@@ -104,8 +104,19 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
             # left them free to settle on the stairwell the relocation was about to
             # move into their clearing (measured on 5 of 30 dragon floors). Order
             # was the shared cause; the stair now knows its final home first.
-            _relocate_stair_from(largest)
-            var chime_room := _farthest_non_dragon_room(largest)
+            # One shared keep-clear for both picks: the surprise spawned before
+            # the dragon chose its clearing, so neither the moved stairwell nor
+            # the chime clearing may take a clearing whose centre stands inside
+            # the surprise's own footprint -- and the two picks must stay THE
+            # SAME clearing, or the stair would no longer finish where the last
+            # chime was. A position, not a cell: room centres are world
+            # coordinates that may sit on a cell boundary, so a distance answers
+            # what a cell key would silently misname.
+            var keep_clear := Vector3.INF
+            if _surprise != null and is_instance_valid(_surprise):
+                keep_clear = _surprise.global_position
+            _relocate_stair_from(largest, keep_clear)
+            var chime_room := _farthest_non_dragon_room(largest, keep_clear)
             world.build_dream_chimes(chime_room)
             stair_visible = false
         world.set_objectives_visible(stair_visible, merchant_exists, dragon_exists)
@@ -190,18 +201,30 @@ func _spawn_menu_wisps() -> void:
         wisp.set_meta("attack_cooldown", _rng.randf_range(0.2, 1.1))
         wisp.set_meta("said_grumble", false)
 
-func _farthest_non_dragon_room(dragon_room: Dictionary) -> Dictionary:
+func _farthest_non_dragon_room(dragon_room: Dictionary, keep_clear := Vector3.INF) -> Dictionary:
     var spawn_room: Dictionary = dungeon["rooms"][0]
     var best: Dictionary = dragon_room
     var best_distance := -1.0
+    var fallback: Dictionary = dragon_room
+    var fallback_distance := -1.0
     for room: Dictionary in dungeon["rooms"]:
         if room == dragon_room:
             continue
         var distance := Vector2(room["cx"] - spawn_room["cx"], room["cy"] - spawn_room["cy"]).length()
+        if distance > fallback_distance:
+            fallback_distance = distance
+            fallback = room
+        # A clearing whose centre stands inside the kept-clear footprint (the
+        # floor's one surprise) is skipped by the picks that plant a prop on a
+        # clearing's centre -- the stairwell's dais and the chime clearing.
+        # When every clearing is somehow inside it, the unfiltered farthest
+        # still answers, because a clearing is always better than none.
+        if Vector3(float(room["cx"]), 0.0, float(room["cy"])).distance_to(keep_clear) <= 1.0:
+            continue
         if distance > best_distance:
             best_distance = distance
             best = room
-    return best
+    return best if best_distance >= 0.0 else fallback
 
 ## Move the stairwell off Snoozle's clearing, onto the chime clearing.
 ##
@@ -212,11 +235,11 @@ func _farthest_non_dragon_room(dragon_room: Dictionary) -> Dictionary:
 ## a step (measured on 21 of 30 dragon floors). The chimes are already built in
 ## the clearing farthest from the spawn, so the stair belongs there instead --
 ## a real walk, and it finishes where the last chime was.
-func _relocate_stair_from(room: Dictionary) -> void:
+func _relocate_stair_from(room: Dictionary, keep_clear := Vector3.INF) -> void:
     if not _point_in_room(world.stair_position, room):
         return
     var spawn_room: Dictionary = dungeon["rooms"][0]
-    var candidate: Dictionary = _farthest_non_dragon_room(room)
+    var candidate: Dictionary = _farthest_non_dragon_room(room, keep_clear)
     if candidate == spawn_room or candidate == room:
         return
     world.stair_position = Vector3(candidate["cx"], 0, candidate["cy"])

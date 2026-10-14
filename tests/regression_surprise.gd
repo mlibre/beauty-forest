@@ -65,10 +65,20 @@ func _run() -> void:
             await frames(1)
             stop(null, suite_name)
             return
+        if not _check_landmarks_own_their_cells(game, floor_number):
+            game.free()
+            await frames(1)
+            stop(null, suite_name)
+            return
     # Reachability: a prop scattered into a wall cell comes home, a prop on
     # a floor cell keeps its scatter, and the check fails for the reason it
     # names (see the mutation note below). Awaited: the live path now walks
     # every kind, and the frames between spawns belong to this check.
+    if not _check_the_occupied_set_speaks_in_cells(game):
+        game.free()
+        await frames(1)
+        stop(null, suite_name)
+        return
     await _check_walled_in_props_come_home()
 
     # AudioServer drains stopped playbacks asynchronously (see the same note
@@ -219,6 +229,47 @@ func _check_surprise_answers(game: Node, floor_number: int, key: String) -> bool
         _:
             return fail("floor %d carries an unknown surprise kind '%s'" % [floor_number, key])
     print("SURPRISE_FLOOR_%02d kind=%s sparkles %d -> %d" % [floor_number, key, before_sparkles, int(game.sparkles)])
+    return true
+
+
+## The landmarks own their cells: the surprise and both glints are finds in
+## the open, never props under the stairwell, the cart or the wishing pool --
+## the walk answers those three BEFORE the surprise, so a find parked under
+## one is shadowed into content the floor can never hand out. Same-cell means
+## the exact same integer position, so half a cell separates "under" from
+## "beside". Covers the dragon floors too: the stair's relocation and the
+## chime clearing both skip the clearing the surprise took.
+func _check_landmarks_own_their_cells(game: Node, floor_number: int) -> bool:
+    var landmarks: Array[Vector3] = [game.world.stair_position, game.world.merchant_position, game.world.pool_position]
+    var props: Array[Node3D] = [game._surprise]
+    for wonder: Node3D in game._minor_wonders:
+        if is_instance_valid(wonder):
+            props.append(wonder)
+    for prop: Node3D in props:
+        for landmark: Vector3 in landmarks:
+            if not ok(prop.position.distance_to(landmark) > 0.5,
+                    "floor %d's %s stands under a landmark (prop at %s, landmark at %s)" % [floor_number, prop.name, prop.position, landmark]):
+                return false
+    return true
+
+
+## The occupied set speaks in CELL INDICES, not in rounded world positions:
+## cell_to_world maps a cell to its +0.5 centre, so a reservation that rounds
+## names the cell to the north-east and leaves the prop's own cell spawnable
+## (the exact miss that put a glint half a cell from the stairwell). Pin the
+## convention on the two shapes that burned it: a half-integer centre
+## reserves its own cell, and a .0 boundary reserves both tenants.
+func _check_the_occupied_set_speaks_in_cells(game: Node) -> bool:
+    var occupied: Dictionary = {}
+    game._reserve_world_cell(occupied, Vector3(9.5, 0.0, 60.5))
+    if not ok(occupied.has(Vector2i(9, 60)),
+            "a prop standing at a cell centre reserved %s -- its own cell (9, 60) stayed spawnable" % [occupied.keys()]):
+        return false
+    occupied = {}
+    game._reserve_world_cell(occupied, Vector3(10.0, 0.0, 60.5))
+    if not ok(occupied.has(Vector2i(10, 60)) and occupied.has(Vector2i(9, 60)),
+            "a prop standing on a cell boundary reserved %s -- both tenants must go" % [occupied.keys()]):
+        return false
     return true
 
 

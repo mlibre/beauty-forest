@@ -24,17 +24,51 @@ var _minor_wonders: Array[Node3D] = []
 var _glade_time := 0.0
 
 ## Every floor hides one small surprise (see FloorSurprise). Spawned after the
-## wisps so the occupied-cell set already holds their homes; the surprise is
-## placed like anything else that belongs to the floor, far from the spawn.
+## wisps so the occupied-cell set already holds their homes and the landmarks'
+## cells; the surprise is placed like anything else that belongs to the floor,
+## far from the spawn.
 func _spawn_surprise() -> void:
     var occupied: Dictionary = {}
     for wisp: Wisp in wisps:
         if is_instance_valid(wisp):
-            occupied[Vector2i(int(round(wisp.global_position.x)), int(round(wisp.global_position.z)))] = true
+            _reserve_world_cell(occupied, wisp.global_position)
+    # The landmarks own their cells the same way the chime spread respects
+    # them (see ForestWorld's chime seeding): the floor's one surprise and
+    # its two glints are finds you stumble on, not props that interpenetrate
+    # the stairwell's dais or Peddle's counter -- and the walk answers the
+    # stair, the cart and the pool BEFORE the surprise, so a find parked
+    # under a landmark is shadowed into content the floor can never hand
+    # out. The dragon is not on this list because it picks its clearing
+    # after the surprise spawns; the stair's own relocation skips the
+    # clearing whose centre cell the surprise took.
+    for landmark: Vector3 in [world.stair_position, world.merchant_position, world.pool_position]:
+        _reserve_world_cell(occupied, landmark)
     _surprise = FloorSurprise.spawn(world, dungeon, _rng, floor_number, occupied)
     _minor_wonders.clear()
     for _wonder in range(2):
         _minor_wonders.append(Adventures.spawn_minor(world, dungeon, _rng, occupied))
+
+## Reserve the cell(s) a world position stands in, for the spawner's occupied
+## set. The keys are CELL INDICES (what random_floor_cell draws and what
+## cell_to_world maps back with a +0.5 centre), so the cell a position
+## belongs to is FLOOR of it -- round() flips every half-integer centre up
+## one and reserves the cell to the north-east instead, which is how a wisp's
+## or a landmark's own cell stayed spawnable. A position on a boundary (a .0
+## fraction) stands in the wall between two cells and touches both tenants,
+## so both go: the same both-conventions paranoia FloorSurprise
+## ._is_floor_cell holds on the read side, mirrored for the write.
+func _reserve_world_cell(occupied: Dictionary, position: Vector3) -> void:
+    for x: int in _cells_across(position.x):
+        for z: int in _cells_across(position.z):
+            occupied[Vector2i(x, z)] = true
+
+## The index of the cell a coordinate sits in, plus the other tenant when the
+## coordinate lands exactly on the wall between two cells.
+func _cells_across(coordinate: float) -> Array[int]:
+    var cells: Array[int] = [int(floor(coordinate))]
+    if is_equal_approx(coordinate, floor(coordinate)):
+        cells.append(int(floor(coordinate)) - 1)
+    return cells
 
 ## The surprise's proximity senses, polled while walking: standing in the star
 ## glade warms, walking through puffs pops them, leaning into a lantern bloom
