@@ -69,6 +69,26 @@ func _run() -> void:
     ok(absf(_horizontal_speed(player) - player.move_speed * 2.6) < 0.05, "analog dash burst at %f u/s instead of ~%f" % [_horizontal_speed(player), player.move_speed * 2.6])
     ok(player.dash_cooldown > 0.0, "dash did not start its cooldown")
 
+    # A still double-tap is the stick's dash: standing idle, the hop borrows
+    # the hero's FACING -- the walk's own last direction -- instead of the
+    # fixed screen-up diagonal that used to swerve a sideways hero mid-hop.
+    # With the stick speaking, the dash simply rides the input.
+    player.set_touch_vector(Vector2(1.0, 0.0))
+    player._physics_process(1.0 / 60.0)
+    var walking_direction: Vector3 = player.move_direction
+    ok(walking_direction.length_squared() > 0.99, "a full stick deflection did not read as walking")
+    player.set_touch_vector(Vector2.ZERO)
+    player._physics_process(1.0 / 60.0)
+    var idle_dash: Vector3 = player.dash_direction()
+    ok(idle_dash.is_equal_approx(walking_direction),
+            "an idle dash direction was not the hero's facing: %s vs %s" % [str(idle_dash), str(walking_direction)])
+    ok(not idle_dash.is_equal_approx(Vector3(-0.70710678, 0.0, -0.70710678)),
+            "an idle dash still carried the old fixed screen-up diagonal")
+    player.set_touch_vector(Vector2(1.0, 0.0))
+    player._physics_process(1.0 / 60.0)
+    ok(player.dash_direction().is_equal_approx(player.move_direction),
+            "a moving dash direction did not ride the stick")
+
     # Disabling control parks the hero even with a live touch vector.
     player.set_touch_vector(Vector2(0.0, -1.0))
     player.set_control_enabled(false)

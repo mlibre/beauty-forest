@@ -25,6 +25,14 @@ var _step_accumulator := 0.0
 var _last_direction := Vector3.FORWARD
 var move_direction := Vector3.ZERO
 
+## The direction a dash should take: the live input when the stick (or the
+## keys) is speaking, else the facing the walk already holds. The keyboard
+## dash refuses to fire when idle; the stick's still double-tap IS the dash,
+## and it should hop the way the hero is facing -- not toward a fixed
+## screen-up diagonal that turned a sideways walk into a mid-hop swerve.
+func dash_direction() -> Vector3:
+    return move_direction if move_direction.length_squared() > 0.01 else _last_direction
+
 func _ready() -> void:
     collision_layer = 2
     collision_mask = 1

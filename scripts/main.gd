@@ -254,10 +254,10 @@ func _physics_process(delta: float) -> void:
 func _touch_dash() -> void:
     if mode != Mode.PLAYING or player == null or not is_instance_valid(player):
         return
-    var direction := player.move_direction
-    if direction.length_squared() < 0.01:
-        direction = Vector3(-0.70710678, 0.0, -0.70710678)
-    player.trigger_dash(direction)
+    # A still double-tap hops the way the hero already faces; a moving tap
+    # keeps riding the stick. The facing lives in the player beside the
+    # members that steer it.
+    player.trigger_dash(player.dash_direction())
 
 func _touch_pause() -> void:
     # The very state machine the Escape key runs -- one home, in
