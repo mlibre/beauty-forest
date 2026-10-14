@@ -18,6 +18,7 @@ extends "res://tests/support/test_case.gd"
 # on first boot. regression_architecture holds this file to it.
 const BeautyContent := preload("res://scripts/beauty_content.gd")
 const CozyVitals := preload("res://scripts/cozy_vitals.gd")
+const RunBoons := preload("res://scripts/run_boons.gd")
 
 func _initialize() -> void:
         suite_name = "BEAUTY_FOREST_LOADOUT"
@@ -31,6 +32,8 @@ func _run() -> void:
         await frames(2)
 
         if not await _check_capacity_has_no_ceiling(game):
+                return
+        if not _check_the_boon_pool_never_empties():
                 return
         if not await _check_a_charm_can_be_bought_twice(game):
                 return
@@ -385,6 +388,31 @@ func _check_free_items_do_not_claim_to_be_owned(game: Node) -> bool:
                 return false
         game.ui.close_panels()
         await frames(2)
+        return true
+
+## The draft's promise is three distinct gifts at every depth a walk can
+## reach, and the empty-pool fallback in _open_draft is a guard for content
+## bugs, not a path a player ever meets. Both readings die if the pool thins:
+## a floor whose available boons drop under three deals two cards and calls
+## it a level, and a floor with none left walks into the fallback -- which
+## then has to survive the wedged state it guards against. Pin the pool's
+## own floor: everywhere the campaign and the endless walk go, at least
+## three deep.
+func _check_the_boon_pool_never_empties() -> bool:
+        var depths: Array[int] = []
+        for floor_number in range(1, BeautyContent.CAMPAIGN_LENGTH + 1):
+                depths.append(floor_number)
+        for depth in [BeautyContent.CAMPAIGN_LENGTH + 1, BeautyContent.CAMPAIGN_LENGTH + 61, 287, 10000]:
+                depths.append(depth)
+        for depth in depths:
+                var available := 0
+                for boon: Dictionary in RunBoons.BOON_POOL:
+                        if depth >= int(boon.get("min_floor", 1)):
+                                available += 1
+                if not ok(available >= 3,
+                                "floor %d's draft can only offer %d gifts -- the pool thinned under the three the draft promises" % [depth, available]):
+                        return false
+        print("LOADOUT boon pool: %d boons, at least %d offered at every probed depth" % [RunBoons.BOON_POOL.size(), 3])
         return true
 
 func _all_labels(node: Node) -> Array:

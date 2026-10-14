@@ -72,10 +72,20 @@ func _open_draft() -> void:
     if _draft_offers.is_empty():
         # No gift can be offered (an empty pool is a content bug, not a state
         # the player made). Grant the plain warmth boon rather than swallowing
-        # a level, and say so in the log where a developer will see it.
+        # a level, and say so in the log where a developer will see it. When
+        # the call arrived from pick_boon -- a second level queued behind the
+        # first -- the world is already paused with the cards closed, so the
+        # recovery has to hand the walk back too, or the guard itself would
+        # wedge the run in a draft with nothing left to pick.
         push_warning("Boon pool offered nothing; applying the warmth boon directly.")
         _grant_warmth_boon()
-        pending_boons -= 1
+        pending_boons = maxi(0, pending_boons - 1)
+        if mode == Mode.DRAFT:
+            ui.close_panels()
+            mode = Mode.PLAYING
+            _set_world_processing(true)
+            player.set_control_enabled(_gameplay_controls_enabled())
+            _refresh_ui()
         return
     mode = Mode.DRAFT
     _set_world_processing(false)
