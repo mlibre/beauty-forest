@@ -64,15 +64,10 @@ const DRAGON := "dragon"
 
 static var _cache: Dictionary = {}
 
-## Drops every cached glyph. Called when High Contrast flips, because the
-## glyphs bake their palette at raster time.
-static func clear_cache() -> void:
-	_cache.clear()
-
 static func get_glyph(key: String) -> Texture2D:
-	## The cached texture for `key`, or an empty placeholder if the key has no
-	## glyph yet. Callers must handle the placeholder: an unknown key is a bug
-	## worth showing, not something to hide behind a generic dot.
+	## The cached texture for `key`. An unknown key rasterizes as the hollow
+	## ring -- a visible, reportable miss rather than a blank square nobody
+	## notices -- and `has_glyph` is how a caller asks before showing one.
 	var cache_key := "%s@%d" % [key, CACHE_SIZE]
 	if _cache.has(cache_key):
 		return _cache[cache_key]
