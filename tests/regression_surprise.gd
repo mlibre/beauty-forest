@@ -83,6 +83,18 @@ func _run() -> void:
 func _check_surprise_answers(game: Node, floor_number: int, key: String) -> bool:
     var surprise: Node3D = game._surprise
     var player: Node3D = game.player
+    # The pill's promise, read LIVE: standing beside the prop, the hint
+    # speaks exactly for the kinds a press answers. A verb_for arm that
+    # drifts from _surprise_interact's match arms would promise E where
+    # nothing answers -- or hide the one place E works -- and every other
+    # check here would still pass, because the arms and the pill are read
+    # from different tables. This is the check that refuses the divorce.
+    player.global_position = surprise.global_position + Vector3(1.2, 0.05, 0)
+    var pill: String = game._surprise_hint_text()
+    var press_promised := not FloorSurprise.verb_for(key).is_empty()
+    if not ok((not pill.is_empty()) == press_promised,
+            "floor %d's %s: hint pill and press table disagree (pill “%s”)" % [floor_number, key, pill]):
+        return false
     var before_sparkles := int(game.sparkles)
     match key:
         "picnic", "singing_ring", "comet_log", "mossy_doodle", "wisp_choir", "lantern_release", "treasure_sprout", "mushroom_house", "shooting_star":
