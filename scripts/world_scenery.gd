@@ -220,6 +220,7 @@ func _build_grove_visual() -> void:
     var trunk_transforms: Array[Transform3D] = []
     var trunk_colors: Array[Color] = []
     var flare_transforms: Array[Transform3D] = []
+    var flare_colors: Array[Color] = []
     var crown_transforms: Array[Transform3D] = []
     var crown_colors: Array[Color] = []
     var grid: PackedInt32Array = dungeon["grid"]
@@ -244,6 +245,11 @@ func _build_grove_visual() -> void:
             # A root flare — a low, wide cone hugging the trunk's feet — so
             # every tree meets the ground grown-out instead of potted.
             flare_transforms.append(Transform3D(Basis.IDENTITY.scaled(Vector3(trunk_girth * 1.9, 0.34, trunk_girth * 1.9)), base + Vector3(0, 0.10, 0)))
+            # The flare rides its own trunk's bark, sunk a step darker so the
+            # foot of the tree reads as ground. When the bark gained its
+            # per-instance lightening, a flat flare colour left every elder's
+            # pale wood standing on the same dark roots.
+            flare_colors.append(bark.darkened(0.16))
             var crown_count := (3 if elder else 0) + (2 if _rng.randf() < 0.72 else 1)
             for crown_index in range(crown_count):
                 var crown_scale := Vector3.ONE * _rng.randf_range(0.72, 1.18) * (1.30 if elder else 1.0)
@@ -261,13 +267,16 @@ func _build_grove_visual() -> void:
     # material must actually read the instance colors it is given.
     trunk_material.vertex_color_use_as_albedo = true
     _add_multimesh("GroveTrunks", trunk_mesh, trunk_material, trunk_transforms, trunk_colors)
-    # The flare shares the trunk's material so bark and roots shade as one.
+    # The flare shares the trunk's material so bark and roots shade as one:
+    # one resource, both multimeshes, each instance carrying its own wood.
     var flare_mesh := CylinderMesh.new()
     flare_mesh.top_radius = 0.16
     flare_mesh.bottom_radius = 0.30
     flare_mesh.height = 1.0
     flare_mesh.radial_segments = 7
-    _add_multimesh("GroveFlares", flare_mesh, _pbr(Color("#7d563a"), 0.95), flare_transforms, [])
+    # The flare shares the trunk's material so bark and roots shade as one:
+    # one resource, both multimeshes, each instance carrying its own wood.
+    _add_multimesh("GroveFlares", flare_mesh, trunk_material, flare_transforms, flare_colors)
 
     var crown_mesh := SphereMesh.new()
     crown_mesh.radius = 0.80

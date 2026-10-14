@@ -449,6 +449,28 @@ func _check_the_floor_opens_like_a_film(game: Node) -> bool:
         if not ok(not _ui._cinematic_on, "the film came back after the panel closed"):
                 return false
 
+        # An outside voice speaks on the card mid-film -- an encounter's
+        # entrance, the lantern's warning, Mote's chatter. The film's turns
+        # must end at the voice: the pending cuts die (generation bumped) and
+        # the bars leave with the card, so the next shot can neither
+        # overwrite what was just said nor leave the letterbox standing over
+        # a card the film no longer owns.
+        _ui.play_floor_prologue(
+                ["The Third Floor", "The scene is mid-film when a wobbly guest arrives."],
+                ["First shot continues.", "Second shot lands."],
+                "mote")
+        await frames(3)
+        var generation_before_voice: int = _ui._prologue_generation
+        _ui.show_story("A Big Feeling", "Not a monster — just one feeling wearing a very big coat.", 3.6)
+        await frames(3)
+        if not ok(_ui._prologue_generation == generation_before_voice + 1
+                        and _ui._story_title.text == "A Big Feeling",
+                        "an outside voice did not take the card away from the film"):
+                return false
+        if not ok(not _ui._cinematic_on,
+                        "the outside voice left the letterbox standing over a non-film card"):
+                return false
+
         # A ceremony claims the cinema mid-scene. The prologue's own exit rule
         # reads the ownership before touching the bars: it no longer owns
         # them, so when its timers run out the bars STAY UP for the ceremony.

@@ -9,7 +9,15 @@ extends "res://scripts/game_ui_screens.gd"
 ## state it drives lives on GameUIState, and every member it touches is
 ## shared down the chain.
 
-func show_story(title: String, body: String, duration: float = 3.8, glyph: String = "") -> void:
+## An outside voice on the story card ends the film's turns. The encounter
+## card, the lantern's warning, Mote's chatter -- every speaker that reaches
+## show_story directly used to have its words eaten by the prologue's next
+## cut (and the film kept the letterbox up after its own sequence died), so
+## the one door every voice shares now supersedes the film first. The film's
+## own beats pass from_film -- their turns are the scene speaking.
+func show_story(title: String, body: String, duration: float = 3.8, glyph: String = "", from_film: bool = false) -> void:
+    if not from_film:
+        _cancel_prologue()
     _cancel_story()
     var generation := _story_generation
     _story_title.text = title
@@ -310,10 +318,10 @@ func play_floor_prologue(story: Array, shots: Array, glyph: String) -> void:
     if _reduced_motion:
         # Still Forest: one page, no cinema. The story arrives exactly as it
         # always did; the shots stay in the telling for readers who seek it.
-        show_story(title, body, 3.8, glyph)
+        show_story(title, body, 3.8, glyph, true)
         return
     set_cinematic(true, "prologue")
-    show_story(title, body, 5.0, glyph)
+    show_story(title, body, 5.0, glyph, true)
     for shot: String in shots:
         await _prologue_wait(3.1)
         if generation != _prologue_generation or not is_inside_tree():
@@ -326,7 +334,7 @@ func play_floor_prologue(story: Array, shots: Array, glyph: String) -> void:
         # The cut: the previous card is cancelled mid-hold and the next shot
         # arrives with the same ink and mark, so the scene reads as one story
         # speaking in frames rather than three cards queueing.
-        show_story(title, shot, 5.0, glyph)
+        show_story(title, shot, 5.0, glyph, true)
     await _prologue_wait(3.3)
     if generation != _prologue_generation or not is_inside_tree():
         return

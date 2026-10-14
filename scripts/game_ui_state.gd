@@ -309,6 +309,14 @@ func _reset_touch_joystick() -> void:
 func set_cinematic(on: bool, owner_tag: String = "") -> void:
     if _cinematic_top == null or _cinematic_bottom == null or not is_instance_valid(_cinematic_top):
         return
+    if on and _cinematic_on:
+        # A second claim on a stage that is already lit: only the name
+        # changes. The bars stand (or are still arriving from the first
+        # claim's own tween), so resetting them to closed and re-tweening
+        # would re-slide a raised frame the reader is already looking
+        # through -- the ceremony inherits the stage, it does not rebuild it.
+        _cinematic_owner = owner_tag
+        return
     if _cinematic_tween != null and _cinematic_tween.is_valid():
         _cinematic_tween.kill()
     _cinematic_tween = null
