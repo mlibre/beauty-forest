@@ -62,18 +62,19 @@ var _touch_joystick: TouchJoystick
 ## The on-screen touch buttons, kept in build order so the responsive layout
 ## can measure the block they actually occupy in the bottom-right corner.
 var _touch_buttons: Array[Button] = []
-## The one CONTEXTUAL action button. It is the touch E: its face re-labels
-## itself to whatever the hero is standing beside (sing, descend, wish,
-## cart), so a touch player never has to know which of five fixed buttons
-## is the right one -- the right button is always the same button.
-var _touch_action_button: Button
-## The bottom-centre hint pill: the key and the verb the key is about to
-## speak ("E · Descend"), shown only while the hero stands near something
-## that listens. The walk screen stays pictures-only at rest; this appears
-## exactly when a press would do something, and leaves with it.
-var _context_hint: PanelContainer
-var _context_label: Label
+## The bottom-centre hint pill: the verb and, where a keyboard exists, the
+## key that speaks it ("E · Descend"). It is shown only while the hero
+## stands near something that listens, and it IS the button on a
+## touchscreen -- no SING/DASH/ASCEND plates live on the walk screen at
+## all; the hint beside the object carries the whole action. The walk
+## screen stays pictures-only at rest; this appears exactly when a press
+## would do something, and leaves with it.
+var _context_hint: Button
 var _context_hint_verb := ""
+## True on a touchscreen, where the pill is not a hint but THE action button:
+## its label drops the "E ·" prefix (no keyboard there) and a tap speaks the
+## interact signal the same way the E key does.
+var _hint_tappable := false
 var _overlay_scrim: ColorRect
 ## The title menu's own scrim. Lighter than the pause card's, because the
 ## menu is the first thing a player sees and the brief is a BRIGHT golden

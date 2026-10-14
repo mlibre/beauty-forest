@@ -9,6 +9,7 @@ const CozyMinimap := preload("res://scripts/cozy_minimap.gd")
 const CozyVFX := preload("res://scripts/cozy_vfx.gd")
 const DungeonGenerator := preload("res://scripts/dungeon_generator.gd")
 const WorldScenery := preload("res://scripts/world_scenery.gd")
+const WorldAtmosphere := preload("res://scripts/world_atmosphere.gd")
 
 func _initialize() -> void:
     suite_name = "BEAUTY_FOREST_GRAPHICS"
@@ -172,7 +173,14 @@ func _check_no_particle_writes_a_color_it_cannot_draw() -> void:
     world.floor_number = 1
     world._build_grove_visual()
     world._build_decor()
-    world._build_ambient_life()
+    # The forest's air is hung by WorldAtmosphere since the ceiling sweep --
+    # the old `world._build_ambient_life()` stopped existing that day, and a
+    # probe that calls a vanished function errors, skips the emitters it came
+    # to inspect, and still reports OK. These two lines are the whole point
+    # of this check: the drifting motes and the leaf fall are children of the
+    # world now, and the scan below must see them.
+    WorldAtmosphere.build_sunbeams(world)
+    WorldAtmosphere.build_ambient_life(world)
     await frames(1)
 
     var checked_petals := 0

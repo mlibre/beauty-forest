@@ -152,7 +152,10 @@ func add_cue(message: String, duration: float = 2.2) -> void:
 
 ## The bottom-centre hint pill, driven by the director's own proximity sense:
 ## pass the verb the next press will speak ("Descend", "Peddle's cart"), or
-## "" to put the pill away. The walk screen is pictures-only at rest; this is
+## "" to put the pill away. On a keyboard the pill names the key and the verb
+## ("E · Descend"); on a touchscreen it is the button itself, so it speaks
+## only the verb ("Descend ♥") and answers a tap with the same move the E
+## key would have made. The walk screen is pictures-only at rest; this is
 ## the one moment prose is allowed on it, and it leaves with the moment.
 func show_context_hint(verb: String) -> void:
     if _context_hint == null or not is_instance_valid(_context_hint):
@@ -166,27 +169,12 @@ func show_context_hint(verb: String) -> void:
     if _context_hint.visible and _context_hint_verb == wanted:
         return
     _context_hint_verb = wanted
-    _context_label.text = "E · %s" % wanted
+    if _hint_tappable:
+        _context_hint.text = "%s ♥" % wanted
+    else:
+        _context_hint.text = "E · %s" % wanted
     _context_hint.visible = true
     _fit_layout()
-
-## The touch action button's face follows the same context: the button IS the
-## E key on a touchscreen, so it re-labels itself to whatever the hero stands
-## beside — and when the hero stands beside nothing, it disappears. A
-## permanent SING plate over the walk was one more icon to parse; a button
-## that only exists when something is near teaches itself.
-func set_action_label(verb: String) -> void:
-    if _touch_action_button == null or not is_instance_valid(_touch_action_button):
-        return
-    var wanted := verb.strip_edges()
-    if wanted.is_empty():
-        _touch_action_button.visible = false
-        return
-    var label := "%s ♥" % wanted.to_upper()
-    _touch_action_button.visible = true
-    if _touch_action_button.text == label:
-        return
-    _touch_action_button.text = label
 
 func set_beat(active: bool, gold: bool) -> void:
     _beat_ring.visible = active

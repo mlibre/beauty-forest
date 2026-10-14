@@ -316,11 +316,23 @@ func _build_cinema() -> void:
 ## The bottom-centre hint pill: the one piece of prose the walk screen is
 ## allowed to paint, and only while a press would actually do something.
 ## "E · Descend" appears when the hero reaches the stair, "E · Peddle's cart"
-## at the cart, and so on -- the button hints itself at the moment of use,
+## at the cart, and so on -- the hint offers itself at the moment of use,
 ## instead of a permanent control line the eye learns to ignore.
+##
+## The pill is a real button, not a painting: on a touchscreen it IS the
+## action (there is no E key there, and the walk screen carries no SING or
+## DESCEND plate -- the hint beside the object is the whole control), and on
+## the desktop a click on it plays the same move, a small courtesy to the
+## mouse. Pressing it speaks through touch_interact_requested, the very
+## signal the E key's neighbours already listen to, so the hint and the key
+## can never disagree about what happens next.
 func _build_context_hint() -> void:
-    _context_hint = PanelContainer.new()
+    _context_hint = Button.new()
     _context_hint.name = "ContextHint"
+    # A touchscreen makes the pill the action button; on the desktop it stays
+    # a hint that happens to answer a click. Either way the press lands in
+    # the same place the E key does.
+    _hint_tappable = DisplayServer.is_touchscreen_available()
     var style := StyleBoxFlat.new()
     style.bg_color = Color(0.07, 0.14, 0.09, 0.88)
     style.border_color = Color("#ffe29a")
@@ -330,13 +342,31 @@ func _build_context_hint() -> void:
     style.content_margin_right = 16
     style.content_margin_top = 7
     style.content_margin_bottom = 7
-    _context_hint.add_theme_stylebox_override("panel", style)
-    _context_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _context_label = _label("", 15, Color("#fff2c4"))
-    _context_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    _context_label.add_theme_color_override("font_outline_color", Color(0.06, 0.11, 0.07, 0.9))
-    _context_label.add_theme_constant_override("outline_size", 4)
-    _context_hint.add_child(_context_label)
+    var hover_style := style.duplicate()
+    hover_style.bg_color = Color(0.10, 0.19, 0.12, 0.92)
+    hover_style.border_color = Color("#fff0b8")
+    var pressed_style := style.duplicate()
+    pressed_style.bg_color = Color(0.05, 0.10, 0.07, 0.95)
+    var focus_style := StyleBoxEmpty.new()
+    _context_hint.add_theme_stylebox_override("normal", style)
+    _context_hint.add_theme_stylebox_override("hover", hover_style)
+    _context_hint.add_theme_stylebox_override("pressed", pressed_style)
+    _context_hint.add_theme_stylebox_override("focus", focus_style)
+    _context_hint.focus_mode = Control.FOCUS_NONE
+    _context_hint.tooltip_text = "Whatever is near you: hug, sing, wish, or go down. Same as E."
+    _context_hint.pressed.connect(func(): touch_interact_requested.emit())
+    # The pill's face rides the button's own text, so the pill always measures
+    # exactly the verb it is speaking — the button sizes to its text, the way
+    # the old PanelContainer sized to its label, without a second node to
+    # keep fed.
+    _context_hint.add_theme_font_size_override("font_size", 15)
+    _context_hint.add_theme_color_override("font_color", Color("#fff2c4"))
+    _context_hint.add_theme_color_override("font_hover_color", Color("#fff8d8"))
+    _context_hint.add_theme_color_override("font_pressed_color", Color("#ffe9a8"))
+    _context_hint.add_theme_color_override("font_focus_color", Color("#fff2c4"))
+    _context_hint.add_theme_color_override("font_outline_color", Color(0.06, 0.11, 0.07, 0.9))
+    _context_hint.add_theme_constant_override("outline_size", 4)
+    _context_hint.add_theme_constant_override("h_separation", 0)
     _context_hint.visible = false
     _root.add_child(_context_hint)
 

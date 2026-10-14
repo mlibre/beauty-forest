@@ -176,18 +176,12 @@ func _build_touch_controls() -> void:
     # the log, under the joystick) out of the way instead of letting the opaque
     # buttons paint over them.
     #
-    # Two buttons, not six. The ACTION button below is the context: standing
-    # beside anything singable, wishable, descendable or buyable re-labels it
-    # and lights it, and away from everything it disappears entirely -- the
-    # walk screen stays clean instead of carrying a SING plate nobody could
-    # parse. DASH lives in the stick: a quick double-tap is a hop (the pause
-    # card's keys line says so), so the corner keeps BOOK and PAUSE only.
-    var use_button := _touch_button("SING ♥", Color("#ffe29a"), Vector2(-280, -180))
-    use_button.visible = false
-    use_button.tooltip_text = "Whatever is near you: hug, sing, wish, or go down. Same as E."
-    use_button.pressed.connect(func(): touch_interact_requested.emit())
-    touch_root.add_child(use_button)
-    _touch_action_button = use_button
+    # One cluster, two plates. The corner keeps BOOK and PAUSE only: every
+    # action verb -- sing, wish, descend, hug, the cart -- lives in the golden
+    # hint that appears beside the object itself, and that hint IS the button
+    # on a touchscreen (tapping it plays the same move the E key would). The
+    # DASH is the stick: a quick double-tap is a hop (the pause card's keys
+    # line says so). Nothing else ever paints itself onto the walk screen.
     var journal_button := _touch_button("BOOK ♥", Color("#c9e7a6"), Vector2(-280, -118))
     journal_button.tooltip_text = "Your memories and stickers. Same as J."
     journal_button.pressed.connect(func(): touch_journal_requested.emit())

@@ -240,7 +240,7 @@ func _nearest_chime() -> Node3D:
 
 func _try_interact() -> void:
     # The finale epilogue keeps Mode.PLAYING so the story can play out, so this
-    # needs the same gate Dash uses: without it E and the touch SING button
+    # needs the same gate Dash uses: without it E and the golden hint's tap
     # answered with a stray "wander toward whatever is glowing" while the
     # controls were off and the ending card owned the screen.
     if not _gameplay_controls_enabled():
@@ -250,10 +250,11 @@ func _try_interact() -> void:
         return
     # One key for every nearby kindness. Peddle's cart used to want its own
     # key (F), which is one more thing to learn and one more thing to forget
-    # at the moment of use; the context pill and the touch button now carry
-    # the whole truth ("E · Peddle's cart"), and F keeps working as an
-    # alias for hands that already learned it. Opening the stall is the
-    # director's move (see the hook in RunState), so this asks, not does.
+    # at the moment of use; the golden pill now carries the whole truth ("E ·
+    # Peddle's cart", and the pill itself is the button on a touchscreen),
+    # and F keeps working as an alias for hands that already learned it.
+    # Opening the stall is the director's move (see the hook in RunState), so
+    # this asks, not does.
     if _near_merchant() and _try_open_nearby_shop():
         return
     if stair_visible and world and is_instance_valid(world.get_node_or_null("Stairwell")):
@@ -280,9 +281,9 @@ func _try_interact() -> void:
     ui.add_cue("wander toward whatever glows")
 
 ## What the hero is standing beside, in one verb — the same senses, in the
-## same order, as _try_interact answers them. The context pill ("E · Descend")
-## and the touch action button's face are both fed from here, so the hint and
-## the press can never disagree about what E does right now.
+## same order, as _try_interact answers them. The golden pill ("E · Descend";
+## on touch, the pill itself is the button) is fed from here, so the hint
+## and the press can never disagree about what E does right now.
 func _interact_hint_text() -> String:
     if _lullaby_active or player == null or not is_instance_valid(player):
         return ""
@@ -301,9 +302,10 @@ func _interact_hint_text() -> String:
             return "Make a wish"
     return _surprise_hint_text()
 
-## Feed the pill and the touch button from the same sense. An empty verb
-## hides the pill and rests the button; a panel opening hides it via
-## close_panels, so no stale "press E" survives a modal.
+## Feed the pill from the same sense. An empty verb hides the pill; a panel
+## opening hides it via close_panels, so no stale "press E" survives a modal.
+## On a touchscreen the pill IS the button now -- there is no action plate on
+## the walk screen for it to mirror.
 func _update_context_hint() -> void:
     if ui == null or not is_instance_valid(ui):
         return
@@ -311,7 +313,6 @@ func _update_context_hint() -> void:
     if mode == Mode.PLAYING and not ending_pending:
         verb = _interact_hint_text()
     ui.show_context_hint(verb)
-    ui.set_action_label(verb)
 
 ## The wishing pool was the one landmark nothing could do anything with: an
 ## elaborate prop whose only interaction was Mote's generic fallback line. Now
