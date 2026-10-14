@@ -360,6 +360,11 @@ func _build_context_hint() -> void:
     # the old PanelContainer sized to its label, without a second node to
     # keep fed.
     _context_hint.add_theme_font_size_override("font_size", 15)
+    # The pill's face joins the text-scaling group like every label: at 200%
+    # text the golden hint grows with the rest, or a scaled HUD would leave
+    # the one word that matters most stuck at reading size.
+    _context_hint.add_to_group("game_ui_scaled_labels")
+    _context_hint.set_meta("base_font_size", 15)
     _context_hint.add_theme_color_override("font_color", Color("#fff2c4"))
     _context_hint.add_theme_color_override("font_hover_color", Color("#fff8d8"))
     _context_hint.add_theme_color_override("font_pressed_color", Color("#ffe9a8"))

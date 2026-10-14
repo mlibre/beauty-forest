@@ -355,6 +355,16 @@ func apply_settings(settings: Dictionary) -> void:
             continue
         var base_size := float(label.get_meta("base_font_size", label.get_theme_font_size("font_size")))
         label.add_theme_font_size_override("font_size", int(round(base_size * _text_scale)))
+    # The scaling group carries buttons too -- the golden hint pill paints its
+    # verb on a Button's own face, so the same meta-and-override treatment
+    # applies with a BaseButton cast. A member that is neither Label nor
+    # BaseButton simply waits for a cast that fits.
+    for node in get_tree().get_nodes_in_group("game_ui_scaled_labels"):
+        var button := node as BaseButton
+        if button == null or not is_instance_valid(button):
+            continue
+        var button_base := float(button.get_meta("base_font_size", button.get_theme_font_size("font_size")))
+        button.add_theme_font_size_override("font_size", int(round(button_base * _text_scale)))
     _minimap.high_contrast = _high_contrast
     _minimap.queue_redraw()
     if is_instance_valid(_vitals):
