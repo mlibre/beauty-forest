@@ -45,15 +45,22 @@ func _tick_surprise(delta: float) -> void:
     _tick_minor_wonders()
     match String(_surprise.get_meta("surprise_key")):
         "star_glade":
-            if player.global_position.distance_to(_surprise.global_position) < 2.4 and not _surprise.get_meta("surprise_used"):
-                _glade_time += delta
-                if _glade_time >= 2.5:
-                    _surprise.set_meta("surprise_used", true)
-                    hp = minf(hp_max, hp + 15.0)
-                    CozyVFX.ring(world, _surprise.global_position + Vector3.UP * 0.4, Color("#fff3a0"), 2.6, 1.0)
-                    audio.play_chord([659.25, 783.99, 987.77], 0.7, 0.07)
-                    ui.show_toast("The stars lend you their light. +15 warmth.", 3.0)
-                    _refresh_ui()
+            # The nook's twin clock: the warmth belongs to a hero who STOPS
+            # here, so walking away forgets the patience already banked --
+            # leaving the timer running let a hero circle the grove across a
+            # whole floor and collect the glade on a glance.
+            if not _surprise.get_meta("surprise_used"):
+                if player.global_position.distance_to(_surprise.global_position) < 2.4:
+                    _glade_time += delta
+                    if _glade_time >= 2.5:
+                        _surprise.set_meta("surprise_used", true)
+                        hp = minf(hp_max, hp + 15.0)
+                        CozyVFX.ring(world, _surprise.global_position + Vector3.UP * 0.4, Color("#fff3a0"), 2.6, 1.0)
+                        audio.play_chord([659.25, 783.99, 987.77], 0.7, 0.07)
+                        ui.show_toast("The stars lend you their light. +15 warmth.", 3.0)
+                        _refresh_ui()
+                else:
+                    _glade_time = 0.0
         "lantern_bloom":
             if not _surprise.get_meta("surprise_used"):
                 var lit := 0

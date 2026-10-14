@@ -106,10 +106,23 @@ func _check_surprise_answers(game: Node, floor_number: int, key: String) -> bool
             if not ok(not game._surprise_interact(), "floor %d's %s answered twice" % [floor_number, key]):
                 return false
         "star_glade":
+            # The glade's clock is the nook's: the patience belongs to a STOP.
+            # Two seconds banked, a walk away, and the fresh stop must pay the
+            # full two and a half again -- banked time that survives the walk
+            # lets a hero circle the grove across a whole floor and collect
+            # the warmth on a glance.
             player.global_position = surprise.global_position + Vector3(0.2, 0.05, 0)
-            for _tick in range(3):
-                game._tick_surprise(1.0)
-            if not ok(bool(surprise.get_meta("surprise_used")), "standing in the glade on floor %d granted nothing" % floor_number):
+            game._tick_surprise(2.0)
+            if not ok(not bool(surprise.get_meta("surprise_used")), "two seconds in floor %d's glade already paid out" % floor_number):
+                return false
+            player.global_position = surprise.global_position + Vector3(6.0, 0.05, 0)
+            game._tick_surprise(0.5)
+            player.global_position = surprise.global_position + Vector3(0.2, 0.05, 0)
+            game._tick_surprise(0.6)
+            if not ok(not bool(surprise.get_meta("surprise_used")), "floor %d's glade banked time across a walk-away" % floor_number):
+                return false
+            game._tick_surprise(2.0)
+            if not ok(bool(surprise.get_meta("surprise_used")), "resting in the glade on floor %d granted nothing" % floor_number):
                 return false
             if not ok(game.hp > 100.0 or is_equal_approx(game.hp, game.hp_max), "the glade's warmth did not land (hp %f)" % game.hp):
                 return false
