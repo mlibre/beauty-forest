@@ -9,9 +9,9 @@
 [![Web build](https://img.shields.io/github/actions/workflow/status/mlibre/beauty-forest/pages.yml?branch=master&style=for-the-badge&label=web%20build&labelColor=1d3524)](https://github.com/mlibre/beauty-forest/actions/workflows/pages.yml)
 ![Made with Godot](https://img.shields.io/badge/made%20with-Godot%204-478cbf?style=for-the-badge&labelColor=1d3524)
 
-<img src="docs/media/beauty_forest.gif" alt="A few moments from a walk: the title, the story, the forest, a level-up gift" width="640"/>
+<img src="docs/media/beauty_forest.gif" alt="A few moments from a walk: the title, the story, the quiet forest floor, a level-up gift and the pause card" width="640"/>
 
-*a few moments from a walk — the title, the story, the forest floor, and a level-up gift*
+*a few moments from a walk — the title, the story, the quiet forest floor, a level-up gift, and the pause card. No pop-up panels; the forest talks in one quiet line at a time.*
 
 </div>
 
