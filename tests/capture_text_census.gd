@@ -173,14 +173,20 @@ func _run() -> void:
         #                 read a promise at all, and a promise nobody can read
         #                 is decoration.
         #   PAUSE    820   705 + one drawn floor-mood line (see below)
-        #   SHOP     700   601: 34 ware names, 4 shelf headings, sparkle count
+        #   SHOP     860   827: 34 ware names, 4 shelf headings, sparkle count,
+        #                 and the keeper's two spoken lines -- a greeting tuned
+        #                 to the visit and one shelf tip. Both landed as
+        #                 features after this budget was set; a cart with a
+        #                 face is allowed to speak two sentences.
         #   NAP      250   200: the cozy-nap card (two floor rows + one warm line)
         #   ENDING   240   176: the dragons-are-snuggled card (dragon, heart, chime)
         #   JOURNAL  380   294: two facts and two stickers; grows with collection
-        #   SETTINGS 500   checkboxes and slider rows, plus the one-line "what
+        #   SETTINGS 570   545: checkboxes and slider rows, plus the one-line "what
         #                 this changes" note under each slider. A bare "×1.40"
         #                 says nothing a new player can act on; the notes are
         #                 five short lines, one per slider, not a paragraph.
+        #                 The identity band's subtitle ("Change anything,
+        #                 anytime. Leaving is always okay.") is the +45.
         #
         # JOURNAL's budget has the most room on purpose. Its length is a player's
         # collection, not an author's paragraph -- every fact they found and every
@@ -272,11 +278,11 @@ const BUDGETS := {
         "PLAYING": 0,
         "MENU": 200,
         "PAUSE": 820,
-        "SHOP": 700,
+        "SHOP": 860,
         "NAP": 250,
         "ENDING": 240,
         "JOURNAL": 380,
-        "SETTINGS": 500,
+        "SETTINGS": 570,
         # DRAFT's own words are one heading, one fact line, three cards that
         # name themselves AND their effect, and one closing line (~250 chars);
         # like the other _root screens the count includes the log strip beneath,

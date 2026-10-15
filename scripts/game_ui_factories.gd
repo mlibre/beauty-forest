@@ -266,6 +266,15 @@ func _medal_chip(glyph_key: String, value: String, tip: String) -> Control:
 ## caps in a row are read the way the player will press them — as keys.
 func _key_cap(label_text: String) -> Control:
     var cap := PanelContainer.new()
+    # Shrink-centre, both axes: a cap sits in a row whose height belongs to
+    # the tallest sibling, and FILL (the default) once stretched each cap to
+    # match a crushed hint label's 388px letter-column. A key cap is keycap-
+    # sized, whatever the row does around it.
+    cap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+    cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    # Name the cap after the key it draws, so a suite can tell one cap from
+    # another in a tree walk (the same reason _icon names its TextureRect).
+    cap.name = "KeyCap%s" % label_text
     var style := StyleBoxFlat.new()
     style.bg_color = Color(0.16, 0.28, 0.18, 0.92)
     style.border_color = Color("#ffe29a")

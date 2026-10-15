@@ -19,6 +19,8 @@ const CozyMaterials := preload("res://scripts/cozy_materials.gd")
 ##   the rim is whether you are wearing it (gold) or not (moss)
 ##   the brightness is whether you can afford it
 ##   the price is a sparkle and a number -- or a heart, when it is a gift
+##   the moss heart at the corner is "already yours, resting"
+##   the name wraps to two printed lines instead of clipping
 ##
 ## Two words survive on purpose: the ware's own name, because two wares can
 ## look alike and a shelf of nameless pictures is a guessing game, and the
@@ -26,8 +28,10 @@ const CozyMaterials := preload("res://scripts/cozy_materials.gd")
 ## tooltip, which the player asks for by hovering -- so browsing stays
 ## scanning, not reading.
 
-const ICON_SIDE := 52.0
-const NAME_SIZE := 13
+const CARD_W := 150.0
+const CARD_H := 150.0
+const ICON_SIDE := 58.0
+const NAME_SIZE := 14
 const PRICE_SIZE := 14
 
 var item: Dictionary = {}
@@ -49,7 +53,7 @@ var purse := -1
 var high_contrast := false
 
 func _ready() -> void:
-        custom_minimum_size = Vector2(138.0, 130.0)
+        custom_minimum_size = Vector2(CARD_W, CARD_H)
         mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 ## The ware's own name, and the key it is filed under. The regression suites
@@ -83,7 +87,11 @@ func _draw() -> void:
                 fill = Color(0.09, 0.14, 0.11, 0.90)
         draw_style_box(CozyMaterials.plate(fill, rim, 14, 3 if selected else 2), rect)
 
-        var icon_center := Vector2(size.x * 0.5, ICON_SIDE * 0.5 + 10.0)
+        var icon_center := Vector2(size.x * 0.5, ICON_SIDE * 0.5 + 12.0)
+        # A pool of lantern light behind the picture: the shelf reads as a row
+        # of small lit things rather than flat swatches, and the eye lands on
+        # the picture before the name. Wearing the ware brightens the pool.
+        draw_circle(icon_center, ICON_SIDE * 0.68, Color(1.0, 0.94, 0.66, 0.16 if selected else 0.09))
         if selected:
                 # The halo is what "you are wearing this" looks like. A ring of light
                 # behind the picture reads as lit from within, which no word does.
@@ -94,24 +102,69 @@ func _draw() -> void:
 
         var font := _font()
         var name_tint := Color("#fff0c8") if affordable else Color(1.0, 1.0, 1.0, 0.45)
-        draw_string(font, Vector2(6.0, ICON_SIDE + 30.0), item_name(), HORIZONTAL_ALIGNMENT_CENTER, size.x - 12.0, NAME_SIZE, name_tint)
-        _draw_tier_pips()
+        # The name wraps to two lines the shelf prints side by side -- long
+        # names ("Counter-melody of the Lodestar") used to clip at one.
+        var lines := _name_lines(font, size.x - 12.0)
+        var first_baseline := ICON_SIDE + 32.0
+        for line_index in range(lines.size()):
+                var baseline := first_baseline + float(line_index) * 16.0
+                draw_string(font, Vector2(6.0, baseline), lines[line_index], HORIZONTAL_ALIGNMENT_CENTER, size.x - 12.0, NAME_SIZE, name_tint)
+        # The pips ride just under the name block, whatever its line count.
+        _draw_tier_pips(first_baseline + float(lines.size() - 1) * 16.0 + 12.0)
+        _draw_owned_badge()
         _draw_worn_badge()
         _draw_price(font)
+
+## The ware's name wrapped to at most two lines, greedy on word width, so
+## the longest names the cart sells ("Counter-melody of the Lodestar") are
+## readable where the single-line draw once clipped them mid-word.
+func _name_lines(font: Font, limit: float) -> PackedStringArray:
+        var words := item_name().split(" ", false)
+        var lines := PackedStringArray()
+        var current := ""
+        for word in words:
+                var candidate := word if current.is_empty() else current + " " + word
+                if current.is_empty() or font.get_string_size(candidate, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_SIZE).x <= limit:
+                        current = candidate
+                else:
+                        lines.append(current)
+                        current = word
+        if not current.is_empty():
+                lines.append(current)
+        if lines.size() <= 2:
+                return lines
+        # More than two lines' worth of name: keep the head, close the second
+        # line with an ellipsis instead of losing the tail mid-glyph.
+        var second := " ".join(lines.slice(1))
+        while not second.is_empty() and font.get_string_size(second + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_SIZE).x > limit:
+                second = second.substr(0, second.length() - 1).rstrip(" ")
+        return PackedStringArray([lines[0], second + "…"])
 
 ## Which copy of a ware this card offers, as dots -- a charm can be owned
 ## twice and the second copy is the same ware made stronger. Two pips under
 ## the name read at a glance where a "(tier 2)" sentence would have been a
 ## third line of words on every card.
-func _draw_tier_pips() -> void:
+func _draw_tier_pips(at_y: float) -> void:
         var tier := int(item.get("tier", 1))
         if tier <= 1:
                 return
         var tint := Color("#ffe08a") if affordable else Color(1.0, 1.0, 1.0, 0.40)
         var span := float(tier) * 10.0 - 4.0
         for pip in range(tier):
-                var at := Vector2((size.x - span) * 0.5 + float(pip) * 10.0 + 2.0, ICON_SIDE + 37.0)
+                var at := Vector2((size.x - span) * 0.5 + float(pip) * 10.0 + 2.0, at_y)
                 draw_circle(at, 2.2, tint)
+
+## Already yours but resting: a small moss roundel with a heart, pinned to
+## the card's top-left corner. The gold rim says "wearing"; this one says
+## "pocketed" -- without it, an owned ware's card and a buyable ware's card
+## painted the same face, and only a hover could tell them apart.
+func _draw_owned_badge() -> void:
+        if not owned or selected or free_item:
+                return
+        var center := Vector2(16.0, 16.0)
+        draw_circle(center, 9.5, Color("#8abf75"))
+        var glyph := GardenGlyphs.get_glyph(GardenGlyphs.HEART)
+        draw_texture_rect(glyph, Rect2(center - Vector2(5.5, 5.5), Vector2(11, 11)), false, Color("#22371f"))
 
 ## Wearing this right now: a small gold heart pinned to the card's corner.
 ## The rim and the halo already say it, but a shelf where several cards wear
@@ -131,6 +184,11 @@ func _draw_worn_badge() -> void:
 func _draw_price(font: Font) -> void:
         var baseline := size.y - 10.0
         var tint := Color("#ffd257") if affordable else Color(1.0, 1.0, 1.0, 0.40)
+        if owned and not free_item:
+                # Already yours: the digits are a memory, not a bill. Kept but
+                # dimmed, so the shelf still reads as the same ware at the same
+                # tier -- and the moss badge says the owning part in ink.
+                tint = Color(1.0, 0.83, 0.42, 0.55)
         var glyph := GardenGlyphs.get_glyph(GardenGlyphs.HEART if free_item else GardenGlyphs.SPARKLE)
         var glyph_side := 15.0
         var digits := "" if free_item else str(price)

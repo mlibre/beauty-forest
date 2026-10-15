@@ -16,6 +16,13 @@ extends "res://tests/support/test_case.gd"
 ##     parked the grove map in the bottom-right corner *under* the SING/DASH/
 ##     CART/BOOK/COZY cluster and the log under the joystick, so on a
 ##     touchscreen both readouts were painted over by opaque buttons.
+##  5. Autowrapped labels inside shrink-wrap rows (the draft's key-row hint,
+##     the menu's promise plates) collapse to ~1px wide -- one letter per
+##     line -- and stretch their row siblings to match (key caps once stood
+##     388px tall beside the crushed hint). And _ware_card read the ware
+##     card's minimum before the card's _ready had run, so it inherited
+##     (0, 0): every ware button bottomed out at its 18px stylebox floor and
+##     each card overflowed its button straight over the row beneath it.
 
 # Deps are pinned by path on purpose: a fresh clone ships no
 # editor-built global-class cache, and bare names would not parse
@@ -187,6 +194,17 @@ func _run() -> void:
                 var content: Control = _ui._overlay_content
                 ok(content.size.x <= card.size.x, "menu copy is %fpx wide inside a %fpx card %s" % [content.size.x, card.size.x, tag])
 
+                # The menu's three promise plates: an autowrapped caption inside a
+                # shrink-wrap row once squeezed each plate into a ~50px-wide,
+                # 100px-tall pill with the caption broken mid-word down its length
+                # ("Sin gs by itse lf"). The plates wear a width floor now, and it
+                # has to hold at every window this suite walks.
+                var promises: Control = _ui._overlay_content.get_node("Promises")
+                for plate in promises.get_children():
+                        var plate_rect: Rect2 = Rect2(plate.position, plate.size)
+                        ok(plate_rect.size.x >= 100.0 and plate_rect.size.y <= 150.0,
+                                "a promise plate collapsed to %s (a tall thin word-pill) %s" % [plate_rect.size, tag])
+
                 # Rebuilding a panel must re-fit the freshly built children, not the
                 # stale ones from the previous build.
                 _ui.show_pause(game.meta)
@@ -194,6 +212,30 @@ func _run() -> void:
                 var pause_rect := Rect2(_ui._overlay_card.position, _ui._overlay_card.size)
                 ok(_root_rect.encloses(pause_rect), "the pause card %s is outside the window: %s" % [tag, pause_rect])
                 ok(_ui._overlay_content.size.x <= _ui._overlay_card.size.x, "pause copy is wider than its card %s" % tag)
+
+                # The level-up draft's key row, the screen where the crash of the
+                # hint was most visible: an autowrapped label in a shrink-wrap row
+                # reported a ~1px minimum width, so the row squeezed the hint to
+                # one letter per line (388px tall) and stretched every key cap to
+                # match. The hint is a fixed one-liner and the caps shrink to
+                # their own size now, at every window.
+                _ui.show_draft([
+                        {"key": "warmth", "glyph": "heart", "word": "More Warmth", "sub": "+20 lantern warmth, fills now"},
+                        {"key": "song", "glyph": "chime", "word": "Stronger Song", "sub": "+4 song power"},
+                        {"key": "both", "glyph": "soul", "word": "A Bit of Both", "sub": "+10 warmth and +2 song"},
+                ], 2, "")
+                await frames(4)
+                for cap in _ui._overlay_content.find_children("KeyCap*", "PanelContainer", true, false):
+                        var cap_rect: Rect2 = Rect2(cap.position, cap.size)
+                        ok(cap_rect.size.y <= 44.0, "a draft key cap grew to %s tall (the crushed-hint stretch) %s" % [cap_rect.size, tag])
+                for label in _ui._overlay_content.find_children("*", "Label", true, false):
+                        if not String((label as Label).text).begins_with("tap a card"):
+                                continue
+                        var hint_rect: Rect2 = Rect2(label.position, label.size)
+                        ok(hint_rect.size.y <= 40.0 and hint_rect.size.x >= 80.0,
+                                "the draft hint collapsed to %s (one letter per line) %s" % [hint_rect.size, tag])
+                _ui.close_panels()
+                await frames(1)
 
         # The touch controls sit in the same bottom corners as the map and the log,
         # so they get their own pass at every size: without a touchscreen the
@@ -317,6 +359,12 @@ func _run() -> void:
         ok(cold_button != null, "the shop did not show the Warm Tea item")
         if cold_button != null:
                 ok(cold_button.disabled, "Warm Tea was buyable at full warmth (a silent no-op purchase)")
+                # The shelf floor: _ware_card once read the ware card's minimum
+                # before the card's _ready had run and inherited (0, 0), so every
+                # ware button bottomed out at its 18px stylebox and each card
+                # overflowed its button straight over the row beneath it.
+                ok(cold_button.size.y >= 120.0,
+                        "the Warm Tea button is only %fpx tall -- the ware shelf collapsed again" % cold_button.size.y)
 
         var hungry_state := full_state.duplicate()
         hungry_state["hp"] = 40.0

@@ -17,15 +17,25 @@ func show_menu(meta: Dictionary) -> void:
     # so the promise reads with no hover at all, and the full sentence stays
     # one hover away. Bare glyphs floated here once; on plates they read as
     # three things the forest promises, not three decorations.
-    var promises := HBoxContainer.new()
-    promises.alignment = BoxContainer.ALIGNMENT_CENTER
-    promises.add_theme_constant_override("separation", 14)
+    # Flow (not HBox), and a width floor on every plate: an autowrapped caption
+    # inside a shrink-wrap row reports a ~1px minimum width, so the row once
+    # squeezed each plate into a ~50px-wide, 100px-tall pill with the caption
+    # broken mid-word down its length ("Sin gs by itse lf"). The floor makes
+    # each plate a readable two-line card; the flow wraps the row on narrow
+    # windows the way the doors below wrap.
+    var promises := HFlowContainer.new()
+    promises.name = "Promises"
+    promises.alignment = FlowContainer.ALIGNMENT_CENTER
+    promises.last_wrap_alignment = FlowContainer.LAST_WRAP_ALIGNMENT_CENTER
+    promises.add_theme_constant_override("hseparation", 14)
+    promises.add_theme_constant_override("vseparation", 10)
     for promise: Array in [
         ["lantern", "Sings by itself", "The lantern sings all by itself — there is no attack button."],
         ["boots", "Just wander", "You just wander. No hurry, no losing."],
         ["heart", "Gifts, never fights", "Gifts, never fights. Leaving is always okay."],
     ]:
         var vow := _plate(Color("#ffe29a"))
+        vow.custom_minimum_size = Vector2(128, 0)
         var vow_box := VBoxContainer.new()
         vow_box.alignment = BoxContainer.ALIGNMENT_CENTER
         vow_box.add_theme_constant_override("separation", 3)
@@ -143,9 +153,16 @@ func show_draft(offers: Array, level: int, fact: String = "") -> void:
     if not fact.is_empty():
         _overlay_content.add_child(_centered_label("Mote learned: “%s”" % fact, 15, Color("#cbdcb7")))
     _overlay_content.add_child(_spacer(8))
-    var cards := HBoxContainer.new()
-    cards.alignment = BoxContainer.ALIGNMENT_CENTER
-    cards.add_theme_constant_override("separation", 16)
+    # Flow, not HBox: three ~200px gift columns need ~640px, and a 480px
+    # window's card has ~370 -- the columns wrap onto a second centred row
+    # instead of marching off the card's right edge. Each column keeps its
+    # card and its effect line together through the wrap.
+    var cards := HFlowContainer.new()
+    cards.name = "GiftRow"
+    cards.alignment = FlowContainer.ALIGNMENT_CENTER
+    cards.last_wrap_alignment = FlowContainer.LAST_WRAP_ALIGNMENT_CENTER
+    cards.add_theme_constant_override("hseparation", 16)
+    cards.add_theme_constant_override("vseparation", 10)
     for index in range(offers.size()):
         var offer: Dictionary = offers[index]
         var column := VBoxContainer.new()
@@ -174,11 +191,19 @@ func show_draft(offers: Array, level: int, fact: String = "") -> void:
                 .set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
     _overlay_content.add_child(cards)
     # The press-a-number hint as three key caps: read the way the keys sit on
-    # the keyboard, left to right, instead of a sentence the eye skips.
+    # the keyboard, left to right, instead of a sentence the eye skips. The
+    # hint is a plain label, NOT an autowrapped one: an autowrapped label in a
+    # shrink-wrap row reports a ~1px minimum width, so the row once squeezed
+    # it to one letter per line and stretched every key cap 388px tall to
+    # match. A short fixed string never needs the wrap.
     var key_row := HBoxContainer.new()
+    key_row.name = "DraftKeys"
     key_row.alignment = BoxContainer.ALIGNMENT_CENTER
     key_row.add_theme_constant_override("separation", 6)
-    key_row.add_child(_centered_label("tap a card  ·  or press", 14, Color("#cbdcb7")))
+    var tap_hint := _label("tap a card  ·  or press", 14, Color("#cbdcb7"))
+    tap_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    tap_hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    key_row.add_child(tap_hint)
     for number in ["1", "2", "3"]:
         key_row.add_child(_key_cap(number))
     var key_center := CenterContainer.new()
@@ -443,6 +468,10 @@ func show_journal(meta: Dictionary, facts_learned: Array, stickers: Array) -> vo
         shelf.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         for sticker: String in stickers:
             var sticker_plate := _plate(Color("#ffe29a"))
+            # The same width floor the menu's promise plates wear: an autowrapped
+            # sticker name inside a shrink-wrapped plate once collapsed each cell
+            # to its longest word. The floor keeps every sticker a little card.
+            sticker_plate.custom_minimum_size = Vector2(128, 0)
             var sticker_box := VBoxContainer.new()
             sticker_box.alignment = BoxContainer.ALIGNMENT_CENTER
             sticker_box.add_theme_constant_override("separation", 4)

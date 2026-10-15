@@ -79,11 +79,12 @@ func _shelf(list: VBoxContainer, title: String, glyph_key: String, count: String
     var grid := GridContainer.new()
     # Picture-cards to a row, fitted to the window: a GridContainer never
     # wraps, so a fixed column count either wasted the shelf on wide windows
-    # or clipped its last column off narrow ones -- five 138px cards plus
-    # separations need 730px, and a 480px window's shelf has ~370. The
+    # or clipped its last column off narrow ones -- five 150px cards plus
+    # separations need 820px, and a 480px window's shelf has ~370. The
     # viewport decides, between two (the smallest shelf that still reads as
-    # a shelf) and five.
-    var card_pitch := 148.0
+    # a shelf) and five. The pitch follows the card's own width so the
+    # column count and the card size can never drift apart.
+    var card_pitch := CozyCard.CARD_W + 14.0
     var window := get_viewport().get_visible_rect().size.x if get_viewport() != null else 1280.0
     var shelf_width := minf(900.0, window * 0.94) - MODAL_MARGIN_X - 8.0
     grid.columns = clampi(int(shelf_width / card_pitch), 2, 5)
@@ -127,8 +128,13 @@ func _ware_card(grid: GridContainer, item: Dictionary, sparkles: int, worn: bool
     button.add_child(card)
     # A Button's minimum is max(custom_minimum_size, its own text), and this row
     # paints no text at all, so without a floor the shelf would collapse into a
-    # single column. The card knows its own size; the button inherits it.
-    button.custom_minimum_size = card.custom_minimum_size
+    # single column. The floor comes from the card's CONSTANTS, not from
+    # card.custom_minimum_size: the card is still outside the tree here, so its
+    # _ready -- which is where the card sets its own minimum -- has not run, and
+    # the inherited value used to arrive as (0, 0). Every shelf row then
+    # collapsed to the button's bare 18px stylebox floor and each card overflowed
+    # its button straight down over the row beneath it.
+    button.custom_minimum_size = Vector2(CozyCard.CARD_W, CozyCard.CARD_H)
     button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     button.focus_mode = Control.FOCUS_NONE
     button.disabled = not affordable
