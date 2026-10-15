@@ -1,7 +1,7 @@
 class_name GameUIChrome
 extends "res://scripts/game_ui_intro.gd"
-## Builds the interface once at boot: HUD cards, minimap, modal cards, story
-## card, beat ring and the touch controls.
+## Builds the interface once at boot: HUD cards, minimap, modal cards, beat
+## ring and the touch controls.
 
 func _build_interface() -> void:
     _root = Control.new()
@@ -170,84 +170,6 @@ func _build_interface() -> void:
     _shop_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _shop_content.add_theme_constant_override("separation", 10)
     _shop_scroll.add_child(_shop_content)
-
-    _story_card = _card(Color(0.13, 0.24, 0.16, 0.90), Color("#ffe29a"), 20, 2)
-    _story_card.set_anchors_preset(Control.PRESET_CENTER_TOP)
-    _story_card.position = Vector2(-300, 150)
-    _story_card.size = Vector2(560, 0)
-    _story_card.custom_minimum_size = Vector2(560, 0)
-    _story_card.visible = false
-    _story_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _root.add_child(_story_card)
-    # The page-turn light: a soft band that crosses the card once as it
-    # arrives, the way a turned page catches the lamp. It rides above the
-    # card as a sibling (a container would fight the motion) and settles
-    # hidden -- one-shot, never a loop.
-    _story_sweep = TextureRect.new()
-    var sweep_gradient := Gradient.new()
-    sweep_gradient.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
-    sweep_gradient.colors = PackedColorArray([Color(1, 1, 1, 0.0), Color(1.0, 0.97, 0.86, 0.13), Color(1, 1, 1, 0.0)])
-    var sweep_texture := GradientTexture2D.new()
-    sweep_texture.gradient = sweep_gradient
-    sweep_texture.fill_from = Vector2(0, 0)
-    sweep_texture.fill_to = Vector2(1, 0)
-    _story_sweep.texture = sweep_texture
-    _story_sweep.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    _story_sweep.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _story_sweep.visible = false
-    _root.add_child(_story_sweep)
-    var story_margin := _margin(24, 18, 24, 18)
-    _story_card.add_child(story_margin)
-    var story_box := VBoxContainer.new()
-    story_margin.add_child(story_box)
-    # The vignette's picture: the region's own mark, shown when the story
-    # carries one. A floor's opening line lands with its picture, the same
-    # way the intro's pages do. The glyph sits on a small stage so the
-    # ink-ripple can ring behind it without fighting the card's layout.
-    var glyph_stage := Control.new()
-    glyph_stage.custom_minimum_size = Vector2(30, 30)
-    glyph_stage.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-    glyph_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    story_box.add_child(glyph_stage)
-    _story_ripple = Panel.new()
-    _story_ripple.set_anchors_preset(Control.PRESET_FULL_RECT)
-    _story_ripple.offset_left = -10
-    _story_ripple.offset_top = -10
-    _story_ripple.offset_right = 10
-    _story_ripple.offset_bottom = 10
-    _story_ripple.pivot_offset = Vector2(25, 25)
-    _story_ripple.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _story_ripple.visible = false
-    var story_ripple_style := StyleBoxFlat.new()
-    story_ripple_style.bg_color = Color(1.0, 0.89, 0.55, 0.10)
-    story_ripple_style.border_color = Color("#ffe29a")
-    story_ripple_style.set_border_width_all(2)
-    story_ripple_style.set_corner_radius_all(25)
-    _story_ripple.add_theme_stylebox_override("panel", story_ripple_style)
-    glyph_stage.add_child(_story_ripple)
-    _story_glyph = TextureRect.new()
-    _story_glyph.custom_minimum_size = Vector2(30, 30)
-    _story_glyph.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    _story_glyph.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    _story_glyph.set_anchors_preset(Control.PRESET_FULL_RECT)
-    _story_glyph.visible = false
-    _story_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    glyph_stage.add_child(_story_glyph)
-    _story_title = _label("", 22, Color("#ffe69d"))
-    _story_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    story_box.add_child(_story_title)
-    _story_body = _label("", 15, Color("#fff0c8"))
-    _story_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    _story_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    # The body is drawn behind an ink wash: the label lays out its full text
-    # every frame (so the card's height never moves) and the shader decides
-    # which rows draw. show_story pours the wash; the reveal is draw-space,
-    # not layout-space, so the typewriter bug can never return.
-    var story_ink := ShaderMaterial.new()
-    story_ink.shader = load("res://shaders/ink_reveal.gdshader")
-    story_ink.set_shader_parameter("reveal", 1.0)
-    _story_body.material = story_ink
-    story_box.add_child(_story_body)
 
     _beat_ring = Panel.new()
     _beat_ring.custom_minimum_size = Vector2(138, 138)

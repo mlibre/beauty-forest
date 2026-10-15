@@ -194,13 +194,11 @@ func _wearing(equipped: Array, key: String, tier: int) -> bool:
 func _present_panel() -> void:
     # Every panel over the walk opens the same way: the transient effects go,
     # the card rises, it lays itself out empty. One home, so a panel can never
-    # forget a step and stack a fresh shelf over a stale story. The context
+    # forget a step and stack a fresh shelf over a stale one. The context
     # pill is one of those transients: it draws above the scrim, so a panel
     # that left it up would float "E · Peddle's cart" over the shop itself
     # until the director's next slow tick noticed.
     _dismiss_beat_ring()
-    _cancel_story()
-    _cancel_prologue()
     _reset_touch_joystick()
     if _context_hint != null and is_instance_valid(_context_hint):
         _context_hint.visible = false
@@ -489,7 +487,6 @@ func close_panels() -> void:
     _menu_scrim.modulate.a = 1.0
     _shop_scrim.modulate.a = 1.0
     _overlay_scrim.modulate.a = 1.0
-    _cancel_story()
     _reset_touch_joystick()
     # A panel opening owns the whole screen; a "press E" hint about a world
     # the player cannot currently touch is a stale promise left floating.

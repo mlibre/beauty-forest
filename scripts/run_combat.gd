@@ -72,9 +72,10 @@ func _spawn_feeling(feeling: Dictionary, story: int) -> void:
     var cell := DungeonGenerator.random_floor_cell(dungeon, _rng, Vector2(spawn_room["cx"], spawn_room["cy"]), 7.0)
     var wisp := _new_wisp(cell, base_types[base_index], floor_number, true, feeling)
     wisp.set_meta("attack_cooldown", 0.8)
-    # A Big Feeling's entrance is a story beat, not a log line: the card names
-    # it gently the moment it appears, the same way floor vignettes do.
-    ui.show_story("A Big Feeling", "Not a monster — just one feeling wearing a very big coat.", 3.6)
+    # A Big Feeling's entrance names itself the moment it appears -- a cue,
+    # not a card: a few bare words over the walk, while the creature itself
+    # is the picture (it wobbles, sniffly and huge, right there on the floor).
+    ui.add_cue("A Big Feeling wobbles close", 2.8)
 
 func _refresh_wisp_shields() -> void:
     for wisp: Wisp in wisps:
@@ -409,17 +410,14 @@ func _damage_player(amount: int, source: String) -> void:
     ui.flash_warmth()
     # The lantern dims and reddens on its own, so being hurt is something you
     # SEE without any words -- that is the rule the whole HUD is built on. But
-    # "how much did that cost me" is a number no lantern can say, and it went to
-    # the hidden log like every other line. The cue carries the figure; it does
-    # not carry the sentence that used to dress it up.
+    # "how much did that cost me" is a number no lantern can say, and the
+    # first bump earns one quiet lesson about where warmth comes back from,
+    # delivered as a cue -- bare words, once per fresh walk; never again.
     ui.add_cue("−%d warmth" % taken)
     ui.add_log("%s nicks you for %d. The lantern hums protectively." % [source, taken])
-    # The first bump gets one quiet lesson, because the lantern dims in the
-    # world but the word "warmth" is only ever spoken on screens. Once per
-    # fresh walk; never again.
     if not _lantern_taught:
         _lantern_taught = true
-        ui.show_story("Your lantern dims", "Warmth is its light — hearts and stairwells refill it.", 4.2)
+        ui.add_cue("Hearts and stairwells refill it", 3.6)
     _refresh_ui()
     if hp <= 0.0:
         _nap()

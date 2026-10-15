@@ -11,14 +11,14 @@ extends RefCounted
 ## started looping.
 ##
 ## So every chapter of thirteen floors past the campaign composes its OWN
-## region, its own two Big Feelings, its own story vignettes and its own finale
+## region, its own two Big Feelings, its own greeting and its own finale
 ## dragon, from the warm pools below, seeded by the chapter number. The same
 ## chapter is always the same forest (saves, waymarks and word of mouth stay
 ## true), and the name walk visits every adjective x noun pairing exactly once
 ## before it cycles -- no two of the first 196 chapters ever read alike.
 
 ## The campaign's floor count lives here, not in BeautyContent: the content
-## tables ask this module endless questions (region, feeling, story), so every
+## tables ask this module endless questions (region, feeling), so every
 ## dependency between the two must point one way -- content -> endless. A const
 ## borrowed back the other way would be a cycle no loader can resolve.
 const CAMPAIGN_LENGTH := 30
@@ -37,12 +37,6 @@ const REGION_NOUNS := [
     "Hollow", "Terrace", "Grove", "Fen", "Meadows", "Warrens", "Vale",
     "Rootways", "Boughs", "Clearing", "Steps", "Loft", "Underglade", "Thickets",
 ]
-## The marks a composed region may wear on its story page, drawn from the warm
-## set the campaign's own regions wear. The dragon stays out of the pool: that
-## mark says "a sleeper is promised here", and in a chapter only its fifth and
-## thirteenth beats may say that.
-const REGION_GLYPHS := ["lantern", "sparkle", "mote", "heart"]
-
 const REGION_ENTRIES := [
     "%s smells of warm bread and old sunlight. Mote says maps down here are more of a hopeful art.",
     "The %s hum in a major key. Everything here is two shades cozier than the floor above.",
@@ -81,25 +75,6 @@ const FEELING_FAREWELLS := [
     "I will tell the moss about you. The moss tells everyone, you know.",
     "Ahh. Warm again. Tell the stairs I said thank you.",
     "I was never lost, exactly. I was just very far from home. Like now, but better.",
-]
-
-## Story beats composed per chapter, one per story position. `%s` is the region
-## name; each keeps the run's gentle plot — cousins below, lullaby practice,
-## the family choir — so the endless walk stays one long, warm fairy tale.
-const CHAPTER_BEATS := [
-    ["Below the %s", "Mote peers over the edge: ‘The light down there is different. Warmer. That is either a cousin or a very confident campfire.’"],
-    ["Warm Drafts Again", "Warm air rises through the %s, smelling faintly of cinnamon. ‘Dragons season their naps,’ Mote says, with deep respect."],
-    ["A Bigger Snore", "The snore below rattles the pollen. It is in harmony with the floor above. ‘A choir,’ Mote whispers. ‘A warm, enormous choir.’"],
-    ["Lullaby Practice, Again", "Mote rehearses in the %s. ‘Every family has its own favorite verse. We will learn theirs. Kindly.’"],
-    ["Someone Sleeps Here", "Five Dream Chimes glimmer among the roots of the %s. ‘Cousin wants tucking in,’ Mote translates. ‘Gently. E on the gold.’"],
-    ["A Letter in Pollen", "Golden pollen arranges itself into a thank-you note. It is signed with a paw print the size of a hammock."],
-    ["The Moss Remembers", "The moss of the %s is patterned like a lullaby sheet. ‘The forest writes things down,’ Mote says. ‘In moss, mostly.’"],
-    ["A Very Big Sigh", "An enormous, contented sigh drifts up from below and rustles every leaf at once. Mote holds onto your sleeve, delighted."],
-    ["Spore Post", "A mushroom cap bounces a heart-shaped spore toward you, then a second, apologetically. ‘Gifts from deeper down,’ Mote says."],
-    ["The Warmth Grows", "The lantern glows easier here, like walking downhill in good company. Mote hums two bars and approves of the acoustics."],
-    ["Family Rumors", "‘Grandma dragon down there,’ Mote confides, ‘once slept through a decade and woke up better rested, not grumpy. Aspire.’"],
-    ["Nearly There", "Warm light pools below the %s like the inside of a lantern. Mote straightens your scarf without being asked."],
-    ["The Next Roost", "This roost is smaller and older and snoozier. The whole family of it dreams here — time for another biggest, softest lullaby."],
 ]
 
 const DEEP_WISP_ROTATIONS := [
@@ -142,16 +117,6 @@ static func region(chapter: int) -> Dictionary:
         var rotated := base.lerp(Color("#fff2c4"), shift * 0.4)
         colors[field] = "#" + rotated.to_html(false)
     var first_floor := CAMPAIGN_LENGTH + (chapter - 1) * CHAPTER_LENGTH + 1
-    ## The chapter's mark rides its own seeded draw, not the palette's rng:
-    ## adding a hand to an existing draw would reshuffle every chapter's
-    ## palette and entry line, and the compose promise ("the same chapter is
-    ## always the same forest") is what saves and word of mouth stand on. A
-    ## composed dict without this field at all is the miss that shipped: the
-    ## story page reads region.get("glyph", "mote"), so every chapter past the
-    ## Roost wore the same generic Mote picture the campaign reserves for one
-    ## region of eight.
-    var glyph_rng := RandomNumberGenerator.new()
-    glyph_rng.seed = hash("endless-glyph-%d" % maxi(1, chapter))
     var composed := {
         "key": "endless-%d" % chapter,
         "ambient": AMBIENT_MOODS[chapter % AMBIENT_MOODS.size()],
@@ -159,7 +124,6 @@ static func region(chapter: int) -> Dictionary:
         "min": first_floor,
         "max": first_floor + CHAPTER_LENGTH - 1,
         "entry": String(REGION_ENTRIES[rng.randi() % REGION_ENTRIES.size()]) % name,
-        "glyph": REGION_GLYPHS[glyph_rng.randi() % REGION_GLYPHS.size()],
     }
     composed.merge(colors)
     return composed
@@ -186,41 +150,6 @@ static func feeling_for_floor(floor_number: int) -> Dictionary:
         "name": FEELING_NAMES[rng.randi() % FEELING_NAMES.size()],
         "farewell": FEELING_FAREWELLS[rng.randi() % FEELING_FAREWELLS.size()],
     }
-
-## The chapter's story vignette for a floor: [title, body]. The campaign keeps
-## its hand-written thirteen; endless chapters compose from the beat pool, so
-## every floor still opens a new page and no page is a repeat of a base one.
-static func story_for_floor(floor_number: int) -> Array:
-    if not is_endless(floor_number):
-        return []
-    var story := story_in_chapter(floor_number)
-    var beat: Array = CHAPTER_BEATS[story - 1]
-    var region_name := String(region(chapter_for_floor(floor_number))["name"])
-    var title := String(beat[0]) % region_name if "%s" in String(beat[0]) else String(beat[0])
-    var body := String(beat[1]) % region_name if "%s" in String(beat[1]) else String(beat[1])
-    # A per-chapter greeting rides along so chapter openers feel addressed.
-    if story == 1:
-        body += " Welcome to the %s." % region_name
-    return [title, body]
-
-## The endless floors keep the film going too: two composed shots per floor,
-## cut from the chapter's own mood, cycling so a long walk never watches the
-## same frame twice in a row.
-const PROLOGUE_BEATS := [
-    ["The %s keeps its oldest light for the path ahead, and the path walks with you like it has been waiting all day.", "Somewhere below, the harmony shifts one note warmer. The floor noticed you coming."],
-    ["Every step down lands on a chord the %s has been holding since the last visitor left.", "A drift of gold passes overhead, pointed the way you are going. The forest grown polite."],
-    ["The %s exhales, slow as tide, and the moss lights up in a wave that follows your feet.", "Far off, a chime tries a note and likes it. The dark keeps the rest for you."],
-]
-
-static func prologue_for_floor(floor_number: int) -> Array:
-    if not is_endless(floor_number):
-        return []
-    var story := story_in_chapter(floor_number)
-    var region_name := String(region(chapter_for_floor(floor_number))["name"])
-    var shots: Array = []
-    for beat: String in PROLOGUE_BEATS[(story - 1) % PROLOGUE_BEATS.size()]:
-        shots.append(beat % region_name if "%s" in beat else beat)
-    return shots
 
 ## Deeper floors rotate new wisp types into the pool: the depths are supposed
 ## to keep meeting you with things you have not soothed yet.

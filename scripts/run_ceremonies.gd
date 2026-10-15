@@ -40,7 +40,9 @@ func _begin_dragon_lullaby() -> void:
     _lullaby_active = true
     _lullaby_kind = "dragon"
     _lullaby_timer = 1.2
-    ui.show_story("The Lullaby", "Mote hums the tune. Press E when the ring glows GOLD. Missed notes merely let the forest wait.", 4.5)
+    # The one instruction the song runs on, delivered as a cue -- bare words
+    # over the walk, readable at a glance while the ring itself is the picture.
+    ui.add_cue("Press E when the ring glows GOLD", 4.2)
     ui.add_log("Mote: “Follow me… E on the gold!”")
     audio.play_tone(523.25, 0.4, 0.07, 1)
     # Snoozle's song is a staged moment: the letterbox frames it like a film
@@ -58,7 +60,9 @@ func _begin_feeling_lullaby(target: Wisp) -> void:
     _feeling_hits = 0
     _feeling_rest = 0
     _lullaby_timer = 1.2
-    ui.show_story("A Big Feeling", "%s wobbles close, sniffly and huge. Hum with it — E on the gold, rest when the ring dims." % target.feeling_name, 4.5)
+    # Same cue voice as the dragon lullaby: the feeling is the picture, the
+    # gold ring is the beat, and the words only say when to act.
+    ui.add_cue("E on the gold, rest when it dims", 4.2)
     ui.add_log("Mote: “Gentle… two little rounds, with breaths between. Missed notes just stretch the song.”")
     ui.set_cinematic(true)
 
@@ -158,7 +162,7 @@ func _win_dragon() -> void:
     dragon_exists = false
     if dragon_finale:
         player.set_control_enabled(false)
-        ui.show_story("SNOOZLE PURRS", "The mountain-sized dragon opens one eye, looks at you like you’re a particularly good dream, purrs until the dust rearranges itself, and hands you a warm scale.", 3.2)
+        ui.show_toast("Snoozle opens one eye, purrs until the dust rearranges itself, and hands you a warm scale.", 3.4)
         ending_pending = true
         ending_countdown = 3.4
     else:
@@ -177,7 +181,7 @@ func _win_dragon() -> void:
         var epilogue := "Snoozle snoozes on, warm and enormous. But Mote tugs your sleeve: there are cousins below, and the forest grows deeper than any map."
         if BeautyContent.story_plan(floor_number) != 5:
             epilogue = "The cousin curls tighter, purring like a small landslide. Mote tugs your sleeve: the family grows bigger below, and the forest grows deeper than any map."
-        ui.show_story("DEEPER STILL", epilogue, 4.2)
+        ui.show_toast(epilogue, 4.2)
         ui.add_log("Mote: “Snoozle sleeps soundly. The stair is glowing now.”")
 
 func _reset_lullaby() -> void:

@@ -32,8 +32,6 @@ func _run() -> void:
         return
     if not await _check_the_deep_floor_plan_is_chapter_relative():
         return
-    if not await _check_endless_story_pages(game):
-        return
     if not await _check_charm_tiers_deepen(game):
         return
     if not await _check_the_draft_offers_real_choices(game):
@@ -83,23 +81,6 @@ func _check_endless_regions_compose(game: Node) -> bool:
             return false
     if not ok(third["ambient"] in BeautyEndless.AMBIENT_MOODS,
             "chapter 3 borrows an ambient mood the score does not know: %s" % str(third.get("ambient"))):
-        return false
-    ## Every composed region must carry a mark the glyph table can draw. The
-    ## field shipped missing, and the story page reads region.get("glyph",
-    ## "mote"), so all one hundred ninety-six chapters wore the same generic
-    ## Mote picture the campaign reserves for one region of eight. The draw
-    ## must also be its own seed: palettes and entry lines may not move
-    ## because a mark joined the compose.
-    for chapter in range(1, 9):
-        var marked: Dictionary = BeautyEndless.region(chapter)
-        if not ok(GardenGlyphs.has_glyph(String(marked.get("glyph", ""))),
-                "chapter %d's region wears a mark the glyph table cannot draw: %s" % [chapter, str(marked.get("glyph"))]):
-            return false
-    if not ok(String(third["glyph"]) == String(BeautyEndless.region(3)["glyph"]),
-            "chapter 3's mark redrew between calls; the compose must be deterministic"):
-        return false
-    if not ok(String(third["glyph"]) in BeautyEndless.REGION_GLYPHS and not BeautyEndless.REGION_GLYPHS.has("dragon"),
-            "the composed mark pool drifted: %s" % str(BeautyEndless.REGION_GLYPHS)):
         return false
     for chapter in range(1, 9):
         var composed: Dictionary = BeautyEndless.region(chapter)
@@ -200,34 +181,6 @@ func _check_the_deep_floor_plan_is_chapter_relative() -> bool:
         return false
     if not ok(not BeautyContent.is_dragon_floor(31) and not BeautyContent.is_dragon_floor(first_chapter + BeautyEndless.CHAPTER_LENGTH),
             "an endless chapter opener grew a dragon from the campaign wrap"):
-        return false
-    return true
-
-func _check_endless_story_pages(game: Node) -> bool:
-    ## Below the Roost every floor still opens a page: a title and a body, never
-    ## a repeat of a campaign page, and never a repeat of another chapter's.
-    for floor_number in range(1, BeautyContent.CAMPAIGN_LENGTH + 1):
-        var page: Array = BeautyContent.story_for_floor(floor_number)
-        if not ok(page.size() == 2 and not String(page[0]).is_empty(),
-                "campaign floor %d lost its hand-written story page" % floor_number):
-            return false
-    var first_endless: Array = BeautyContent.story_for_floor(31)
-    if not ok(first_endless.size() == 2 and not String(first_endless[0]).is_empty() and not String(first_endless[1]).is_empty(),
-            "endless floor 31 opened a blank page"):
-        return false
-    if not ok(first_endless == BeautyContent.story_for_floor(31), "endless floor 31's page changed between reads"):
-        return false
-    var chapter_two: Array = BeautyContent.story_for_floor(44)
-    if not ok(String(chapter_two[0]) != String(first_endless[0]),
-            "chapter 2 opened with chapter 1's page: %s" % String(chapter_two[0])):
-        return false
-    var pages := {}
-    for offset in range(0, 13):
-        var page: Array = BeautyContent.story_for_floor(31 + offset)
-        pages[String(page[0])] = true
-        if not ok(page.size() == 2, "endless floor %d's page is malformed" % (31 + offset)):
-            return false
-    if not ok(pages.size() >= 11, "one chapter told only %d distinct stories" % pages.size()):
         return false
     return true
 

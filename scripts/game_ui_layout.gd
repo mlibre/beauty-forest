@@ -131,37 +131,6 @@ func _fit_layout(settle: bool = true) -> void:
         var hint_rect := _effective_rect(_context_hint)
         var hint_y := viewport_size.y - hint_rect.size.y - 30.0 - safe.w
         _context_hint.position = Vector2((viewport_size.x - hint_rect.size.x) * 0.5, hint_y)
-    if is_instance_valid(_story_card):
-        # The story card is opaque and draws after the HUD, so it has to start
-        # below the toast band measured above it. Fixed offsets (96 on short
-        # windows, 150 on tall ones) ignored how far the toast text actually
-        # wrapped, and hid it behind the card at every size under 600px tall.
-        var story_top := 150.0
-        if is_instance_valid(_toast_label):
-            story_top = _toast_label.position.y + _toast_label.size.y + 4.0
-        # With the two corner word-cards gone the story card no longer has to
-        # squeeze into a gap between them, so it is just a centred band that
-        # starts below the toast and never hangs off an edge.
-        var story_width := clampf(viewport_size.x * 0.72, 280.0, 560.0)
-        var gap_left := 8.0
-        var gap_right := viewport_size.x - 8.0
-        var gap := gap_right - gap_left
-        story_width = minf(story_width, gap)
-        _story_card.custom_minimum_size = Vector2(story_width, 0)
-        _story_card.reset_size()
-        # A very short window cannot stack both bands; keeping the card on screen
-        # wins over keeping it clear of the toast. The 48px under the card is
-        # the telling's pride: the height measured here is pre-sort (the
-        # picture has not joined the column, the body has not re-wrapped at
-        # this width), and the settled card can stand ~44px taller -- so the
-        # clamp reserves that growth, or a 240px window fits a card that
-        # then hangs past its bottom edge.
-        story_top = minf(story_top, maxf(8.0, viewport_size.y - _story_card.size.y - 48.0))
-        # The card's own text sets a minimum width no custom_minimum_size can
-        # beat, so clamp the final x too and keep it in the window regardless.
-        var story_x := gap_left + (gap - _story_card.size.x) * 0.5
-        story_x = clampf(story_x, 8.0, maxf(8.0, viewport_size.x - _story_card.size.x - 8.0))
-        _story_card.position = Vector2(story_x, story_top)
     _fit_modal_card(_overlay_card)
     _fit_modal_card(_shop_card)
     # Modal copy is authored at comfortable desktop widths (up to 820px text,
@@ -394,8 +363,6 @@ func _show_menu_overlay() -> void:
 ## pause card's heavy one, or the menu's light one that keeps the forest bright.
 func _show_overlay(for_menu: bool = false) -> void:
     _dismiss_beat_ring()
-    _cancel_story()
-    _cancel_prologue()
     _reset_touch_joystick()
     # Same transient as _present_panel's: the pill draws above the scrim, so
     # the pause card (and every other overlay) must put it away itself rather

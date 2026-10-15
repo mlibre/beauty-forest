@@ -35,7 +35,6 @@ func _initialize() -> void:
 
 func _run() -> void:
     _test_sticker_tables_agree()
-    _test_the_floors_film_is_well_formed()
     _test_meta_recovery()
     _test_settings_recovery()
     _test_save_round_trips()
@@ -49,45 +48,6 @@ func _run() -> void:
     remove_path(BeautyData.settings_path() + ".tmp")
     # finish() tears the throwaway profile down (TestProfile.end()) itself.
     finish(null, "BEAUTY_FOREST_DATA_REGRESSION")
-
-## The film's script. The prologue walks its shots through a typed loop and
-## an await chain: one malformed entry (a non-String, an empty page, a floor
-## missing its shots) would kill the coroutine mid-scene and leave the
-## letterbox standing over the walk for the rest of the run -- silent in the
-## editor, fatal on the floor. The table is hand-written, so its shape is
-## pinned here the same way the sticker tables are.
-func _test_the_floors_film_is_well_formed() -> void:
-    var campaign := int(BeautyEndless.CAMPAIGN_LENGTH)
-    # Every campaign floor has exactly its page-continuing pair, and every
-    # line is a non-empty String the card can actually speak.
-    for floor_number in range(1, campaign + 1):
-        var shots: Array = BeautyContent.PROLOGUE_SHOTS.get(floor_number, [])
-        if not ok(shots.size() == 2, "campaign floor %d does not carry exactly two film shots" % floor_number):
-                return
-        for shot: String in shots:
-            if not ok(shot is String and not String(shot).is_empty(),
-                            "campaign floor %d carries a shot the card could not speak" % floor_number):
-                return
-    if not ok(BeautyContent.PROLOGUE_SHOTS.size() == campaign,
-                    "the film table holds %d frames for %d campaign floors" % [BeautyContent.PROLOGUE_SHOTS.size(), campaign]):
-        return
-    # The endless chapter's mood cuts: three beat-pairs, each speakable, and
-    # the composer returns well-formed shots on both sides of its cycle.
-    for beats: Array in BeautyEndless.PROLOGUE_BEATS:
-        if not ok(beats.size() == 2, "an endless mood beat-pair does not carry two shots"):
-                return
-        for beat: String in beats:
-            if not ok(beat is String and not String(beat).is_empty(),
-                            "an endless mood beat is not a speakable line"):
-                return
-    for endless_floor in [campaign + 1, campaign + 14, campaign + 27]:
-        var shots: Array = BeautyContent.prologue_for_floor(endless_floor)
-        if not ok(shots.size() == 2, "endless floor %d composed %d shots, not two" % [endless_floor, shots.size()]):
-                return
-        for shot: String in shots:
-            if not ok(shot is String and not String(shot).is_empty(),
-                            "endless floor %d composed a shot the card could not speak" % endless_floor):
-                return
 
 func _test_sticker_tables_agree() -> void:
     # "Century of Kindness" once went missing from the toast-line table, so

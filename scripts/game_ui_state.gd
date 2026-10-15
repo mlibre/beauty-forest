@@ -114,17 +114,6 @@ var _shop_content: VBoxContainer
 ## The purse digits in the cart's heading, kept so a rebuild can pulse them --
 ## the one spot on the shelf the eye should land on after a purchase lands.
 var _shop_purse_label: Label
-var _story_card: PanelContainer
-var _story_title: Label
-var _story_body: Label
-## The vignette's picture, shown when a story names one.
-var _story_glyph: TextureRect
-## The vignette's arrival choreography — settle-scale, lamp-sweep and
-## ink-ripple in one tween, killed by _cancel_story so a fast vignette never
-## fights a slow one.
-var _story_arrival_tween: Tween
-var _story_ripple: Panel
-var _story_sweep: TextureRect
 var _beat_ring: Panel
 var _beat_inner: Panel
 var _warm_flash: ColorRect
@@ -151,10 +140,10 @@ var _intro_page_count := 0
 ## the older one wins the last word -- the next page's picture never shrinks
 ## in at all. One home, killed on every turn.
 var _intro_turn_tween: Tween
-## The ink wash that draws the prose onto the page: a shader mask on the
-## body labels (intro and in-run vignette). The text is laid out in full and
-## the mask only decides which rows draw, so the reveal can never make a
-## label's minimum size dance the way a typewriter did.
+## The ink wash that draws the prose onto the storybook's page: a shader mask
+## on the intro's body label. The text is laid out in full and the mask only
+## decides which rows draw, so the reveal can never make a label's minimum
+## size dance the way a typewriter did.
 var _ink_tween: Tween
 var _ink_label: Label
 ## The intro's living picture: five motes drifting slow loops inside the
@@ -169,15 +158,6 @@ var _cinematic_top: ColorRect
 var _cinematic_bottom: ColorRect
 var _cinematic_tween: Tween
 var _cinematic_on := false
-## Who raised the letterbox: "" for the song ceremonies, "prologue" for the
-## floor's opening scene. The prologue lowers the bars only while it still
-## owns them, so a ceremony that claims the cinema mid-scene is never cut
-## short by the story's exit.
-var _cinematic_owner := ""
-## The film prologue's generation: every raise (a newer floor, a superseding
-## scene, a panel taking the stage) bumps it, and the pending beats of an
-## older scene check it after every wait and quietly die when it moved on.
-var _prologue_generation := 0
 ## The page-turn wipe: one soft wash of light when the walk descends past a
 ## stair, so floors change the way a book turns its page.
 var _page_wipe: ColorRect
@@ -190,8 +170,6 @@ var _selected_style := "standard"
 var _toast_queue: Array[Dictionary] = []
 var _toast_active := false
 var _toast_tween: Tween
-var _story_tween: Tween
-var _story_generation := 0
 var _reduced_motion := false
 var _high_contrast := false
 var _text_scale := 1.0
@@ -271,30 +249,6 @@ func set_selected_style(key: String) -> void:
     ## already picked. Unknown keys fall back to the standard trail.
     _selected_style = key if BeautyContent.STYLE_DATA.has(key) else "standard"
 
-func _cancel_story() -> void:
-    _story_generation += 1
-    if _story_tween != null and _story_tween.is_valid():
-        _story_tween.kill()
-    _story_tween = null
-    if _story_arrival_tween != null and _story_arrival_tween.is_valid():
-        _story_arrival_tween.kill()
-    _story_arrival_tween = null
-    if _ink_tween != null and _ink_tween.is_valid():
-        _ink_tween.kill()
-    _ink_tween = null
-    _ink_label = null
-    # A replaced vignette must not leave a half-poured wash on the labels:
-    # both bodies return to fully drawn, whatever the cancel interrupted.
-    for washed_label in [_story_body, _intro_body]:
-        if washed_label != null and is_instance_valid(washed_label) and washed_label.material is ShaderMaterial:
-            (washed_label.material as ShaderMaterial).set_shader_parameter("reveal", 1.0)
-    if _story_card != null and is_instance_valid(_story_card):
-        # A cancelled arrival leaves no half-settled transform behind: scale
-        # always returns to ONE, so the next show starts from rest.
-        _story_card.scale = Vector2.ONE
-    if _story_card != null:
-        _story_card.visible = false
-
 func _reset_touch_joystick() -> void:
     if _touch_joystick != null and is_instance_valid(_touch_joystick):
         _touch_joystick.reset()
@@ -302,26 +256,22 @@ func _reset_touch_joystick() -> void:
 ## The cinema: letterbox bars that frame the song ceremonies while they play
 ## and leave when the song ends. The walk's biggest moments stage themselves
 ## instead of arriving as prose over the normal HUD. This lives in the BASE
-## on purpose: the floor's film prologue (one file up, in GameUITelling)
-## raises the same bars under an owner tag, and the panels must be able to
-## take the stage back -- a base can call what lives beside it, never what
-## lives up the chain.
-func set_cinematic(on: bool, owner_tag: String = "") -> void:
+## so the screens and panels raise and lower it beside their own work -- a
+## base can call what lives beside it, never what lives up the chain.
+func set_cinematic(on: bool) -> void:
     if _cinematic_top == null or _cinematic_bottom == null or not is_instance_valid(_cinematic_top):
         return
     if on and _cinematic_on:
-        # A second claim on a stage that is already lit: only the name
-        # changes. The bars stand (or are still arriving from the first
-        # claim's own tween), so resetting them to closed and re-tweening
-        # would re-slide a raised frame the reader is already looking
-        # through -- the ceremony inherits the stage, it does not rebuild it.
-        _cinematic_owner = owner_tag
+        # A second claim on a stage that is already lit: the bars stand (or
+        # are still arriving from the first claim's own tween), so resetting
+        # them to closed and re-tweening would re-slide a raised frame the
+        # reader is already looking through -- the ceremony inherits the
+        # stage, it does not rebuild it.
         return
     if _cinematic_tween != null and _cinematic_tween.is_valid():
         _cinematic_tween.kill()
     _cinematic_tween = null
     _cinematic_on = on
-    _cinematic_owner = owner_tag if on else ""
     if not on:
         _cinematic_top.visible = false
         _cinematic_bottom.visible = false
@@ -339,17 +289,6 @@ func set_cinematic(on: bool, owner_tag: String = "") -> void:
     _cinematic_tween.set_parallel(true)
     _cinematic_tween.tween_property(_cinematic_top, "offset_bottom", bar_height, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
     _cinematic_tween.tween_property(_cinematic_bottom, "offset_top", -bar_height, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-
-## The film leaves when a modal takes the stage. The story card is the
-## panel's to clear (_cancel_story does that), but the letterbox and the
-## pending cuts are the prologue's own: panels and overlays call this beside
-## _cancel_story, so a shop opened mid-scene gets a silent stage, not a film
-## still cutting cards behind its scrim. A ceremony's claim is respected as
-## always -- the bars go only if the prologue still owns them.
-func _cancel_prologue() -> void:
-    _prologue_generation += 1
-    if _cinematic_owner == "prologue":
-        set_cinematic(false, "prologue")
 
 func apply_settings(settings: Dictionary) -> void:
     _settings = settings.duplicate(true)
@@ -412,7 +351,7 @@ func apply_settings(settings: Dictionary) -> void:
 
 func _contrast_cards() -> Array[PanelContainer]:
     var cards: Array[PanelContainer] = []
-    for card: Control in [_shop_card, _story_card, _overlay_card]:
+    for card: Control in [_shop_card, _overlay_card]:
         if card != null and is_instance_valid(card):
             cards.append(card as PanelContainer)
     return cards

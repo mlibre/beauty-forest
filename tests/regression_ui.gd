@@ -141,45 +141,14 @@ func _run() -> void:
                         var rect := Rect2(control.position, control.size)
                         ok(_root_rect.encloses(rect), "%s %s is outside the window: %s" % [label, tag, rect])
 
-                # A story card and a toast can be on screen at the same time (every floor
-                # load opens both on merchant and Big Feeling floors). The story card is
-                # opaque and draws after the HUD, so overlapping meant the toast's text
-                # was simply hidden. Measured after the layout has settled, which is how
-                # the game reaches it: the viewport resize settles, then the card shows.
-                _ui.show_story("The Descent Begins", "Mote heard a rumor: far below sleeps a dragon who has not napped properly in centuries.")
+                # The toast is the walk's one transient voice now (the story
+                # card is gone): whatever it says, it must land inside the
+                # window at every size, measured after the layout has settled,
+                # which is how the game reaches it.
                 _ui.show_toast("A Big Feeling wanders this floor. Wait for its GOLD halo, then press E nearby and sing with it.")
                 await frames(4)
                 var toast_rect := Rect2(_ui._toast_label.position, _ui._toast_label.size)
-                var story_rect := Rect2(_ui._story_card.position, _ui._story_card.size)
-                # Both bands must stay on screen at every size. Clearing the toast only
-                # has to hold where the two can actually be stacked: a 240px-tall window
-                # has no room for an 84px toast plus a 168px card, and there staying
-                # on screen is the better trade.
-                if toast_rect.size.y + story_rect.size.y + 4.0 + 16.0 <= _root_rect.size.y:
-                        ok(not toast_rect.intersects(story_rect), "the story card covers the toast %s: toast=%s story=%s" % [tag, toast_rect, story_rect])
-                ok(_root_rect.encloses(story_rect), "the story card is outside the window %s: %s" % [tag, story_rect])
                 ok(_root_rect.encloses(toast_rect), "the toast is outside the window %s: %s" % [tag, toast_rect])
-                _ui.close_panels()
-                await frames(1)
-
-                # Two tellings can overlap (a floor vignette under a ceremony
-                # line): the second show cancels the first mid-arrival. A
-                # cancelled rise must settle back to the SAME rest the layout
-                # chose -- baking the half-risen y as the new rest walks the
-                # card up the screen one rapid vignette at a time.
-                _ui.show_story("First telling", "Mote heard a rumor: far below sleeps a dragon who has not napped properly in centuries.")
-                await frames(3)
-                var rest_first := _ui._story_card.position.y
-                _ui.show_story("Second telling", "Mote heard the same rumor again, closer now.")
-                await frames(40)
-                var rest_second := _ui._story_card.position.y
-                _ui.show_story("Third telling", "Mote is tired of rumors and goes to bed.")
-                await frames(40)
-                var rest_third := _ui._story_card.position.y
-                ok(absf(rest_second - rest_first) < 1.0,
-                    "a telling cancelled mid-rise moved the card's rest from %.2f to %.2f -- the half-risen y became the new rest" % [rest_first, rest_second])
-                ok(absf(rest_third - rest_first) < 1.0,
-                    "the card's rest kept drifting after repeated tellings: %.2f then %.2f" % [rest_second, rest_third])
                 _ui.close_panels()
                 await frames(1)
 
@@ -269,19 +238,13 @@ func _run() -> void:
         await frames(4)
         _root_rect = Rect2(Vector2.ZERO, _ui._root.size)
         # 200% text must not push anything off screen. The vitals ring is the only
-        # top-left HUD element now, but the story card and toast are the wide bands
-        # that text size actually widens.
-        _ui.show_story("The Descent Begins", "Mote heard a rumor: far below sleeps a dragon who has not napped properly in centuries.")
+        # top-left HUD element now, but the toast is the wide band that text
+        # size actually widens.
         _ui.show_toast("A Big Feeling wanders this floor. Wait for its GOLD halo, then press E nearby and sing with it.")
         await frames(4)
-        var big_story := Rect2(_ui._story_card.position, _ui._story_card.size)
         var big_toast := Rect2(_ui._toast_label.position, _ui._toast_label.size)
-        # At 200% on a 640x360 window the two bands cannot both fit stacked -- a
-        # card that needs 294px of height has nowhere to go in 360 minus the toast.
-        # What the layout guarantees either way is that each band is INSIDE the
-        # window: clipped at the edge is bad, pushed off it is worse.
-        ok(big_story.position.x >= 0.0 and big_story.end.x <= _root_rect.size.x + 0.5,
-                "200%% text pushed the story card outside the window: %s" % str(big_story))
+        # What the layout guarantees is that the band is INSIDE the window:
+        # clipped at the edge is bad, pushed off it is worse.
         ok(big_toast.position.x >= 0.0 and big_toast.end.x <= _root_rect.size.x + 0.5,
                 "200%% text pushed the toast outside the window: %s" % str(big_toast))
         _ui.close_panels()
@@ -432,18 +395,17 @@ func _run() -> void:
         if unaffordable != null:
                 ok(unaffordable.disabled, "an unowned charm was offered with 0 sparkles")
 
-        if not await _check_the_floor_opens_like_a_film(game):
+        if not await _check_the_cinema_stages_the_song(game):
                 return
 
         finish(game, suite_name)
 
 
-## The floor's opening scene is a film now: letterbox in, the page, two more
-## shots, letterbox out -- and the walk never stops. The checks pin the
-## staging (bars up, card up), the supersede (a newer floor's prologue takes
-## over without waiting for the old one's timers) and the ownership rule
-## (a ceremony that claims the cinema keeps its bars after the story leaves).
-func _check_the_floor_opens_like_a_film(game: Node) -> bool:
+## The song ceremonies stage themselves: set_cinematic raises the letterbox
+## bars, a second claim inherits the stage instead of re-sliding it, and the
+## ceremony's exit lowers the bars. This is the cinema's whole contract now
+## that the floor's film prologue is gone.
+func _check_the_cinema_stages_the_song(game: Node) -> bool:
         _ui.apply_settings({
                 "reduced_motion": false,
                 "text_scale": 1.0,
@@ -454,93 +416,32 @@ func _check_the_floor_opens_like_a_film(game: Node) -> bool:
                 "volume": 0.8,
                 "muted": true,
         })
-        _ui.play_floor_prologue(
-                ["The Test Floor", "A page for the prologue to speak."],
-                ["First shot continues the scene.", "Second shot lands the cut."],
-                "mote")
-        await frames(3)
-        if not ok(_ui._cinematic_on and _ui._cinematic_owner == "prologue",
-                        "the prologue did not raise the letterbox in its own name"):
-                return false
-        if not ok(_ui._story_card.visible, "the prologue's page never arrived"):
-                return false
-        # A newer floor supersedes: the second call bumps the generation, so
-        # the first sequence's timers become noise and the second owns the
-        # stage -- no double-bars, no queue of stale cards.
-        var first_generation: int = _ui._prologue_generation
-        _ui.play_floor_prologue(
-                ["The Next Floor", "The scene moves on."],
-                ["One more shot."],
-                "mote")
-        await frames(3)
-        if not ok(_ui._prologue_generation == first_generation + 1,
-                        "a second prologue did not supersede the first"):
-                return false
-        if not ok(_ui._story_card.visible and _ui._story_title.text == "The Next Floor",
-                        "the superseding prologue did not own the card"):
-                return false
-        # A modal takes the stage mid-scene: opening the shop must dismiss the
-        # film -- bars down, card away, generation bumped so the pending cuts
-        # die quietly behind the scrim instead of painting over the wares.
-        var generation_before_shop: int = _ui._prologue_generation
-        _ui.show_shop({
-                "sparkles": 4, "charms": [], "owned": [], "stanzas": {"petals": true},
-                "mote_verse": {}, "hp": 60.0, "hp_max": 100.0, "capacity": 2,
-        })
-        await frames(3)
-        if not ok(not _ui._cinematic_on and not _ui._story_card.visible
-                        and _ui._prologue_generation == generation_before_shop + 1,
-                        "opening a panel mid-film left the letterbox, the card or the cuts alive"):
-                return false
-        _ui.close_shop()
+        _ui.set_cinematic(true)
+        # The slide-in is a real 0.45s tween; headless frames run uncapped, so
+        # counting frames cannot promise it has settled. Await the tween, then
+        # let a frame pass so the bars draw at their rest.
+        if _ui._cinematic_tween != null and _ui._cinematic_tween.is_valid():
+                await _ui._cinematic_tween.finished
         await frames(2)
-        if not ok(not _ui._cinematic_on, "the film came back after the panel closed"):
+        if not ok(_ui._cinematic_on, "the ceremony could not raise the letterbox"):
                 return false
-
-        # An outside voice speaks on the card mid-film -- an encounter's
-        # entrance, the lantern's warning, Mote's chatter. The film's turns
-        # must end at the voice: the pending cuts die (generation bumped) and
-        # the bars leave with the card, so the next shot can neither
-        # overwrite what was just said nor leave the letterbox standing over
-        # a card the film no longer owns.
-        _ui.play_floor_prologue(
-                ["The Third Floor", "The scene is mid-film when a wobbly guest arrives."],
-                ["First shot continues.", "Second shot lands."],
-                "mote")
-        await frames(3)
-        var generation_before_voice: int = _ui._prologue_generation
-        _ui.show_story("A Big Feeling", "Not a monster — just one feeling wearing a very big coat.", 3.6)
-        await frames(3)
-        if not ok(_ui._prologue_generation == generation_before_voice + 1
-                        and _ui._story_title.text == "A Big Feeling",
-                        "an outside voice did not take the card away from the film"):
+        if not ok(_ui._cinematic_top.visible and _ui._cinematic_bottom.visible
+                        and _ui._cinematic_top.offset_bottom > 0.0 and _ui._cinematic_bottom.offset_top < 0.0,
+                        "the letterbox bars never slid in"):
                 return false
-        if not ok(not _ui._cinematic_on,
-                        "the outside voice left the letterbox standing over a non-film card"):
-                return false
-
-        # A ceremony claims the cinema mid-scene. The prologue's own exit rule
-        # reads the ownership before touching the bars: it no longer owns
-        # them, so when its timers run out the bars STAY UP for the ceremony.
-        # (The prologue also stops cutting cards -- enforced by the same
-        # ownership check in play_floor_prologue.)
+        # A second claim inherits the raised stage: the bars stand (or are
+        # still arriving), and re-claiming must not re-tween them closed.
+        var top_offset: float = _ui._cinematic_top.offset_bottom
         _ui.set_cinematic(true)
         await frames(2)
-        if not ok(_ui._cinematic_on and _ui._cinematic_owner == "",
-                        "the ceremony could not claim the cinema from the prologue"):
+        if not ok(_ui._cinematic_on and is_equal_approx(_ui._cinematic_top.offset_bottom, top_offset),
+                        "a second claim re-slid the raised letterbox (%.1f -> %.1f)" % [top_offset, _ui._cinematic_top.offset_bottom]):
                 return false
+        # The ceremony's exit lowers the bars.
         _ui.set_cinematic(false)
         await frames(2)
-        if not ok(not _ui._cinematic_on and _ui._cinematic_owner == "",
+        if not ok(not _ui._cinematic_on and not _ui._cinematic_top.visible and not _ui._cinematic_bottom.visible,
                         "the ceremony's exit left the letterbox hanging"):
                 return false
-        # A fresh prologue still raises its own cinema afterwards, and the
-        # story card is back on stage.
-        _ui.play_floor_prologue(["A Later Floor", "The film plays again."], [], "mote")
-        await frames(3)
-        var bars_back: bool = _ui._cinematic_on and _ui._cinematic_owner == "prologue"
-        var card_back: bool = _ui._story_card.visible
-        _ui.play_floor_prologue([], [], "")  # supersede: bumps the generation
-        await frames(2)
-        return ok(bars_back and card_back and _ui._prologue_generation >= 2,
-                        "a later prologue could not raise the cinema again")
+        return ok(_ui._toast_label != null and is_instance_valid(_ui._toast_label),
+                        "the cinema check lost the interface")

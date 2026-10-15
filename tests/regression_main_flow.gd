@@ -349,29 +349,28 @@ func _run() -> void:
             "starting from the returned-to title did not begin a fresh floor-1 walk (mode %d, floor %d)" % [int(game.mode), int(game.floor_number)]):
         return
 
-    # Mote's idle chatter must wait for the floor's opening film. Her timer
-    # lands on the story card -- the very card the film is speaking through --
-    # and since an outside voice now ends the film's turns, her chatter would
-    # cut the floor's own scene short. While the prologue owns the card she
-    # stays quiet; the moment the frame leaves she speaks again.
-    if not _check_mote_waits_for_the_film(game):
+    # Mote's idle chatter must wait for a song ceremony: her timer fires on
+    # the same walk the ceremony stages, and a line of weather chatter queuing
+    # over "press E when the ring glows GOLD" would bury the one instruction
+    # the song runs on. While the letterbox stands she stays quiet; the moment
+    # the stage clears she speaks again -- on the toast, never a card.
+    if not _check_mote_waits_for_the_ceremony(game):
         return
     finish(game, "BEAUTY_FOREST_MAIN_FLOW")
 
-func _check_mote_waits_for_the_film(game: Node) -> bool:
+func _check_mote_waits_for_the_ceremony(game: Node) -> bool:
+    game.ui.clear_toast()
     game.ui._cinematic_on = true
-    game.ui._cinematic_owner = "prologue"
     game._mote_line_timer = 0.0
     game._process(0.02)
-    if not ok(not game.ui._story_card.visible or game.ui._story_title.text != "Mote ✦",
-            "Mote talked over the floor's own film"):
+    if not ok(not game.ui._toast_active and game.ui._toast_queue.is_empty(),
+            "Mote chattered over a song ceremony's stage"):
         return false
     game.ui._cinematic_on = false
-    game.ui._cinematic_owner = ""
     game._mote_line_timer = 0.0
     game._process(0.02)
-    if not ok(game.ui._story_title.text == "Mote ✦",
-            "Mote never spoke once the film's frame had left (card says %s)" % game.ui._story_title.text):
+    if not ok(game.ui._toast_active and game.ui._toast_label.text.begins_with("Mote:"),
+            "Mote never spoke once the stage had cleared (toast says %s)" % game.ui._toast_label.text):
         return false
-    game.ui._story_card.visible = false
+    game.ui.clear_toast()
     return true

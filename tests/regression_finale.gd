@@ -58,7 +58,7 @@ func _run() -> void:
         return
     if not ok(not game._lullaby_active, "a song ceremony started on the frame that ended the run"):
         return
-    if not ok(not game.ui._story_card.visible, "the lullaby story card was left on top of the nap screen"):
+    if not ok(not game.ui._cinematic_on, "the lullaby's letterbox was left standing over the nap screen"):
         return
     game._start_run(1)
     await frames(4)
@@ -106,7 +106,7 @@ func _run() -> void:
     await frames(2)
     if not ok(game.ui._log_label.text.is_empty(), "E still answered during the finale epilogue: %s" % game.ui._log_label.text):
         return
-    if not ok(game.ui._story_card.visible, "the finale story was replaced by an interaction"):
+    if not ok(not game.ui._toast_label.text.is_empty(), "the finale's words were replaced by an interaction"):
         return
     await frames(8)
     if not ok(game.mode == game.Mode.PLAYING, "a successful finale was interrupted by a wisp"):
@@ -142,14 +142,14 @@ func _run() -> void:
     game.ending_pending = true
     game.ending_countdown = 30.0
     # The epilogue keeps Mode.PLAYING while the ending counts down, and Mote's
-    # idle chatter ran on the same PLAYING branch -- a random personality card
-    # could pop straight over the quietest moment in the game.
+    # idle chatter ran on the same PLAYING branch -- a random personality line
+    # could toast straight over the quietest moment in the game.
     game._mote_line_timer = 0.01
     await frames(3)
-    var epilogue_was_quiet: bool = not game.ui._story_card.visible
+    var epilogue_was_quiet: bool = not game.ui._toast_label.text.begins_with("Mote:")
     game.ending_countdown = 0.01
     if not ok(epilogue_was_quiet,
-            "Mote's idle chatter popped a story card over the finale epilogue"):
+            "Mote's idle chatter popped a toast over the finale epilogue"):
         return
     game._pause_game()
     var paused_countdown: float = game.ending_countdown

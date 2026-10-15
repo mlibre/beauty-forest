@@ -97,55 +97,55 @@ const NICKNAMES := [
 
 const REGIONS := [
     {
-        "key": "sunlit-roots", "name": "Sunlit Roots", "min": 1, "max": 4, "glyph": "lantern",
+        "key": "sunlit-roots", "name": "Sunlit Roots", "min": 1, "max": 4,
         "sky": "#f8e7ae", "horizon": "#fff3c4", "fog": "#dbe6a3", "sun": "#ffe29a",
         "foliage": "#65b947", "tip": "#b7dc55", "flower": "#ffd1e8", "ground": "#87bd62", "accent": "#fff0a5",
         "entry": "Sunlit Roots hum hello. The map says ‘here, but cozier’.",
     },
     {
-        "key": "pollen-halls", "name": "Pollen Halls", "min": 5, "max": 8, "glyph": "sparkle",
+        "key": "pollen-halls", "name": "Pollen Halls", "min": 5, "max": 8,
         "sky": "#f6d890", "horizon": "#ffe6a3", "fog": "#e9d78f", "sun": "#ffd06a",
         "foliage": "#91b943", "tip": "#dac95b", "flower": "#ffe98d", "ground": "#a8bf55", "accent": "#fff2aa",
         "entry": "Pollen Halls drift golden. Mote sneezes heroically and apologizes to the air.",
     },
     {
-        "key": "mushroom-lull", "name": "Mushroom Lull", "min": 9, "max": 12, "glyph": "mote",
+        "key": "mushroom-lull", "name": "Mushroom Lull", "min": 9, "max": 12,
         "sky": "#f4c98d", "horizon": "#ffd9a8", "fog": "#e5c08d", "sun": "#ffc06e",
         "foliage": "#b68150", "tip": "#e3b66d", "flower": "#d9c8ff", "ground": "#9ba552", "accent": "#ffd58d",
         "entry": "Mushroom Lull glows amber and kind. Somewhere below, something enormous snores in tune.",
     },
     {
-        "key": "roost", "name": "Snoozle’s Roost", "min": 13, "max": 13, "glyph": "dragon",
+        "key": "roost", "name": "Snoozle’s Roost", "min": 13, "max": 13,
         "sky": "#fff0c8", "horizon": "#fff5d4", "fog": "#e9e4ac", "sun": "#ffe08a",
         "foliage": "#78bd5e", "tip": "#b9dd69", "flower": "#fff3b0", "ground": "#9ac765", "accent": "#ffeaa0",
         "entry": "The Roost glows like the inside of a lantern. Tuck in your scarf.",
     },
     {
-        "key": "dewdrop-terraces", "name": "Dewdrop Terraces", "min": 14, "max": 17, "glyph": "sparkle",
+        "key": "dewdrop-terraces", "name": "Dewdrop Terraces", "min": 14, "max": 17,
         "sky": "#f2f0cf", "horizon": "#fdf6d8", "fog": "#d8e8c0", "sun": "#ffeaa6",
         "foliage": "#5cb554", "tip": "#a9dd66", "flower": "#bfe4ff", "ground": "#7cc065", "accent": "#e8f4c0",
         "entry": "Dewdrop Terraces ring like tiny bells. Every leaf holds its own little sky.",
     },
     {
-        "key": "honeywind-boughs", "name": "Honeywind Boughs", "min": 18, "max": 21, "glyph": "lantern",
+        "key": "honeywind-boughs", "name": "Honeywind Boughs", "min": 18, "max": 21,
         "sky": "#f8d99a", "horizon": "#ffe9b8", "fog": "#ecd9a0", "sun": "#ffd37e",
         "foliage": "#a2b945", "tip": "#e0cd5e", "flower": "#ffd9a0", "ground": "#b0bd55", "accent": "#fff0b0",
         "entry": "Honeywind Boughs sway slow and golden. The breeze tastes faintly of dessert.",
     },
     {
-        "key": "glowcap-meadow", "name": "Glowcap Meadow", "min": 22, "max": 25, "glyph": "mote",
+        "key": "glowcap-meadow", "name": "Glowcap Meadow", "min": 22, "max": 25,
         "sky": "#f7cf9e", "horizon": "#ffdcb0", "fog": "#e8c9a2", "sun": "#ffc47e",
         "foliage": "#b98d52", "tip": "#e8bc72", "flower": "#ffe3f2", "ground": "#a3a858", "accent": "#ffd9a8",
         "entry": "Glowcap Meadow leans in close to listen. Every mushroom is a tiny reading lamp.",
     },
     {
-        "key": "starpetal-vale", "name": "Starpetal Vale", "min": 26, "max": 29, "glyph": "heart",
+        "key": "starpetal-vale", "name": "Starpetal Vale", "min": 26, "max": 29,
         "sky": "#f9e2c2", "horizon": "#fff3d8", "fog": "#e9e2b8", "sun": "#ffe5a2",
         "foliage": "#6dbb58", "tip": "#c0e468", "flower": "#e6d5ff", "ground": "#8cc468", "accent": "#fff0c0",
         "entry": "Starpetal Vale glows softly from below, like a lantern under a quilt.",
     },
     {
-        "key": "grand-roost", "name": "The Grand Roost", "min": 30, "max": 30, "glyph": "dragon",
+        "key": "grand-roost", "name": "The Grand Roost", "min": 30, "max": 30,
         "sky": "#fff3d4", "horizon": "#fff8e0", "fog": "#eee9b8", "sun": "#ffe89a",
         "foliage": "#7fc260", "tip": "#bfe06e", "flower": "#fff4bc", "ground": "#9ecb6a", "accent": "#ffeab0",
         "entry": "The Grand Roost glows like the inside of a lantern. The whole family is waiting.",
@@ -219,76 +219,6 @@ const FEELINGS := {
     20: {"name": "The Giggly", "farewell": "Hee… hee… *snorf* Thank you. I had that laugh saved up for ages."},
     24: {"name": "The Dreamy", "farewell": "Was I humming? You hummed WITH me. Now it is a song. Sleep well, friend."},
     28: {"name": "The Snuggly", "farewell": "You may borrow this hug anytime. It renews itself. That is the trick of hugs."},
-}
-
-const STORY := {
-    1: ["The Descent Begins", "Mote heard a rumor: far below sleeps a whole family of dragons who haven’t napped properly in centuries. You two will fix that."],
-    2: ["A Warm Draft", "Warm air rises past you, smelling of moss and lavender. ‘Dragons snore harmonically,’ Mote whispers, impressed."],
-    3: ["Distant Thunder", "A slow, rumbling snore shakes dust from the canopy. The wisps below seem calmer near it."],
-    4: ["The Lullaby Problem", "Mote explains: the first dragon wakes grumpy without five Dream Chimes sung in harmony. They’re lost on the floor below. Naturally."],
-    5: ["Snoozle’s Nap Chamber", "Five chimes glimmer among the roots. ‘Snoozle!’ Mote squeaks. ‘Remember: E on the gold, gentle as pancakes.’"],
-    6: ["Snoozle Sleeps Soundly", "Mote waves goodbye. ‘One dragon tucked in! But she mumbled about cousins below. Big family. Bigger snores.’"],
-    7: ["Pollen Postcards", "Golden pollen drifts up like tiny letters. ‘The cousins write in sneezes,’ Mote translates, sneezing fluently."],
-    8: ["The Family Hum", "Every snore down here harmonizes. ‘That’s a family choir,’ Mote whispers. ‘Snoozle is the soprano. Obviously.’"],
-    9: ["Mushroom Mail", "A cap bounces a heart-shaped spore toward you. ‘A gift from the Roost!’ Mote declares. ‘Or lunch. Either way, heartwarming.’"],
-    10: ["Cousin Rumbles", "The floor purrs like a giant kettle. ‘That’s not one dragon,’ Mote says. ‘That’s a whole cuddle-pile.’"],
-    11: ["Lullaby Practice", "Mote rehearses his softest hum. ‘The first cousin’s roost is near. Pudding is picky about lullabies.’"],
-    12: ["Almost to the Roost", "Warm light pools from below. ‘Nearly there,’ Mote breathes. ‘Tuck in your scarf. Family reunions need coziness.’"],
-    13: ["A Cousin’s Roost", "Pudding the cousin curls here, half the size and twice the snooze. Five fresh chimes glimmer among the roots. ‘She counts them to fall asleep,’ Mote whispers."],
-    14: ["The Terraces Begin", "Dewdrop Terraces step down like stairs for giants, every leaf holding a drop of light. ‘Someone polishes these,’ Mote says, checking behind the leaves."],
-    15: ["Tiny Bells", "The dew rings when the wind walks past — a whole terrace of chimes nobody winds. Mote conducts two bars, then apologizes to the breeze."],
-    16: ["The Wakeful Feeling", "A Very Big Feeling sits alone on a terrace, swinging its feet. ‘Feels are heavier in the deep,’ Mote says. ‘Bring your softest hum.’"],
-    17: ["Terrace Games", "Young dragons left hopscotch marks in the moss, scorched gently at each square. ‘Recess downstairs,’ Mote grins. ‘They never could skip square four.’"],
-    18: ["The Boughs Ahead", "Honeywind Boughs hang low and heavy with sweetness. ‘Mind your hair,’ Mote warns, already sticky."],
-    19: ["A Slow Golden River", "Warm air drifts downhill like a river you cannot see. Mote floats a leaf on it and bows to the current."],
-    20: ["The Giggly Feeling", "Something enormous giggles behind the boughs, then hiccups pollen. ‘Everyone needs a laugh this big sometime,’ Mote says, dusting off."],
-    21: ["The Boughs’ Sleeper", "Tumblesnug sleeps braided into the lowest bough, chimes humming in her moss. ‘She wound them herself,’ Mote whispers. ‘Gold beats, gentle as syrup.’"],
-    22: ["Meadow of Little Lamps", "Glowcap Meadow is lit floor to sky — every mushroom a reading lamp, every lamp left on. ‘The family reads to each other down here,’ Mote says softly."],
-    23: ["The Library Log", "A hollow log holds bedtime stories scratched in bark: one about a brave wisp. It is you. The pictures are very flattering."],
-    24: ["The Dreamy Feeling", "A huge, half-asleep Feeling drifts the meadow path, humming off-key with total confidence. ‘Sing it home anyway,’ Mote yawns. ‘Kindness doesn’t need the right notes.’"],
-    25: ["Spore Lanterns", "The caps release slow golden spores that hang like tiny lanterns over the path. Mote walks extra politely through them."],
-    26: ["The Vale Below", "Starpetal Vale opens beneath you, glowing like a lantern under a quilt. ‘Almost the whole way,’ Mote breathes. ‘Listen — even the stairs sound cozy.’"],
-    27: ["Petals That Point", "Starpetals lean all one direction — deeper. ‘The forest grew signposts,’ Mote says. ‘Someone very kind must have taught it.’"],
-    28: ["The Snuggly Feeling", "A house-sized Feeling is hugging a boulder, waiting its turn. ‘They line up to feel better down here,’ Mote whispers. ‘Family habit, probably.’"],
-    29: ["The Eldest’s Anteroom", "Marigold, ancient and immense, naps at the threshold with her chimes arranged like a crown. ‘The softest lullaby ever hummed,’ Mote whispers. ‘This is why we came.’"],
-    30: ["The Grand Roost", "Every dragon, every cousin, one warm heap of family — and above them all, Snoozle opens one eye to wave you in. Time for the biggest, softest lullaby ever hummed."],
-}
-
-## Each floor's story keeps playing after its page: two more shots, cut the
-## way a film cuts, while the walk stays live underneath. The prologue reads
-## the page, then these two, then the bars leave -- the floor's whole opening
-## scene, and no two floors share a frame.
-const PROLOGUE_SHOTS := {
-    1: ["The stairwell swallows the daylight one step at a time, and Mote lights the way like a very small, very proud lamp.", "Somewhere far below, something enormous rolls over in its sleep. The whole forest leans closer to listen."],
-    2: ["The draft carries a snore so soft the moss leans into it. Mote catches a curl of it and tucks it into his sash like a keepsake.", "Higher up, the wisps stop their drifting for a single breath, as if the whole grove were listening to the same lullaby."],
-    3: ["The snore rolls through again, and this time the canopy shivers gold. ‘Encore,’ Mote whispers, applauding with two careful fingers.", "A ring of chimes trembles in the quiet that follows, waiting for a braver song than the wind's."],
-    4: ["Mote draws the song in the air: five notes, five chimes, one very sleepy dragon. ‘Musically speaking, it is basically a hug.’", "The first chime glimmers far below, patient as moonrise. The forest seems to hold the rest of the melody for you."],
-    5: ["She is vast and warm and breathing like weather. Every step closer lands softer, as if the floor itself asked you to tiptoe.", "Mote lifts his tiny baton — a pine needle — and the first note leaves you like a bird remembering how."],
-    6: ["One golden snore, deeper than the last, rolls over the clearing like a tide going out. Mote dabs his eyes with his own glow.", "The stairwell down appears as if it had been waiting behind a curtain all along."],
-    7: ["The pollen spells half-words as it drifts. ‘D...R...E,’ Mote reads. ‘Dream. They are all dreaming of somewhere softer.’", "One mote of gold lands on your sleeve and stays, warm as a coin fresh from a pocket."],
-    8: ["Down here the snores fit together, note on note, like a family around one table. Mote hums the third part, badly, with great heart.", "The path ahead glows a little brighter whenever the harmony lands. The forest applauds in moss."],
-    9: ["The spore-heart opens in your palm, and for a moment you can hear the Roost: a hundred dragons dreaming in one warm key.", "‘Delivered,’ Mote announces, stamping the air. The mushroom bows, having done its one job beautifully."],
-    10: ["The floor purrs beneath your boots, a kettle the size of a hill. Somewhere in it a cousin rolls over, and the whole dark rearranges.", "Mote consults a map that is mostly blanket. ‘The cuddle-pile sleeps in shifts. Someone always keeps the dream warm.’"],
-    11: ["Mote rehearses: too loud, too squeaky, then — at last — the hum that could fold laundry and mountains alike.", "‘Perfect. Pudding will be asleep before the second bar. It is a gift. Use it kindly.’"],
-    12: ["Warm light climbs the stairwell like syrup finding a plate. Your shadow walks ahead of you, gilded at the edges.", "Mote straightens your scarf and nods once, professionally. ‘Coziness is armor down here. Wear it tall.’"],
-    13: ["Pudding's chimes are counted, sorted and adored. One wobbles — the fifth — and she frowns in her sleep until you steady it with a note.", "The lullaby settles over her like a second blanket. Somewhere in the dream, she smiles with every tooth she owns."],
-    14: ["Each terrace holds its drop of light up to you as you pass — a stadium of tiny lanterns showing off their polish.", "‘Wipe your feet,’ Mote says, completely seriously. The dew applauds your compliance."],
-    15: ["The wind walks the terrace row and every leaf rings. Mote conducts with his whole body, then pretends he was stretching.", "One bell rings a note nobody expected. The whole terrace answers it, and the song walks with you a while."],
-    16: ["It sits with its feet dangling over the terrace edge, sighing in colors. Mote hands you the softest hum you own.", "‘Feels are just songs that got heavy. Carry yours gently. Sing to theirs.’"],
-    17: ["The hopscotch squares glow faintly as you pass. Mote hops the first three on principle, then remembers he can fly.", "Square four is scorched and dark. ‘Skipped by every dragon ever. Some traditions are sacred.’"],
-    18: ["Honeywind hangs low and gold, and the air tastes like the last day of summer. Mote's halo picks up three leaves and wears them proudly.", "Something enormous giggles beyond the boughs — a laugh with a hiccup in it, the size of weather."],
-    19: ["The warm current drifts downhill carrying petals, feathers and one extremely relaxed leaf. Mote salutes it as it passes.", "‘Everything loose goes where it is needed,’ he says, watching the river bend toward a sleeping silhouette."],
-    20: ["The giggle arrives first, then the pollen, then — heaving with laughter — the biggest feeling you have ever seen wipe its eyes.", "You hum. It giggles. The boughs shake gold. Nobody, least of all the forest, can keep a straight face."],
-    21: ["Tumblesnug's chimes turn slowly in her moss, keeping the time she wound into them. Gold beats, syrup-gentle.", "Your lullaby braids into hers. She sinks a hand's-width deeper into sleep, and the branch holds you both a little closer."],
-    22: ["Every lamp in the meadow is lit, and every lamp is left on — a whole field of doors left open for someone coming home.", "‘The family reads to each other down here. Listen. Page by page. Snore by snore.’"],
-    23: ["Bark pages turn under your fingers: the brave wisp walks into the dark with a lantern and a friend who will not stop talking.", "‘The pictures flatter you,’ Mote says, ‘but they got the friend exactly right.’"],
-    24: ["It hums a tune with total confidence and no notes in common with any song ever written. You sing it home anyway.", "Kindness does not need the right notes. The Feeling dims its colors gratefully and drifts toward the meadow's softest corner."],
-    25: ["The caps release their golden lanterns and the path hangs them at exactly wisp-height, like a corridor of little hosts.", "Mote walks through politely, thanking each one. The spores dim shyly, then glow harder."],
-    26: ["Starpetal Vale opens under the last stair like a lantern under a quilt. The stairs themselves have gone quiet to let you hear it.", "‘Almost the whole way,’ Mote breathes. Below, a family of dragons sleeps in one enormous, gently snoring heap."],
-    27: ["Every starpetal leans the same way: down, toward the deep. Mote tries to lean the other way and slowly, gently, tips over.", "‘The forest grew signposts because someone very kind once got lost and promised not to again.’"],
-    28: ["It hugs a boulder with the patience of mountains, waiting its turn. The boulder does not mind. The boulder has hugged back, once.", "Your hum reaches it early. It pats the boulder farewell — you will be softer, and it knows."],
-    29: ["Marigold fills the chamber the way evening fills a window. Her chimes are arranged like a crown, and she wears the dark like a shawl.", "‘The softest lullaby ever hummed,’ Mote whispers, suddenly very small and very brave. ‘This is why we came.’"],
-    30: ["Every dragon, every cousin, every feeling — one heap of family, rising and falling like a country breathing. Snoozle opens one eye and waves you in.", "Mote lifts the pine-needle baton one last time. ‘Whenever you are ready. The forest will follow your lead.’"],
 }
 
 ## Every sticker the journal can pin: the name it shows and the award line the
@@ -452,21 +382,6 @@ static func feeling_for_floor(floor_number: int) -> Dictionary:
     if BeautyEndless.is_endless(floor_number):
         return BeautyEndless.feeling_for_floor(floor_number)
     return FEELINGS.get(story_floor(floor_number), {})
-
-## The floor's story vignette: [title, body]. Campaign floors read the
-## hand-written page; endless floors read their chapter's composed page.
-static func story_for_floor(floor_number: int) -> Array:
-    if BeautyEndless.is_endless(floor_number):
-        return BeautyEndless.story_for_floor(floor_number)
-    return STORY.get(story_floor(floor_number), [])
-
-## The two shots that keep a floor's story playing after its page, cut like a
-## film while the walk stays live. Hand-written for the campaign's thirty;
-## composed from the endless chapter's own mood below.
-static func prologue_for_floor(floor_number: int) -> Array:
-    if BeautyEndless.is_endless(floor_number):
-        return BeautyEndless.prologue_for_floor(floor_number)
-    return PROLOGUE_SHOTS.get(story_floor(floor_number), [])
 
 ## The last floor of any chapter — the campaign's Grand Roost, or an endless
 ## chapter's own finale — the one floor whose dragon hands the walk to the

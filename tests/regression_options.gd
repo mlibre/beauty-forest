@@ -143,7 +143,7 @@ func _check_vitals_follow_the_accessibility_settings() -> void:
 ## modes -- a setting named for contrast that changed none of the text a player
 ## actually reads. Each card has to get measurably darker.
 func _check_high_contrast_reaches_the_text() -> void:
-        for card_name in ["_shop_card", "_story_card", "_overlay_card"]:
+        for card_name in ["_shop_card", "_overlay_card"]:
                 var card: Control = _ui.get(card_name)
                 if card == null:
                         ok(false, "high contrast: %s is missing" % card_name)

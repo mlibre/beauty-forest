@@ -150,20 +150,12 @@ func _load_floor(number: int, menu_stage: bool = false) -> void:
     _refresh_ui()
     if not menu_stage:
         player.set_control_enabled(true)
-        var vignette: Array = BeautyContent.story_for_floor(floor_number)
-        if not vignette.is_empty():
-            # The floor opens like a film and stays one: letterbox in, the
-            # page with its ink and mark, then the story keeps playing across
-            # its next two shots while the walk stays live underneath. Nothing
-            # blocks -- the player can keep wandering mid-scene, which is the
-            # deal the adventures struck with the floors.
-            ui.play_floor_prologue(vignette, BeautyContent.prologue_for_floor(floor_number), String(region.get("glyph", "mote")))
         # A region says hello on its first floor: `min` is that floor for the
         # campaign's own regions and for a composed endless chapter alike.
-        # A toast, not the hidden log: the greeting is the region's one moment.
-        # Floor 1 is the exception -- its vignette card IS the welcome, and a
-        # second greeting would put a sentence over the walk itself.
-        if floor_number > 1 and floor_number == int(region.get("min", 1)):
+        # A toast, not the hidden log: the greeting is the region's one
+        # moment. Floor 1 joins in -- the welcome is the toast now that no
+        # vignette card speaks it.
+        if floor_number == int(region.get("min", 1)):
             ui.show_toast(String(region["entry"]), 3.6)
         ui.add_log("Mote: “Today’s forecast: %s — %s.”" % [String(floor_modifier.get("name", "soft air")), String(floor_modifier.get("description", "the woods are humming"))])
         # A milestone cheer: every tenth floor the forest throws petals, so a
@@ -363,7 +355,7 @@ func _make_a_wish() -> void:
     var pool := world.get_node("WishingPool") as Node3D
     CozyVFX.ring(world, pool.global_position + Vector3.UP * 0.3, Color("#ffe9a8"), 2.8, 1.2)
     audio.play_chord([523.25, 659.25, 880.0], 0.6, 0.08)
-    ui.show_story("The pool glows ✦", "%s\n+15 warmth, with the forest’s thanks." % String(BeautyContent.random_choice(BeautyLore.WISH_LINES)), 3.6)
+    ui.show_toast("%s +15 warmth, with the forest’s thanks." % String(BeautyContent.random_choice(BeautyLore.WISH_LINES)), 3.4)
     _refresh_ui()
 
 func _descend() -> void:

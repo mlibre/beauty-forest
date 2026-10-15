@@ -43,9 +43,10 @@ it.
   you love can be loved again — buy it deeper and it comes back stronger.
 - **The wishing pool.** One small wish a floor: toss a sparkle in, catch the
   warmth that comes back up.
-- **Mote walks beside you.** Her lines arrive as little story cards during the
-  walk, and every level-up card carries a fresh real-world fact she just
-  learned ("Octopuses have three hearts — two just for the gills").
+- **Mote walks beside you.** Her lines drift over the walk as quiet toasts —
+  no cards, no pop-ups, just the forest talking — and every level-up card
+  carries a fresh real-world fact she just learned ("Octopuses have three
+  hearts — two just for the gills").
 - **A lullaby grown note by note.** Every region of the forest hums its own
   music-box melody, composed when you arrive, and it bows out politely for the
   quiet moments.

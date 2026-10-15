@@ -184,23 +184,14 @@ func _process(delta: float) -> void:
             # generation of walks and then delivered nowhere: the only reader
             # of _mote_line was the descend announcement, so her thirty lines
             # of personality never reached a single player. She speaks on the
-            # story card now -- the same transient moment the floor vignettes
-            # use, never a permanent sentence over the walk. The finale
-            # epilogue also keeps Mode.PLAYING while its ending counts down;
-            # that is the one moment the walk stays quiet, so the timer
-            # re-arms and says nothing there.
-            if not ending_pending:
-                # The floor's opening film owns the story card for its first
-                # seconds; Mote used to walk straight over it (and now that an
-                # outside voice ends the film's turns, her chatter would END
-                # the scene she was talking through). She waits instead -- the
-                # timer re-arms, so she speaks a couple of lines later, when
-                # the floor's own frame has left.
-                if ui._cinematic_on and ui._cinematic_owner == "prologue":
-                    pass
-                else:
-                    _mote_line = String(BeautyContent.random_choice(BeautyLore.MOTE_LINES))
-                    ui.show_story("Mote ✦", _mote_line, 3.4)
+            # toast now -- bare words over the walk, the same channel a petal
+            # shower uses, with no card popping over the forest. The finale
+            # epilogue also keeps Mode.PLAYING while its ending counts down
+            # (the walk's quietest moment), and a song ceremony owns the stage
+            # while the letterbox stands -- she waits through both; the timer
+            # re-arms, so she speaks a couple of lines later.
+            if not ending_pending and not ui._cinematic_on:
+                ui.show_toast("Mote: “%s”" % String(BeautyContent.random_choice(BeautyLore.MOTE_LINES)), 3.2)
         if play_seconds >= _next_petal_shower:
             _next_petal_shower = play_seconds + _rng.randf_range(34.0, 58.0)
             CozyVFX.burst(world, player.global_position + Vector3(0, 3.2, 0), Color(region["flower"]), 42, 1.25, 2.4)
